@@ -96,8 +96,8 @@ class String : public Object {
         size_t other_string_length = other_string->size();
 
         char new_string[my_string_length + other_string_length + 1];
-        strcpy(new_string, c_str);
-        strcat(new_string, other_string->c_str);
+        strcpy(new_string, cstr_);
+        strcat(new_string, other_string->cstr_);
 
         const char* const_new_string = new_string;
 
@@ -110,7 +110,7 @@ class String : public Object {
         size_t other_string_length = strlen(other_string);
 
         char new_string[my_string_length + other_string_length + 1];
-        strcpy(new_string, c_str);
+        strcpy(new_string, cstr_);
         strcat(new_string, other_string);
 
         const char* const_new_string = new_string;

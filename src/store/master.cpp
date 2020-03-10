@@ -129,7 +129,7 @@ class Server {
     // Send my list of known node IPs to all of the individual node
     void update_clients_() {
         // Encode server's list of known nodes to json array
-        char *registered_nodes_string = serializer.encode_json_array(registered_nodes);
+        char *registered_nodes_string = serializer->encode_json_array(registered_nodes);
 
         Message directory_msg(my_ip_address, my_port, DIRECTORY, registered_nodes_string);
 

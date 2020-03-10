@@ -37,7 +37,8 @@ class Message {
         }
 
         // Use duplicate because strtok mutates its string
-        char* msg_duplicate = duplicate(message_string);
+        Sys s;
+	char* msg_duplicate = s.duplicate(message_string);
 
         sender_ip_address = strtok(msg_duplicate, ":");
         if (strlen(sender_ip_address) == 0) {
