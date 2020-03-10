@@ -1,8 +1,8 @@
 #pragma once
 #include <stdarg.h>  // va_arg
 #include <stdlib.h>
-#include "object.h"
-#include "string.h"
+#include "../../utils/object.h"
+#include "../../utils/string.h"
 
 #define INT_TYPE 'I'
 #define BOOL_TYPE 'B'

@@ -6,9 +6,9 @@
 #include <stropts.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#include "helper.h"
+#include "../utils/helper.h"
+#include "../utils/string.h"
 #include "message.h"
-#include "string.h"
 
 #define MAX_MESSAGE_SIZE 512
 #define LISTEN_TIMEOUT 200

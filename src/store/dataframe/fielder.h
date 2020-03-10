@@ -1,7 +1,7 @@
 #pragma once
+#include "../../utils/object.h"
+#include "../../utils/string.h"
 #include "stdlib.h"
-#include "object.h"
-#include "string.h"
 
 /*****************************************************************************
  * Fielder::
@@ -95,8 +95,6 @@ class IntSumFielder : public Fielder {
     }
 };
 
-
-
 /*****************************************************************************
  * TrueCountFielder::
  * A fielder for testing.
@@ -169,7 +167,9 @@ class MaxSeenFielder : public Fielder {
         // empty
     }
     void accept(int i) {
-        if (i > max) { max = i; }
+        if (i > max) {
+            max = i;
+        }
     }
     void accept(String* s) {
         // empty

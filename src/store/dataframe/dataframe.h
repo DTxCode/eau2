@@ -1,11 +1,11 @@
 #pragma once
 #include <thread>
+#include "../../utils/object.h"
+#include "../../utils/string.h"
 #include "column.h"
-#include "object.h"
 #include "row.h"
 #include "rower.h"
 #include "schema.h"
-#include "string.h"
 
 #define INT_TYPE 'I'
 #define BOOL_TYPE 'B'

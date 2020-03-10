@@ -1,8 +1,8 @@
 #pragma once
-#include "array.h"
-#include "helper.h"
-#include "object.h"
-#include "string.h"
+#include "../../utils/array.h"
+#include "../../utils/helper.h"
+#include "../../utils/object.h"
+#include "../../utils/string.h"
 
 /*************************************************************************
  * Schema::

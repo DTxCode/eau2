@@ -1,5 +1,5 @@
 #pragma once
-#include "object.h"
+#include "../../utils/object.h"
 #include "row.h"
 
 #define INT_TYPE 'I'
@@ -67,7 +67,6 @@ class TrueRower : public Rower {
     }
 };
 
-
 // Rower that executes a for loop with the nuber of iterations
 // equal to 100 * (sum of integers in given row + 1)
 class LoopRower : public Rower {
@@ -87,24 +86,22 @@ class LoopRower : public Rower {
         return true;
     }
 
-    // Nothing to join, just delete given rower 
+    // Nothing to join, just delete given rower
     virtual void join_delete(Rower* other) {
         delete other;
     }
 
-    
     // Returns a new loop rower pointer
-    // This class has no unique fields 
+    // This class has no unique fields
     virtual LoopRower* clone() {
         return new LoopRower();
     }
-
-}; 
+};
 
 // Rower that tracks the maximum integer seen, or 0
 class MaxRower : public Rower {
    public:
-   int max = 0;
+    int max = 0;
     virtual bool accept(Row& r) {
         MaxSeenFielder f;
         r.visit(r.get_idx(), f);
@@ -116,23 +113,22 @@ class MaxRower : public Rower {
         return true;
     }
 
-    // Join the two max values and delete given rower 
+    // Join the two max values and delete given rower
     virtual void join_delete(Rower* other) {
         MaxRower* m = dynamic_cast<MaxRower*>(other);
-        if (m->get_max() > max) { max = m->get_max(); }
+        if (m->get_max() > max) {
+            max = m->get_max();
+        }
         delete other;
     }
 
     // Return maximum int seen by this rower
     int get_max() { return max; }
-    
+
     // Returns a new max rower pointer with same max as this
     virtual MaxRower* clone() {
         MaxRower* m = new MaxRower();
         m->max = get_max();
         return m;
     }
-
-}; 
-
-   
+};
