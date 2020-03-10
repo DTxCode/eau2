@@ -40,7 +40,8 @@ bool test_simple_message() {
     node2.register_and_listen();
 
     // Send empty ACK message from node1 to node2
-    node1.send_msg("127.0.0.1", 7001, ACK, "Hello from node 1!");
+    Message* response = node1.send_msg("127.0.0.1", 7001, ACK, "Hello from node 1!");
+    delete response;
 
     // shutdown system
     s.shutdown();

@@ -69,9 +69,13 @@ class Server {
             printf("... sending shutdown message to %s:%d\n", node_host, node_port);
             Message *response = network->send_and_receive_msg(&shutdown_msg, node_host, node_port);
 
+	    delete[] node_host;
+
             if (response->msg_type != ACK) {
                 printf("WARN: Did not get back ACK from node after sending it shutdown signal");
             }
+
+	    delete response;
         }
     }
 
@@ -146,7 +150,9 @@ class Server {
             if (response->msg_type != ACK) {
                 printf("WARN: Did not get back ACK from node after sending it directory update");
             }
-        }
+	   
+	    delete response;
+	}
 
         delete[] registered_nodes_string;
     }

@@ -18,7 +18,8 @@ class Message {
     int sender_port;
     MessageType msg_type;
     char* msg;
-
+    char* original_string;
+    
     // Constructs a Message with the given fields
     // NOTE: `msg` cannot contain any semicolons!
     Message(char* sender_ip_address, int sender_port, MessageType msg_type, char* msg) {
@@ -26,6 +27,15 @@ class Message {
         this->sender_port = sender_port;
         this->msg_type = msg_type;
         this->msg = msg;
+	this->original_string = nullptr;
+    }
+
+    ~Message() {
+	if (original_string) {
+		delete[] original_string;
+	}
+	//delete[] sender_ip_address;
+	//delete[] msg;
     }
 
     // Constructs a Message from the given stringified Message
@@ -39,6 +49,7 @@ class Message {
         // Use duplicate because strtok mutates its string
         Sys s;
 	char* msg_duplicate = s.duplicate(message_string);
+	original_string = msg_duplicate; // save to delete later
 
         sender_ip_address = strtok(msg_duplicate, ":");
         if (strlen(sender_ip_address) == 0) {
@@ -49,6 +60,10 @@ class Message {
         // Cast port to int
         char* port_string = strtok(nullptr, ";");
         sender_port = atoi(port_string);
+	//s.p("Port String is ");
+	//s.pln(port_string);
+	//delete[] port_string;
+	//s.pln("finished deleting port string");
         if (sender_port == 0) {
             printf("ERROR failed to parse Message.sender_port from the given string: %s\n", message_string);
             exit(1);
@@ -57,6 +72,9 @@ class Message {
         // Cast message type to enum
         char* msg_type_string = strtok(nullptr, ";");
         msg_type = static_cast<MessageType>(atoi(msg_type_string));
+	//s.p("Msg type string is ");
+	//s.pln(msg_type_string);
+	//delete[] msg_type_string;
 
         // can be empty string
         msg = strtok(nullptr, ";");
