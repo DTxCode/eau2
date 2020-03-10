@@ -231,7 +231,11 @@ class Serializer {
     // abstracting over both
     virtual char* serialize_string_array(StringArray* array) {
         size_t length = array->size();
-        // Will have a char* for each value. Track them separately
+        if (length == 0) {
+		return nullptr;
+	}
+
+	// Will have a char* for each value. Track them separately
         //  because we do not know their size
         char** cell_strings = new char*[length];
         size_t i;
@@ -245,15 +249,20 @@ class Serializer {
             total_size += strlen(cell_strings[i]);
         }
         // size of cell char*s + (length - 1) commas + 1 for null terminator
-        // + 1 for empty case (return "\0")
-        total_size += length + 1;
+        //// + 1 for empty case (return "\0")
+        total_size += length;
         char* serial_buffer = new char[total_size];
-        if (total_size == 1) {  // Empty case
-            strcpy(serial_buffer, "\0");
-        } else {
-            // Copy all value-strings in to one buffer
-            strcpy(serial_buffer, cell_strings[0]);
-        }
+        //if (total_size == 1) {  // Empty case
+        //    strcpy(serial_buffer, "\0");
+	//    
+	//}
+       
+	//{
+        // Copy all value-strings in to one buffer
+        strcpy(serial_buffer, cell_strings[0]);
+	delete[] cell_strings[0];
+        
+	//}
         // Loop through any remaining values
         for (i = 1; i < length; i++) {
             strcat(serial_buffer, ",");  // CSV
