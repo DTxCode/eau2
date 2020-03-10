@@ -67,6 +67,14 @@ class String : public Object {
     /** Deep copy of this string */
     String* clone() { return new String(*this); }
 
+    // Returns copy of the internal raw char*
+    virtual char* get_string() {
+        size_t s_length = strlen(cstr_);
+        char* tmp_string = new char[s_length + 1];
+        strcpy(tmp_string, cstr_);
+        return tmp_string;
+    }
+
     /** This consumes cstr_, the String must be deleted next */
     char* steal() {
         char* res = cstr_;
@@ -80,6 +88,34 @@ class String : public Object {
         for (size_t i = 0; i < size_; ++i)
             hash = cstr_[i] + (hash << 6) + (hash << 16) - hash;
         return hash;
+    }
+
+    // returns concatenation of given string to this string
+    virtual String* concat(String* other_string) {
+        size_t my_string_length = size();
+        size_t other_string_length = other_string->size();
+
+        char new_string[my_string_length + other_string_length + 1];
+        strcpy(new_string, c_str);
+        strcat(new_string, other_string->c_str);
+
+        const char* const_new_string = new_string;
+
+        return new String(const_new_string);
+    }
+
+    // returns concatenation of given string to this string
+    virtual String* concat(char* other_string) {
+        size_t my_string_length = size();
+        size_t other_string_length = strlen(other_string);
+
+        char new_string[my_string_length + other_string_length + 1];
+        strcpy(new_string, c_str);
+        strcat(new_string, other_string);
+
+        const char* const_new_string = new_string;
+
+        return new String(const_new_string);
     }
 };
 

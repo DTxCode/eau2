@@ -8,6 +8,7 @@
 #include "../utils/array.h"
 #include "../utils/string.h"
 #include "network.h"
+#include "serial.h"
 
 /*
     Represents a Server in a network. Clients connect to this server in order in order to register/join the network.
@@ -20,6 +21,7 @@ class Server {
     Network *network;
     std::thread *listener;  // Thread that listens for incoming connections
     bool shutting_down;     // Whether this server is shutting down. Used by (infinite) spawned thread to know to shut down
+    Serializer *serializer;
 
     Server(char *my_ip_address, int my_port) {
         this->my_ip_address = my_ip_address;
@@ -28,6 +30,7 @@ class Server {
         network = new Network();
         listener = nullptr;
         shutting_down = false;
+        serializer = new Serializer();
     }
 
     ~Server() {
@@ -41,6 +44,7 @@ class Server {
 
         delete registered_nodes;
         delete network;
+        delete serializer;
     }
 
     // Sends a shutdown signal to all nodes in the network and stops the server
@@ -125,7 +129,7 @@ class Server {
     // Send my list of known node IPs to all of the individual node
     void update_clients_() {
         // Encode server's list of known nodes to json array
-        char *registered_nodes_string = encode_json_array(registered_nodes);
+        char *registered_nodes_string = serializer.encode_json_array(registered_nodes);
 
         Message directory_msg(my_ip_address, my_port, DIRECTORY, registered_nodes_string);
 

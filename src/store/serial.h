@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../utils/array.h"
+#include "../utils/helper.h"
 #include "dataframe/column.h"
 
 // Utility class which understands how to transform Classes and
@@ -100,5 +102,65 @@ class Serializer {
         sscanf(msg, "%f", &data);
         printf("Got float: %f", data);
         return data;
+    }
+
+    // Creates string with the json array representation of the given array of strings
+    char* encode_json_array(StringArray* array) {
+        String* list = new String("[");
+
+        for (size_t i = 0; i < array->size(); i++) {
+            if (i != 0) {
+                list = list->concat(",");
+            }
+
+            String* s = array->get(i);
+            list = list->concat(s);
+        }
+
+        list = list->concat("]");
+
+        char* str = list->get_string();
+        delete list;
+        return str;
+    }
+
+    // Creates a StringArray based on the given c-style jsonArray
+    // Assumes jsonArray has format [val1,val2,...,valn]
+    StringArray* decode_json_array(char* jsonArray) {
+        // Helper for strings duplicating, counting chars
+        Sys s;
+
+        // We'll need to modify the jsonArray, so work with a copy of it
+        char* json_array_duplicate = s.duplicate(jsonArray);
+
+        // Remove "[" and "]"
+        json_array_duplicate = json_array_duplicate + 1;
+        json_array_duplicate[strlen(json_array_duplicate) - 1] = '\0';
+
+        if (strlen(json_array_duplicate) == 0) {
+            // jsonArray had no strings in it
+            return nullptr;
+        }
+
+        // jsonArray has count(",") + 1 strings inside of it
+        size_t num_strings = s.count_char(",", json_array_duplicate) + 1;
+
+        // Loop through array and pull out strings between ","
+        StringArray* stringArray = new StringArray();
+        for (size_t i = 0; i < num_strings; i++) {
+            char* str = nullptr;
+
+            if (i == 0) {
+                // First iteration, strtok takes the actual string
+                str = strtok(json_array_duplicate, ",");
+            } else {
+                // If it's not the first iteration, strtok already has the string in its memory
+                str = strtok(nullptr, ",");
+            }
+
+            stringArray->push_back(new String(str));
+        }
+
+        return stringArray;
     }
 };

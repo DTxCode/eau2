@@ -11,6 +11,7 @@
 #include <thread>
 #include "message.h"
 #include "network.h"
+#include "serial.h"
 
 /*
     Represents a Node in a network. Needs to register with a Server to join the network.
@@ -29,6 +30,7 @@ class Node {
     std::thread *listener;  // thread that listens for incoming connections
     bool registered;        // Whether this node is registered with the master server
     bool shutting_down;     // Whether this node is shutting down. Used by (infinite) spawned thread to know to shut down
+    Serializer *serializer;
 
     Node(char *my_ip_address, int my_port, char *server_ip_address, int server_port) {
         this->my_ip_address = my_ip_address;
@@ -40,6 +42,7 @@ class Node {
         network = new Network();
         registered = false;
         shutting_down = false;
+        serializer = new Serializer();
     }
 
     ~Node() {
@@ -61,6 +64,7 @@ class Node {
 
         delete listener;
         delete network;
+        delete serializer;
     }
 
     // Sends the given message to the given target
@@ -171,7 +175,7 @@ class Node {
         }
 
         // Save new directory list
-        known_nodes = decode_json_array(new_directory);
+        known_nodes = serializer.decode_json_array(new_directory);
 
         // Send ACK
         Message ack(my_ip_address, my_port, ACK, "");
