@@ -7,6 +7,7 @@
 #include <string.h>
 #include "../utils/array.h"
 #include "dataframe/column.h"
+#include "dataframe/schema.h"
 #include "message.h"
 
 // Utility class which understands how to transform Classes and
