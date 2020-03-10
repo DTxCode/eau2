@@ -23,17 +23,17 @@ class Network {
     size_t max_message_size;
     size_t listen_timeout;
     size_t max_incoming_connections;
-    Sys* sys; // helper
+    Sys* sys;  // helper
 
     Network() {
         max_message_size = MAX_MESSAGE_SIZE;
         listen_timeout = LISTEN_TIMEOUT;
         max_incoming_connections = MAX_INCOMING_CONNECTIONS;
-    	sys = new Sys();
+        sys = new Sys();
     }
 
     ~Network() {
-	delete sys;
+        delete sys;
     }
 
     // Extracts port from the given address
@@ -69,11 +69,11 @@ class Network {
         // first call to strtok will return just the string before the ":"
         char* host = strtok(address_copy, ":");
 
-	// make dupe so that we can delete[] the original copy
-	char* host_dup = sys->duplicate(host);
-	delete[] address_copy;
+        // make dupe so that we can delete[] the original copy
+        char* host_dup = sys->duplicate(host);
+        delete[] address_copy;
 
-	return host_dup;
+        return host_dup;
     }
 
     // Bind the given address/port to this process and listen for incoming connections
@@ -125,9 +125,9 @@ class Network {
     // Socket should be open and read-ready, else this call hangs.
     Message* read_msg(int socket) {
         char* msg_string = read_from_socket_(socket);
-	Message* msg = new Message(msg_string);
-	delete[] msg_string;
-	return msg;
+        Message* msg = new Message(msg_string);
+        delete[] msg_string;
+        return msg;
     }
 
     // Writes the given Message to the given socket

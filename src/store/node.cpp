@@ -145,8 +145,8 @@ class Node {
             } else if (msg->msg_type == SHUTDOWN) {
                 // Node was told to shutdown by the server
                 shutdown_(connection);
-		close(connection);
-		delete msg;
+                close(connection);
+                delete msg;
                 break;
             } else {
                 // Node got a message from another node
