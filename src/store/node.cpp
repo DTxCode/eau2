@@ -175,7 +175,7 @@ class Node {
         }
 
         // Save new directory list
-        known_nodes = serializer->decode_json_array(new_directory);
+        known_nodes = serializer->deserialize_string_array(new_directory);
 
         // Send ACK
         Message ack(my_ip_address, my_port, ACK, "");
