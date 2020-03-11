@@ -10,7 +10,7 @@
 #include "../utils/string.h"
 #include "message.h"
 
-#define MAX_MESSAGE_SIZE 512
+#define MAX_MESSAGE_CHUNK_SIZE 512
 #define LISTEN_TIMEOUT 200
 #define MAX_INCOMING_CONNECTIONS 20
 
@@ -20,13 +20,13 @@
 */
 class Network {
    public:
-    size_t max_message_size;
+    size_t max_message_chunk_size;
     size_t listen_timeout;
     size_t max_incoming_connections;
     Sys* sys;  // helper
 
     Network() {
-        max_message_size = MAX_MESSAGE_SIZE;
+        max_message_chunk_size = MAX_MESSAGE_CHUNK_SIZE;
         listen_timeout = LISTEN_TIMEOUT;
         max_incoming_connections = MAX_INCOMING_CONNECTIONS;
         sys = new Sys();
@@ -167,17 +167,38 @@ class Network {
     // Returns no more than num_bytes worth of data from the read buffer
     // of the given socket
     char* read_from_socket_(int socket) {
-        char* buffer = new char[max_message_size];
-        bzero(buffer, max_message_size);
+        String* msg = new String("");
 
-        int bytes_read = read(socket, buffer, max_message_size);
+        char* buffer = new char[max_message_chunk_size];
 
-        if (bytes_read < 0) {
-            perror("ERROR reading from socket");
-            exit(1);
+        while (1) {
+            bzero(buffer, max_message_chunk_size);
+
+            // read size - 1 to always ensure there's a null terminator
+            int bytes_read = read(socket, buffer, max_message_chunk_size - 1);
+
+            if (bytes_read < 0) {
+                perror("ERROR reading from socket");
+                exit(1);
+            }
+
+            // record new data, which is possibly empty string
+            String* new_msg = msg->concat(buffer);
+            delete msg;
+            msg = new_msg;
+
+            if (bytes_read < max_message_chunk_size - 1) {
+                // finished reading from socket
+                break;
+            }
         }
 
-        return buffer;
+        // Pull out and return cstr inside of String*
+        char* msg_string = msg->get_string();
+        delete msg;
+        delete[] buffer;
+
+        return msg_string;
     }
 
     // Writes given message to the given socket.
