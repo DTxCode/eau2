@@ -131,3 +131,34 @@ double time_now() {
     auto duration_time = std::chrono::duration<double>(time.time_since_epoch());
     return duration_time.count();
 }
+
+// Helper to remove trailing/leading whitespace from given string
+// FOUND ONLINE AT:
+// - LINK: https://cboard.cprogramming.com/c-programming/143810-removing-leading-whitespace-line.html
+// - DATE: 1/19/20
+char* trim_whitespace(char* str) {
+    // Trim leading whitespace
+    while (isspace(*str)) {
+        str++;
+    }
+    char* end = str + strlen(str) - 1;
+    // Trim trailing whitespace
+    while ((end > str) && (isspace(*end))) {
+        end--;
+    }
+    // Guarantee str is null-terminated
+    *(end + 1) = '\0';
+
+    return str;
+}
+
+// Helper to check if a given char array contains a spefic char c
+bool contains_char(char* array, char c) {
+    for (size_t i = 0; i < strlen(array); i++) {
+        if (c == array[i]) {
+            return true;
+        }
+    }
+
+    return false;
+}
