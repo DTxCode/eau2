@@ -164,39 +164,52 @@ class Network {
         return -1;
     }
 
-    // Returns no more than num_bytes worth of data from the read buffer
-    // of the given socket
+    // Returns all data possible to be read from the given socket
+    // Expects message to be prepended with "[LENGTH];", where LENGTH is the length of the message that follows
     char* read_from_socket_(int socket) {
-        String* msg = new String("");
+        char buffer[max_message_chunk_size];
+        bzero(buffer, max_message_chunk_size);
 
-        char* buffer = new char[max_message_chunk_size];
+        // first extract how many bytes we're expecting from this socket
+        // read size - 1 to always ensure there's a null terminator
+        int bytes_read = read(socket, buffer, max_message_chunk_size - 1);
 
-        while (1) {
+        if (bytes_read < 0) {
+            perror("ERROR reading from socket");
+            exit(1);
+        }
+
+        // rest of the message should have this length
+        char* message_length_string = strtok(buffer, ";");
+        size_t message_length = atoi(message_length_string);  // Assumes success because we formatted the message
+
+        // Initialize msg and bytes_read, then loop until bytes_read >= message_length
+        char* message = strtok(nullptr, ";");  // The actual message
+        String* msg = new String(message);
+        bytes_read = msg->size();
+
+        while (bytes_read < message_length) {
             bzero(buffer, max_message_chunk_size);
 
             // read size - 1 to always ensure there's a null terminator
-            int bytes_read = read(socket, buffer, max_message_chunk_size - 1);
+            int new_bytes_read = read(socket, buffer, max_message_chunk_size - 1);
 
-            if (bytes_read < 0) {
+            if (new_bytes_read < 0) {
                 perror("ERROR reading from socket");
                 exit(1);
             }
 
-            // record new data, which is possibly empty string
+            bytes_read += new_bytes_read;
+
+            // record new data
             String* new_msg = msg->concat(buffer);
             delete msg;
             msg = new_msg;
-
-            if (bytes_read < max_message_chunk_size - 1) {
-                // finished reading from socket
-                break;
-            }
         }
 
         // Pull out and return cstr inside of String*
         char* msg_string = msg->get_string();
         delete msg;
-        delete[] buffer;
 
         return msg_string;
     }
@@ -204,8 +217,17 @@ class Network {
     // Writes given message to the given socket.
     // Prepends given ip address and port to the message in the format ADDRESS:PORT;msg
     void write_to_socket_(int socket, char* msg_to_send) {
+        // Prepend message length to message
+        size_t length = strlen(msg_to_send);
+        size_t num_digits_in_length = snprintf(NULL, 0, "%d", length);
+
+        // + 1 for semicolon between length and message, + 1 for null terminator
+        char prepended_message[num_digits_in_length + 1 + length + 1];
+
+        sprintf(prepended_message, "%d;%s", length, msg_to_send);
+
         // Send message to server
-        int bytes_written = write(socket, msg_to_send, strlen(msg_to_send));
+        int bytes_written = write(socket, prepended_message, strlen(prepended_message));
 
         if (bytes_written < 0) {
             perror("ERROR writing to socket");
