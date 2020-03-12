@@ -184,7 +184,7 @@ class Network {
         size_t message_length = atoi(message_length_string);  // Assumes success because we formatted the message
 
         // Initialize msg and bytes_read, then loop until bytes_read >= message_length
-        char* message = strtok(nullptr, ";");  // The actual message
+        char* message = strtok(nullptr, "\0");  // The actual message
         String* msg = new String(message);
         bytes_read = msg->size();
 
