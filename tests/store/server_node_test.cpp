@@ -13,6 +13,9 @@ class TestNode : public Node {
     }
 
     void handle_message(int connected_socket, Message* msg) {
+    	printf("Node %s:%d got message from another node with type %d and contents \"%s\"\n", my_ip_address, my_port, msg->msg_type, msg->msg);
+   
+
         // Send ACK
         Message ack(my_ip_address, my_port, ACK, "");
         network->write_msg(connected_socket, &ack);
