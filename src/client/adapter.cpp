@@ -149,8 +149,17 @@ int main(int argc, char** argv) {
         length = file_size + 1;
     }
 
+    pln("Here 1");
+
     // Create Sorer to hand out dataframes from file
     Sorer* s = new Sorer(fp, num_nodes, from, length);
+
+    ModifiedDataFrame* my_df = s->get_chunk_as_df(0);
+
+    Sys sys;
+
+    pln("Here 5");
+    sys.p(my_df->get_string(2, 2));
 
     return 0;
 }

@@ -56,6 +56,8 @@ class Sorer {
 
         rows_per_chunk = num_rows / num_chunks;
         assert(rows_per_chunk > 0);
+
+        pln("Here 2");
     }
 
     ~Sorer() {
@@ -79,6 +81,66 @@ class Sorer {
         // Moves file pointer to 'from_row' point in file
         go_to_row(from_row);
         
+        pln("Here 3");
+        
+        ModifiedDataFrame* df = new ModifiedDataFrame(*schema);
+        Row* row = new Row(*schema);
+
+        char buffer[255];
+
+        // Local row idx
+        size_t curr_row = 0;
+        size_t col_idx = 0;
+        size_t read_idx = 0;
+        bool reading_val = false; 
+        // For whole chunk: 
+        //  create Row object of each row's data
+        //  add Row to df
+        while (!feof(fp)) {
+            char c = fgetc(fp);
+            if (c == '<') {
+                reading_val = true;
+                read_idx = 0;
+            } else if (c == '>') {
+                reading_val = false;
+                buffer[read_idx] = '\0';
+
+                if (buffer == "") {
+                    // TODO handle empty type
+                }
+
+                // Based on schema, add data to row
+                if (schema->col_type(col_idx) == INT_TYPE) {
+                    row->set(col_idx, atoi(trim_whitespace(buffer)));
+                } else if (schema->col_type(col_idx) == FLOAT_TYPE) {
+                    row->set(col_idx, (float) atof(trim_whitespace(buffer)));
+                } else if (schema->col_type(col_idx) == STRING_TYPE) {
+                    row->set(col_idx, new String(trim_whitespace(buffer)));
+                } else { // BOOL_TYPE
+                    if (trim_whitespace(buffer) == "1") {
+                        row->set(col_idx, true);
+                    } else {
+                        row->set(col_idx, false);
+                    }
+                }
+                    
+                col_idx++;
+                // Add row to dataframe
+                df->add_row(*row);
+            } else if (reading_val) {  // Copy value into buffer
+                buffer[read_idx] = c;
+                read_idx++;
+            } else if (c == '\n') {
+                curr_row++;
+                col_idx = 0;
+            }
+            // Stop reading after chunk
+            if (from_row + curr_row == to_row) {
+                break;
+            }
+        }
+        pln("Here 4");
+        return df;
     }
 
     // Move file pointer to the given row_idx in the file
@@ -105,21 +167,29 @@ class Sorer {
     }
 
     // Count the total number of rows in the file in the given 
-    // [from, length] region
+    // [from, from+length] region
     // TODO could this overflow size_t range?
     void count_rows() {
-        // return to beginning of file
-        fseek(fp, 0, SEEK_SET);
+        // return to beginning of range [from, from+length] of file 
+        fseek(fp, from, SEEK_SET);
 
         // Maximum number of characters possible in a row
         size_t max_row_size = 255 * num_columns;
         char buffer[max_row_size];
 
         size_t cur_line_idx = 0;
+        size_t bytes_read = 0;
         while (!feof(fp)) {
             // Read a whole line
             fgets(buffer, max_row_size, fp);
+            // Track bytes read
+            // TODO Does this count right number of bytes?
+            bytes_read += strlen(buffer);
             cur_line_idx++;
+            // Only count until from+length
+            if (bytes_read >= length) {
+                break;
+            }
         }
        
         num_rows = cur_line_idx + 1;
