@@ -6,6 +6,7 @@
 #include "../store/dataframe/dataframe.h"
 #include "field.h"
 #include "../utils/helper.h"
+#include <assert.h>
 
 /* 
 * Utility class to parse SoR file into a DataFrame format.
@@ -15,41 +16,149 @@
 class Sorer {
    public:
     FILE* fp;
+    size_t from; 
+    size_t length;
     size_t num_chunks;
     size_t num_columns;
-    size_t num_rows_per_chunk;
+    size_t num_rows;
+    size_t rows_per_chunk;
     Schema* schema;
 
     /* Create a Sorer based on a file pointer.
        PARAMS: 
         file_ptr : FILE pointer to SoR file to process
-        max_chunk_size : maximum size of a chunk, in bytes
-        from : byte location of where to start reading the file
-        length : number of bytes to read from the file
-       Undefined behavior if the given max_chunk_size is too large
-       to store on a single machine. */
-    Sorer(FILE* file_ptr, size_t max_chunk_size, size_t from, size_t length) {
+        number_chunks : desired number of chunks
+        from_pt : byte location of where to start reading the file
+        length_to_read : number of bytes to read from the file
+       Undefined behavior if the given number_chunks_size results in chunks 
+       that are too large to store. Always creates at least 1 chunk. */
+    Sorer(FILE* file_ptr, size_t number_chunks, size_t from_pt, size_t length_to_read) {
         // TODO how much error handling do we want at this stage
         if (file_ptr == nullptr) {
             exit_with_msg("file_ptr cannot be null");
         }
         fp = file_ptr;
+        // Always create atleast 1 chunk
+        if (number_chunks == 0) {
+            num_chunks = 1;
+        } else {
+            num_chunks = number_chunks;
+        }
+
+        from = from_pt;
+        length = length_to_read;
         // Pre-processing step. Obtain number of columns and the schema
         // of the SoR file
-        parse_schema(fp);
+        parse_schema();
+        // Get number of rows in file in the region [from, length] 
+        // for use in calculation rows_per_chunk
+        count_rows();
+
+        rows_per_chunk = num_rows / num_chunks;
+        assert(rows_per_chunk > 0);
+    }
+
+    ~Sorer() {
+        fclose(fp);
+        delete schema;
     }
     
     /* Return the chunk, in the form of a DataFrame, corresponding to the
        given chunk_id. The chunk_id corresponds to the chunk of the file, 
        in order. The id 0 should always be valid and corresponds to the 
        first chunk. */ 
-    DataFrame* get_chunk_as_df(size_t chunk_id) {
+    ModifiedDataFrame* get_chunk_as_df(size_t chunk_id) {
+        // Will create dataframe from the region of the file represented by
+        // [from_row, to_row]
+        size_t from_row = chunk_id * rows_per_chunk;
+        size_t to_row = (chunk_id + 1) * rows_per_chunk;
+
+        // Ensure final chunk does not miss last few rows
+        if (chunk_id == (num_chunks - 1)) { to_row = num_rows; }
+
+        // Moves file pointer to 'from_row' point in file
+        go_to_row(from_row);
         
+    }
+
+    // Move file pointer to the given row_idx in the file
+    void go_to_row(size_t row_idx) {
+        // move file pointer to next line after "from"
+        fseek(fp, from, SEEK_SET);
+        while (from != 0 && fgetc(fp) != '\n') {
+        }
+
+        // Maximum number of characters possible in a row
+        size_t max_row_size = 255 * num_columns;
+        char buffer[max_row_size];
+
+        size_t cur_line_idx = 0;
+        while (!feof(fp)) {
+            if (cur_line_idx == row_idx) {
+                break;
+            }
+
+            // Read a whole line
+            fgets(buffer, max_row_size, fp);
+            cur_line_idx++;
+        }
+    }
+
+    // Count the total number of rows in the file in the given 
+    // [from, length] region
+    // TODO could this overflow size_t range?
+    void count_rows() {
+        // return to beginning of file
+        fseek(fp, 0, SEEK_SET);
+
+        // Maximum number of characters possible in a row
+        size_t max_row_size = 255 * num_columns;
+        char buffer[max_row_size];
+
+        size_t cur_line_idx = 0;
+        while (!feof(fp)) {
+            // Read a whole line
+            fgets(buffer, max_row_size, fp);
+            cur_line_idx++;
+        }
+       
+        num_rows = cur_line_idx + 1;
+    }
+
+    // Count number of columns in the longest line in first 500 rows
+    // Gives number of columns for the schema
+    void count_cols() { 
+        // return to beginning of file
+        fseek(fp, 0, SEEK_SET);
+
+        size_t max_fields = 0;
+        size_t cur_fields = 0;
+        size_t cur_line_idx = 0;
+        // Count number of columns in row with most elements in first 500 lines
+        // This gives number of columns for schema
+        while (!feof(fp)) {
+            char c = fgetc(fp);
+
+            if (c == '>') {  // Note: semi-brittle way of counting fields
+                cur_fields += 1;
+            } else if (c == '\n') {  // New line, reset fields count
+                if (cur_fields > max_fields) {
+                    max_fields = cur_fields;
+                }
+                cur_line_idx += 1;
+                cur_fields = 0;
+            }
+            // Only look for schema in first 500 lines
+            if (cur_line_idx >= 499) {
+                break;
+            }
+        }
+        num_columns = max_fields;
     }
 
     // Obtain the schema from the first 500 lines of the file
     void parse_schema() {
-        num_columns = count_cols();
+        count_cols();
 
         // return to beginning of file
         fseek(fp, 0, SEEK_SET);
@@ -62,7 +171,7 @@ class Sorer {
         char type; 
         FIELD_TYPE column_types[num_columns];
         // Default type for every col is BOOL
-        for (size_t i = 0; i < num_cols; i++) {
+        for (size_t i = 0; i < num_columns; i++) {
             column_types[i] = BOOL;
         }
 
@@ -106,7 +215,7 @@ class Sorer {
         schema = new Schema();
         
         // Create a schema from column types
-        for (size_t i = 0; i < num_cols; i++) {
+        for (size_t i = 0; i < num_columns; i++) {
             FIELD_TYPE type = column_types[i];
             if (type == STRING) {
                 schema->add_column(STRING_TYPE, nullptr);
@@ -120,12 +229,6 @@ class Sorer {
             }
         }
     }
-
-     
-
-
-
-
 };
 
 

@@ -1,10 +1,12 @@
 // lang:CwC
 // Authors: Ryan Heminway (heminway.r@husky.neu.edu), David Tandetnik
 
-#include "dataframe.h"
-#include "helper.h"
-#include "object.h"
-#include "string.h"
+#pragma once
+#include "../store/dataframe/dataframe.h"
+#include "../utils/helper.h"
+#include "../utils/object.h"
+#include "../utils/string.h"
+#include "sorer.h"
 
 /*
 * Program to parse SoR (schema on read) file and react to command-line
@@ -35,6 +37,9 @@ int main(int argc, char** argv) {
     bool seen_cmds[num_flags] = {0};
     // Tracker # of queries
     size_t queries = 0;
+
+    // TODO how do we know the nodes
+    size_t num_nodes = 1;
 
     // Parse command-line arguments
     for (int i = 1; i < argc; i++) {
@@ -143,53 +148,9 @@ int main(int argc, char** argv) {
     if (!seen_cmds[2]) {  // User did not specify a length, read whole file
         length = file_size + 1;
     }
-    fseek(fp, 0, SEEK_SET);
 
-    size_t max_fields = 0;
-    size_t cur_fields = 0;
-    size_t cur_line_idx = 0;
-    // Count number of columns in row with most elements in first 500 lines
-    // This gives number of columns for schema
-    while (!feof(fp)) {
-        char c = fgetc(fp);
-
-        if (c == '>') {  // Note: semi-brittle way of counting fields
-            cur_fields += 1;
-        } else if (c == '\n') {  // New line, reset fields count
-            if (cur_fields > max_fields) {
-                max_fields = cur_fields;
-            }
-            cur_line_idx += 1;
-            cur_fields = 0;
-        }
-        // Only look for schema in first 500 lines
-        if (cur_line_idx >= 499) {
-            break;
-        }
-    }
-
-    // return to beginning of file
-    fseek(fp, 0, SEEK_SET);
-
-    // Sanity check the requested column_idx and offset
-    if (col_idx >= max_fields) {
-        exit_with_msg("ERROR: Requested col idx out of bounds");
-    }
-
-    // Create the dataframe from the sor file, the number of fields in the
-    // schema, and the from and length
-    Dataframe* df = new Dataframe(fp, max_fields, from, length);
-
-    if (seen_cmds[3]) {  // print_col_type query
-        pln(df->get_col_type(col_idx));
-    } else if (seen_cmds[4]) {  // print_col_idx query
-        pln(df->get_value_at(col_idx, col_offset));
-    } else if (seen_cmds[5]) {  // is_missing_idx query
-        pln(df->missing_at(col_idx, col_offset));
-    }
-
-    delete df;
-    fclose(fp);
+    // Create Sorer to hand out dataframes from file
+    Sorer* s = new Sorer(fp, num_nodes, from, length);
 
     return 0;
 }
