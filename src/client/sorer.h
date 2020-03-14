@@ -8,6 +8,8 @@
 #include "../utils/helper.h"
 #include <assert.h>
 
+#include "../store/serial.h"
+
 /* 
 * Utility class to parse SoR file into a DataFrame format.
 * Sorer class holds the file pointer and can return a DataFrame
@@ -56,8 +58,6 @@ class Sorer {
 
         rows_per_chunk = num_rows / num_chunks;
         assert(rows_per_chunk > 0);
-
-        pln("Here 2");
     }
 
     ~Sorer() {
@@ -70,8 +70,6 @@ class Sorer {
        in order. The id 0 should always be valid and corresponds to the 
        first chunk. */ 
     ModifiedDataFrame* get_chunk_as_df(size_t chunk_id) {
-        // Will create dataframe from the region of the file represented by
-        // [from_row, to_row]
         size_t from_row = chunk_id * rows_per_chunk;
         size_t to_row = (chunk_id + 1) * rows_per_chunk;
 
@@ -80,8 +78,6 @@ class Sorer {
 
         // Moves file pointer to 'from_row' point in file
         go_to_row(from_row);
-        
-        pln("Here 3");
         
         ModifiedDataFrame* df = new ModifiedDataFrame(*schema);
         Row* row = new Row(*schema);
@@ -139,7 +135,6 @@ class Sorer {
                 break;
             }
         }
-        pln("Here 4");
         return df;
     }
 
@@ -192,7 +187,7 @@ class Sorer {
             }
         }
        
-        num_rows = cur_line_idx + 1;
+        num_rows = cur_line_idx;
     }
 
     // Count number of columns in the longest line in first 500 rows
@@ -282,6 +277,7 @@ class Sorer {
                 break;
             }
         }
+
         schema = new Schema();
         
         // Create a schema from column types

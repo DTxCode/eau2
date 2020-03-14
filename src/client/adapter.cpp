@@ -159,7 +159,7 @@ int main(int argc, char** argv) {
     Sys sys;
 
     pln("Here 5");
-    sys.p(my_df->get_string(2, 2));
+    sys.p(my_df->get_string(2, 2)->c_str());
 
     return 0;
 }
