@@ -39,7 +39,7 @@ int main(int argc, char** argv) {
     size_t queries = 0;
 
     // TODO how do we know the nodes
-    size_t num_nodes = 1;
+    size_t num_nodes = 10000;
 
     // Parse command-line arguments
     for (int i = 1; i < argc; i++) {
@@ -149,17 +149,20 @@ int main(int argc, char** argv) {
         length = file_size + 1;
     }
 
-    pln("Here 1");
+    pln("Processing file, generating chunks...");
 
     // Create Sorer to hand out dataframes from file
     Sorer* s = new Sorer(fp, num_nodes, from, length);
+
+    pln("Sorer created, responding to requests...");
 
     ModifiedDataFrame* my_df = s->get_chunk_as_df(0);
 
     Sys sys;
 
-    pln("Here 5");
     sys.p(my_df->get_string(2, 2)->c_str());
+
+    pln("\nFinished. Exiting.");
 
     return 0;
 }
