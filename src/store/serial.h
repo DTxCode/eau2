@@ -8,7 +8,7 @@
 #include "../utils/array.h"
 #include "dataframe/column.h"
 #include "dataframe/schema.h"
-#include "message.h"
+#include "network/message.h"
 
 // Utility class which understands how to transform Classes and
 // data structures used in our DataFrame API to and from a serialized

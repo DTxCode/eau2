@@ -58,7 +58,7 @@ class Sorer {
        given chunk_id. The chunk_id corresponds to the chunk of the file, 
        in order. The id 0 should always be valid and corresponds to the 
        first chunk. */
-    ModifiedDataFrame* get_chunk_as_df(size_t chunk_id, size_t num_chunks) {
+    DataFrame* get_chunk_as_df(size_t chunk_id, size_t num_chunks) {
         if (num_chunks == 0) {
             exit_with_msg("get_chunk_as_df: num_chunks must be > 0");
         }
@@ -77,7 +77,7 @@ class Sorer {
         // Moves file pointer to 'from_row' point in file
         go_to_row(from_row);
 
-        ModifiedDataFrame* df = new ModifiedDataFrame(*schema);
+        DataFrame* df = new DataFrame(*schema);
         Row* row = new Row(*schema);
 
         char buffer[255];

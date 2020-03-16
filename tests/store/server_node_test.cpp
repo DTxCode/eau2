@@ -1,7 +1,7 @@
 #include <assert.h>
-#include "../../src/store/master.cpp"
+#include "../../src/store/master.h"
 #include "../../src/store/message.h"
-#include "../../src/store/node.cpp"
+#include "../../src/store/node.h"
 
 // A Node for testing
 class TestNode : public Node {

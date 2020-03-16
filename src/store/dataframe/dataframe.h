@@ -20,13 +20,13 @@
  * describes it.
  * This ModifiedDataFrame has the ability of executing map in parallel
  */
-class ModifiedDataFrame : public Object {
+class DataFrame : public Object {
    public:
     Schema* schema;
     Column** columns;
 
     /** Create a data frame with the same columns as the given df but with no rows or row names */
-    ModifiedDataFrame(ModifiedDataFrame& df) {
+    DataFrame(DataFrame& df) {
         schema = new Schema(df.get_schema());
         columns = new Column*[schema->width()];
 
@@ -35,14 +35,14 @@ class ModifiedDataFrame : public Object {
 
     /** Create a data frame from a schema and columns. All columns are created
     * empty. */
-    ModifiedDataFrame(Schema& scm) {
+    DataFrame(Schema& scm) {
         schema = new Schema(scm);
         columns = new Column*[scm.width()];
 
         set_empty_cols_(schema);
     }
 
-    ~ModifiedDataFrame() {
+    ~DataFrame() {
         for (size_t col_idx = 0; col_idx < schema->width(); col_idx++) {
             delete columns[col_idx];
         }
@@ -300,11 +300,11 @@ class ModifiedDataFrame : public Object {
         for (size_t i = 0; i < cpu_cores - 1; i++) {
             rowers[i] = dynamic_cast<Rower*>(r.clone());
             // First (cpu_cores - 1) threads get equal chunk sizes
-            threads[i] = std::thread(&ModifiedDataFrame::map_chunk, this, i * rows_p_thread,
+            threads[i] = std::thread(&DataFrame::map_chunk, this, i * rows_p_thread,
                                      ((i + 1) * rows_p_thread) - 1, std::ref(*rowers[i]));
         }
         // Last thread gets rest of the frame as its chunk
-        threads[cpu_cores - 1] = std::thread(&ModifiedDataFrame::map_chunk, this,
+        threads[cpu_cores - 1] = std::thread(&DataFrame::map_chunk, this,
                                              (cpu_cores - 1) * rows_p_thread,
                                              nrows() - 1, std::ref(r));
 
@@ -321,8 +321,8 @@ class ModifiedDataFrame : public Object {
 
     /** Create a new dataframe, constructed from rows for which the given Rower
     * returned true from its accept method. */
-    ModifiedDataFrame* filter(Rower& r) {
-        ModifiedDataFrame* new_df = new ModifiedDataFrame(get_schema());
+    DataFrame* filter(Rower& r) {
+        DataFrame* new_df = new DataFrame(get_schema());
 
         // pass this row to the Rower and add to new_df is rower accepts it
         Row* row = new Row(*schema);
@@ -377,5 +377,26 @@ class ModifiedDataFrame : public Object {
             // Finished with this row, move to next line
             s.pln();
         }
+    }
+
+    // Stores count vals in a single column in a DataFrame. Saves that DF in store under key and returns it.
+    // Count must be less than or equal to the number of floats in vals
+    static DataFrame* fromArray(Key* key, Store* store, size_t count, float* vals) {
+        Schema* empty_schema = new Schema();
+        DataFrame* df = new DataFrame(empty_schema);
+
+        FloatColumn col;
+
+        for (size_t i = 0; i < count; i++) {
+            col.push_back(vals[i]);
+        }
+
+        // add column to DF
+        df->add_column(&col, nullptr);
+
+        // add DF to store under key
+        store->put(key, df);
+
+        return df;
     }
 };

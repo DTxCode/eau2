@@ -19,7 +19,7 @@ bool test_get() {
 
     // Create Sorer to hand out dataframes from file
     Sorer s(input_file, from, length);
-    ModifiedDataFrame* my_df = s.get_chunk_as_df(0, 2);
+    DataFrame* my_df = s.get_chunk_as_df(0, 2);
 
     char* actual = my_df->get_string(2, 2)->c_str();
     char* expected = "bye";

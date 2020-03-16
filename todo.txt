@@ -11,7 +11,9 @@ Store:
     Dataframe - ::fromArray/fromScalar
     Dataframe - fix pointers in column
     Dataframe - empty values?
+    Dataframe - Row deletes String* in DF on destruction
     Distributed Arrays?
     Serialize - need types, generic deserialize method
-    Network - need put, get, getandwait, map
+    Serialize - support for Dataframes
+    Network - need put, get, getandwait for other nodes
     Network - who starts up all the nodes and the master server?
