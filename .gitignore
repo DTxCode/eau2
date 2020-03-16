@@ -1,1 +1,5 @@
 .vscode
+*.sor
+!tests/test_data/*.sor
+app
+simple_sorer_test

@@ -1,1 +1,0 @@
-// TODO: entry point of the program, should probably handle args and create an Application
