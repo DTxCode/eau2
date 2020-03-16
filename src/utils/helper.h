@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <cstring>
+#include <climits>
 #include <ctime>
 #include <iostream>
 
@@ -124,6 +125,40 @@ class Sys {
         if (p) myfail();
     }
 };
+
+void pln(const char* c) {
+    std::cout << c << "\n";
+}
+
+void exit_with_msg(const char* c) {
+    pln(c);
+    exit(1);
+}
+
+// Helper to compare strings so that we can avoid direct library calls
+bool equal_strings(const char* s1, const char* s2) {
+    return strcmp(s1, s2) == 0;
+}
+
+// Helper to convert the given string to an unsigned int
+// returns the unsigned int it finds one, or -1 if it 'fails'
+// Fails if string is not an int, its negative, or its too big
+long string_to_int(char* int_str) {
+    int temp;
+    char* endpt;  // For use in strtol func
+    temp = strtol(int_str, &endpt, 10);
+    if (endpt == int_str) {  // Test if arg is an integer
+        return -1;
+    }
+    temp = atoi(int_str);  // Convert string to int
+    if (temp < 0) {
+        return -1;
+    }
+    if (temp > INT_MAX) {
+        return -1;
+    }
+    return temp;
+}
 
 // Utility function to get time in milliseconds as a double
 double time_now() {
