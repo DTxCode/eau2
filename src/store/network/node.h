@@ -9,9 +9,9 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <thread>
+#include "../serial.h"
 #include "message.h"
 #include "network.h"
-#include "serial.h"
 
 /*
     Represents a Node in a network. Needs to register with a Server to join the network.

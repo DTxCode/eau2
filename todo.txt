@@ -2,7 +2,6 @@ Client:
     Sorer current starts at row 1 always, discarding first row
     Calls to dataframe.print() fail ... is this a local problem?
     Expand the example to use the dataframe after it is created
-    Expand data.sor to have 10gb of data
     Handle missing values
     Actually distribute data in Application
         - What are the keys? How does the user know them?
@@ -11,7 +10,9 @@ Store:
     Dataframe - ::fromArray/fromScalar
     Dataframe - fix pointers in column
     Dataframe - empty values?
+    Dataframe - Row deletes String* in DF on destruction
     Distributed Arrays?
     Serialize - need types, generic deserialize method
-    Network - need put, get, getandwait, map
+    Serialize - support for Dataframes
+    Network - need put, get, getandwait for other nodes
     Network - who starts up all the nodes and the master server?
