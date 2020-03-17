@@ -130,6 +130,11 @@ class DataFrame : public Object {
         }
     }
 
+    // Return a copy of the Column at the given index
+    Column* get_col_(size_t col_idx) {
+        return get_col_copy_(columns[col_idx]);
+    }
+
     /** Return the value at the given column and row. Accessing rows or
     *  columns out of bounds, or request the wrong type is undefined.*/
     int get_int(size_t col, size_t row) {

@@ -5,10 +5,10 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <thread>
-#include "../utils/array.h"
-#include "../utils/string.h"
+#include "../../utils/array.h"
+#include "../../utils/string.h"
 #include "network.h"
-#include "serial.h"
+#include "../serial.h"
 
 /*
     Represents a Server in a network. Clients connect to this server in order in order to register/join the network.

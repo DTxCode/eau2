@@ -1,7 +1,8 @@
+#pragma once
 #include <assert.h>
-#include "../../src/store/master.h"
-#include "../../src/store/message.h"
-#include "../../src/store/node.h"
+#include "../../src/store/network/master.h"
+#include "../../src/store/network/message.h"
+#include "../../src/store/network/node.h"
 
 // A Node for testing
 class TestNode : public Node {

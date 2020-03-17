@@ -194,16 +194,9 @@ class Sorer {
             cur_line_idx++;
             // Only count until from+length
             if (bytes_read >= length) {
-                s.p("WERE HERE\n");
-                s.p(length);
-                s.p("\n");
                 break;
             }
         }
-
-        s.p("ROWS: \n");
-        s.p(cur_line_idx);
-        s.p("\n");
 
         num_rows = cur_line_idx;
     }

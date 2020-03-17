@@ -1,11 +1,11 @@
 #pragma once
-#include "dataframe/dataframe.h"
+#include "network/node.h"
 #include "../utils/map.h"
 #include "key.h"
 #include "network/message.h"
-#include "network/node.h"
+#include "dataframe/dataframe.h"
+#include "serial.h"
 
-class DataFrame;
 
 // Represents a KeyValue with local data as well as the capability to fetch data from other KeyValue stores.
 class Store : public Node {
