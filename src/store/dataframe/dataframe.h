@@ -2,8 +2,6 @@
 #include <thread>
 #include "../../utils/object.h"
 #include "../../utils/string.h"
-#include "../key.h"
-#include "../store.h"
 #include "column.h"
 #include "row.h"
 #include "rower.h"
@@ -384,26 +382,5 @@ class DataFrame : public Object {
             // Finished with this row, move to next line
             s.pln();
         }
-    }
-
-    // Stores count vals in a single column in a DataFrame. Saves that DF in store under key and returns it.
-    // Count must be less than or equal to the number of floats in vals
-    static DataFrame* fromArray(Key* key, Store* store, size_t count, float* vals) {
-        Schema* empty_schema = new Schema();
-        DataFrame* df = new DataFrame(*empty_schema);
-
-        FloatColumn col;
-
-        for (size_t i = 0; i < count; i++) {
-            col.push_back(vals[i]);
-        }
-
-        // add column to DF
-        df->add_column(&col, nullptr);
-
-        // add DF to store under key
-        store->put(key, df);
-
-        return df;
     }
 };

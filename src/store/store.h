@@ -1,11 +1,10 @@
 #pragma once
-#include "network/node.h"
 #include "../utils/map.h"
+#include "dataframe/dataframe.h"
 #include "key.h"
 #include "network/message.h"
-#include "dataframe/dataframe.h"
+#include "network/node.h"
 #include "serial.h"
-
 
 // Represents a KeyValue with local data as well as the capability to fetch data from other KeyValue stores.
 class Store : public Node {
@@ -38,7 +37,7 @@ class Store : public Node {
 
     // Saves the given Dataframe under the given key, possibly on another node
     // Does not own/delete any of the given data
-    void put(Key* key, DataFrame* df) {
+    void put(Key *key, DataFrame *df) {
         size_t key_home = key->get_home_node();
         char *value = "";  //TODO:serializer->serialize_df(df);
 
@@ -64,7 +63,7 @@ class Store : public Node {
             //TODO uncomment
             //Object *val = map->get(key->get_name());
             // TODO remove
-            Object* val = nullptr;
+            Object *val = nullptr;
 
             if (val == nullptr) {
                 // Key does not exist
@@ -120,3 +119,24 @@ class Store : public Node {
         network->write_msg(connected_socket, &ack);
     }
 };
+
+// Stores count vals in a single column in a DataFrame. Saves that DF in store under key and returns it.
+// Count must be less than or equal to the number of floats in vals
+static DataFrame *DataFrame::fromArray(Key *key, Store *store, size_t count, float *vals) {
+    Schema *empty_schema = new Schema();
+    DataFrame *df = new DataFrame(*empty_schema);
+
+    FloatColumn col;
+
+    for (size_t i = 0; i < count; i++) {
+        col.push_back(vals[i]);
+    }
+
+    // add column to DF
+    df->add_column(&col, nullptr);
+
+    // add DF to store under key
+    store->put(key, df);
+
+    return df;
+}

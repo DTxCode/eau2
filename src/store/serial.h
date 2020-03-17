@@ -5,9 +5,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "dataframe/dataframe.h"
 #include "../utils/array.h"
 #include "dataframe/column.h"
+#include "dataframe/dataframe.h"
 #include "dataframe/schema.h"
 #include "network/message.h"
 
@@ -36,7 +36,7 @@ class Serializer {
     virtual char* serialize_dataframe(DataFrame* df) {
         // Track total buffer size we need
         size_t total_str_size = 0;
-        
+
         // Serialize schema
         char* schema_str = serialize_schema(&df->get_schema());
         total_str_size += strlen(schema_str);
@@ -45,7 +45,7 @@ class Serializer {
         size_t cols = df->ncols();
         char** col_strs = new char*[cols];
         for (size_t i = 0; i < cols; i++) {
-            // Serialize column based on schema 
+            // Serialize column based on schema
             col_strs[i] = serialize_col(df->get_col_(i), df->get_schema().col_type(i));
             total_str_size += strlen(col_strs[i]);
         }
@@ -55,7 +55,7 @@ class Serializer {
         // Copy schema and column strings into buffer
         memcpy(serial_buffer, schema_str, strlen(schema_str));
         strcat(serial_buffer, ";;");
-        
+
         // Add serialized column messages to buffer, delimeted by ";"
         for (size_t j = 0; j < cols; j++) {
             strcat(serial_buffer, col_strs[j]);
@@ -64,7 +64,7 @@ class Serializer {
                 strcat(serial_buffer, ";");
             }
             delete[] col_strs[j];
-        } 
+        }
         delete[] col_strs;
         return serial_buffer;
     }
@@ -73,10 +73,10 @@ class Serializer {
     virtual DataFrame* deserialize_dataframe(char* msg) {
         // Tokenize message
         char* token = strtok(msg, ";;");
-        
+
         Schema* schema = deserialize_schema(token);
 
-        Schema empty_schema();
+        Schema empty_schema;
 
         // Initialize
         DataFrame* df = new DataFrame(empty_schema);
@@ -213,7 +213,6 @@ class Serializer {
         }
         return new String(static_cast<const char*>(msg));
     }
-
 
     // Generic serialization method for Column type
     // Process is same for every column, but serialization method used for
@@ -434,7 +433,6 @@ class Serializer {
 
         return fill_schema;
     }
-    
 
     /* For full-implementation of this API, the following stubs must be
         implemented. Some are referenced by generic methods for serialization
