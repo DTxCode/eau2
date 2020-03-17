@@ -6,8 +6,8 @@
 #include <stropts.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#include "../utils/helper.h"
-#include "../utils/string.h"
+#include "../../utils/helper.h"
+#include "../../utils/string.h"
 #include "message.h"
 
 #define MAX_MESSAGE_CHUNK_SIZE 512

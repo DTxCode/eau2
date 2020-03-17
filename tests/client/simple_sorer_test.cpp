@@ -8,8 +8,9 @@
 // Simple test that reads in a sor file, gets a chunk of it as a dataframe, and then checks a cell of that dataframe
 bool test_get() {
     size_t from = 0;
-    size_t length = 1000;
-    char* input_file_name = "tests/test_data/small.sor";
+    size_t length = 0;
+    //char* input_file_name = "tests/test_data/small.sor";
+    char* input_file_name = "data/data.sor";
 
     // Immediately try to open file
     FILE* input_file = fopen(input_file_name, "r");
@@ -19,7 +20,7 @@ bool test_get() {
 
     // Create Sorer to hand out dataframes from file
     Sorer s(input_file, from, length);
-    DataFrame* my_df = s.get_chunk_as_df(0, 2);
+    DataFrame* my_df = s.get_chunk_as_df(0, 10);
 
     char* actual = my_df->get_string(2, 2)->c_str();
     char* expected = "bye";

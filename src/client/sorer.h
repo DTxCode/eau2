@@ -7,7 +7,6 @@
 #include "../store/dataframe/dataframe.h"
 #include "../store/dataframe/field.h"
 #include "../utils/helper.h"
-
 #include "../store/serial.h"
 
 /* 
@@ -20,10 +19,8 @@ class Sorer {
     FILE* fp;
     size_t from;
     size_t length;
-    size_t num_chunks;
     size_t num_columns;
     size_t num_rows;
-    size_t rows_per_chunk;
     Schema* schema;
 
     /* Create a Sorer based on a file pointer.
@@ -32,7 +29,8 @@ class Sorer {
         from_pt : byte location of where to start reading the file
         length_to_read : number of bytes to read from the file
        Undefined behavior if the given number_chunks_size results in chunks 
-       that are too large to store. Always creates at least 1 chunk. */
+       that are too large to store. Always creates at least 1 chunk. If 
+       length_to_read is 0, assumes the whole file should be read. */
     Sorer(FILE* file_ptr, size_t from_pt, size_t length_to_read) {
         // TODO how much error handling do we want at this stage
         if (file_ptr == nullptr) {
@@ -40,7 +38,15 @@ class Sorer {
         }
         fp = file_ptr;
         from = from_pt;
-        length = length_to_read;
+        // Read whole file if given length to read is 0
+        if (length_to_read == 0) {
+            fseek(fp, 0, SEEK_END);
+            length = ftell(fp);
+        } else {
+            length = length_to_read;
+        }
+        
+        assert(length > 0);
         // Pre-processing step. Obtain number of columns and the schema
         // of the SoR file
         parse_schema();
@@ -63,7 +69,7 @@ class Sorer {
             exit_with_msg("get_chunk_as_df: num_chunks must be > 0");
         }
 
-        rows_per_chunk = num_rows / num_chunks;
+        size_t rows_per_chunk = num_rows / num_chunks;
         assert(rows_per_chunk > 0);
 
         size_t from_row = chunk_id * rows_per_chunk;
@@ -82,8 +88,6 @@ class Sorer {
 
         char buffer[255];
 
-        // Local row idx
-        size_t curr_row = 0;
         size_t col_idx = 0;
         size_t read_idx = 0;
         bool reading_val = false;
@@ -129,11 +133,11 @@ class Sorer {
                 // Add row to dataframe
                 df->add_row(*row);
 
-                curr_row++;
+                from_row++;
                 col_idx = 0;
             }
             // Stop reading after chunk
-            if (from_row + curr_row == to_row) {
+            if (from_row >= to_row) {
                 break;
             }
         }
@@ -170,6 +174,10 @@ class Sorer {
     void count_rows() {
         // return to beginning of range [from, from+length] of file
         fseek(fp, from, SEEK_SET);
+        while (from != 0 && fgetc(fp) != '\n') {
+        }
+        
+        Sys s;
 
         // Maximum number of characters possible in a row
         size_t max_row_size = 255 * num_columns;
@@ -186,9 +194,16 @@ class Sorer {
             cur_line_idx++;
             // Only count until from+length
             if (bytes_read >= length) {
+                s.p("WERE HERE\n");
+                s.p(length);
+                s.p("\n");
                 break;
             }
         }
+
+        s.p("ROWS: \n");
+        s.p(cur_line_idx);
+        s.p("\n");
 
         num_rows = cur_line_idx;
     }

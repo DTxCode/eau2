@@ -2,6 +2,8 @@
 #include <thread>
 #include "../../utils/object.h"
 #include "../../utils/string.h"
+#include "../key.h"
+#include "../store.h"
 #include "column.h"
 #include "row.h"
 #include "rower.h"
@@ -383,7 +385,7 @@ class DataFrame : public Object {
     // Count must be less than or equal to the number of floats in vals
     static DataFrame* fromArray(Key* key, Store* store, size_t count, float* vals) {
         Schema* empty_schema = new Schema();
-        DataFrame* df = new DataFrame(empty_schema);
+        DataFrame* df = new DataFrame(*empty_schema);
 
         FloatColumn col;
 

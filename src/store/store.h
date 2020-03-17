@@ -1,9 +1,11 @@
 #pragma once
-#include "../utils/map.h"
 #include "dataframe/dataframe.h"
+#include "../utils/map.h"
 #include "key.h"
 #include "network/message.h"
 #include "network/node.h"
+
+class DataFrame;
 
 // Represents a KeyValue with local data as well as the capability to fetch data from other KeyValue stores.
 class Store : public Node {
@@ -14,7 +16,7 @@ class Store : public Node {
 
     Store(size_t node_id, char *my_ip_address, int my_port, char *server_ip_address, int server_port) : Node(my_ip_address, my_port, server_ip_address, server_port) {
         this->node_id = node_id;
-        Map = new Map();
+        map = new Map();
         serializer = new Serializer();
     }
 
@@ -36,13 +38,14 @@ class Store : public Node {
 
     // Saves the given Dataframe under the given key, possibly on another node
     // Does not own/delete any of the given data
-    void put(Key *key, DataFrame *df) {
+    void put(Key* key, DataFrame* df) {
         size_t key_home = key->get_home_node();
         char *value = "";  //TODO:serializer->serialize_df(df);
 
         if (key_home == node_id) {
             // Value belongs on this node
-            map->put(key->get_name(), value);
+            //TODO uncomment
+            //map->put(key->get_name(), &value);
         } else {
             // Value belongs on another node
             // TODO
@@ -58,7 +61,10 @@ class Store : public Node {
         size_t key_home = key->get_home_node();
 
         if (key_home == node_id) {
-            Object *val = map->get(key->get_name());
+            //TODO uncomment
+            //Object *val = map->get(key->get_name());
+            // TODO remove
+            Object* val = nullptr;
 
             if (val == nullptr) {
                 // Key does not exist
@@ -86,7 +92,8 @@ class Store : public Node {
             Object *val;
 
             while (val == nullptr) {
-                val = map->get(key_name);
+                // TODO uncomment
+                //val = map->get(key_name);
             }
 
             DataFrame *df = nullptr;  // TODO: serializer->deserailize_df(val);
