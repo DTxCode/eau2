@@ -13,6 +13,6 @@ Store:
     Dataframe - Row deletes String* in DF on destruction
     Distributed Arrays?
     Serialize - need types, generic deserialize method
-    Serialize - support for Dataframes
+    Serialize - support for Dataframes [main work done, just need to add few methods for bools]
     Network - need put, get, getandwait for other nodes
     Network - who starts up all the nodes and the master server?

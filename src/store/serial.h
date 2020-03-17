@@ -32,7 +32,7 @@ class Serializer {
    public:
     // Serialize a given DataFrame object
     // Serialized message will take the form:
-    // "[Serialized Schema];;[Serialized Column 0]; ... ;[Serialized Column n-1]"
+    // "[Serialized Schema]~[Serialized Column 0]; ... ;[Serialized Column n-1]"
     virtual char* serialize_dataframe(DataFrame* df) {
         // Track total buffer size we need
         size_t total_str_size = 0;
@@ -54,7 +54,7 @@ class Serializer {
 
         // Copy schema and column strings into buffer
         memcpy(serial_buffer, schema_str, strlen(schema_str));
-        strcat(serial_buffer, ";;");
+        strcat(serial_buffer, "~");
 
         // Add serialized column messages to buffer, delimeted by ";"
         for (size_t j = 0; j < cols; j++) {
@@ -71,19 +71,39 @@ class Serializer {
 
     // Deserialize a char* buffer into a DataFrame object
     virtual DataFrame* deserialize_dataframe(char* msg) {
-        // Tokenize message
-        char* token = strtok(msg, ";;");
+        // Keep around a copy of the original message
+        char* msg_copy = new char[strlen(msg)];
+        strcpy(msg_copy, msg);
 
+        // Tokenize message to get schema section
+        char* token = strtok(msg, "~");
+
+        // Deserialize calls strtok, which breaks any subsequent calls using this msg
+        // Need to use copies of msg for further tokenizing
         Schema* schema = deserialize_schema(token);
+        char** token_copies = new char*[schema->width()];
 
         Schema empty_schema;
 
-        // Initialize
+        // Initialize empty dataframe
         DataFrame* df = new DataFrame(empty_schema);
 
         // Deserialize each column and add it to the dataframe
         for (size_t i = 0; i < schema->width(); i++) {
-            token = strtok(nullptr, ";");
+            // Create a new message copy for this tokenizing
+            token_copies[i] = new char[strlen(msg_copy)];
+            strcpy(token_copies[i], msg_copy);
+
+            // Move token to be the column strings
+            token = strtok(token_copies[i], "~");
+            token = strtok(nullptr, "~");
+
+            token = strtok(token, ";");
+            // Move token to the correct column string
+            for (size_t j = 0; j < i; j++) {
+                token = strtok(nullptr, ";");
+            }
+
             char type = schema->col_type(i);
             if (type == INT_TYPE) {
                 df->add_column(deserialize_int_col(token), nullptr);
@@ -96,6 +116,8 @@ class Serializer {
             }
         }
 
+        delete[] token_copies;
+        delete[] msg_copy;
         delete schema;
         return df;
     }

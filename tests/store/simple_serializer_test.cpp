@@ -19,10 +19,13 @@ bool test_df_serialize() {
 
     char* serialized_df = serial.serialize_dataframe(&df);
     Sys s;
-    s.p(serialized_df);
-    s.p("\n");
+    //s.p(serialized_df);
+    //s.p("\n");
 
-    return true;
+    DataFrame* new_df = serial.deserialize_dataframe(serialized_df);
+    
+    //return (new_df->get_int(0, 2) == df.get_int(0,2));
+    return (new_df->get_string(1, 2)->equals(df.get_string(1,2)));
 }
 
 int main() {
