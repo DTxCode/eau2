@@ -456,19 +456,40 @@ class Serializer {
         return fill_schema;
     }
 
-    /* For full-implementation of this API, the following stubs must be
-        implemented. Some are referenced by generic methods for serialization
-        and deserialization */
+    // Serialize a bool to a char* message
+    // true gets serialized to "1"
+    // false gets serialized to "0"
+    virtual char* serialize_bool(bool value) { 
+        char* data;
+        data = new char[2];
+        // Cast boolean to int (0 or 1), and write to buffer
+        snprintf(data, 2, "%d", (int) value);
+        return data;
+    }
 
-    // Stub implementation for reference in generic methods
-    virtual char* serialize_bool(bool value) { return nullptr; }
+    // Deserialize a boolean serialized message
+    // Expects a message in the form "1" or "0"
+    virtual bool deserialize_bool(char* msg) { 
+        int data;
+        sscanf(msg, "%d", &data);
+        // For clarity, translate 1 / 0 to true / false 
+        if (data) {
+            return true;
+        } 
+        return false;
+    }
 
-    // Stub implementation for reference in generic methods
-    virtual bool deserialize_bool(bool value) { return false; }
+    // Serialize boolean column
+    // Uses same format as other columns, see serialize_col
+    virtual char* serialize_bool_col(BoolColumn* col) {
+        return serialize_col(col, BOOL_TYPE);
+    }
+        
+    // Deserialize boolean column from char* 
+    virtual BoolColumn* deserialize_bool_col(char* msg) {
+        BoolColumn* b_c = new BoolColumn();
+        deserialize_col(msg, BOOL_TYPE, b_c);
+        return b_c;
+    }
 
-    // Stub implementation for reference in generic methods
-    virtual char* serialize_bool_col(BoolColumn* col) { return nullptr; }
-
-    // Stub implementation for reference in generic methods
-    virtual BoolColumn* deserialize_bool_col(char* msg) { return nullptr; }
 };

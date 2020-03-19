@@ -12,7 +12,7 @@ bool test_df_serialize() {
     Schema empty_schema;
     DataFrame df(empty_schema);
     df.add_column(i_c, nullptr);
-    //df.add_column(b_c, nullptr); TODO finish bool serializing 
+    df.add_column(b_c, nullptr); 
     df.add_column(s_c, nullptr);
 
     Serializer serial;
@@ -25,10 +25,32 @@ bool test_df_serialize() {
     DataFrame* new_df = serial.deserialize_dataframe(serialized_df);
     
     //return (new_df->get_int(0, 2) == df.get_int(0,2));
-    return (new_df->get_string(1, 2)->equals(df.get_string(1,2)));
+    //return (new_df->get_string(1, 2)->equals(df.get_string(1,2)));
+    return new_df->get_bool(1, 3);
 }
+
+// Test boolean serialization (newly added in Milestone 1)
+bool test_bool_serialize() {
+    bool b1 = true;
+    bool b2 = false;
+    Serializer serial;
+
+    char* serialized_b1 = serial.serialize_bool(b1);
+    char* serialized_b2 = serial.serialize_bool(b2);
+
+    //Sys s;
+    //s.p(serialized_b1);
+    //s.p(serialized_b2);
+
+    bool new_b1 = serial.deserialize_bool(serialized_b1);
+    bool new_b2 = serial.deserialize_bool(serialized_b2);
+
+    return (new_b1 && !new_b2);
+}
+
 
 int main() {
     assert(test_df_serialize());
+    assert(test_bool_serialize());
     printf("========== test_serialize_df PASSED =============\n");
 }
