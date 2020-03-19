@@ -4,12 +4,20 @@ build:
 run:
 	./app -from 0 -len 1000 -f ./data/data.sor
 
-# Client
-test-client:
+### Client
+
+# Trivial Application Test
+test-client-trivial:
+	g++ -std=c++11 -Wall -pthread -g tests/client/trivial_application_test.cpp -o trivial_app_test
+	./trivial_app_test
+
+
+# Simple sorer test
+test-client-sorer:
 	g++ -std=c++11 -Wall -pthread -g tests/client/simple_sorer_test.cpp -o simple_sorer_test
 	./simple_sorer_test
 
-valgrind-client:
+valgrind-client-sorer:
 	g++ -std=c++11 -Wall -pthread -g tests/client/simple_sorer_test.cpp -o simple_sorer_test
 	valgrind --leak-check=full --track-origins=yes ./simple_sorer_test
 

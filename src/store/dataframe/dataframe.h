@@ -6,11 +6,14 @@
 #include "row.h"
 #include "rower.h"
 #include "schema.h"
+#include "../key.h"
 
 #define INT_TYPE 'I'
 #define BOOL_TYPE 'B'
 #define FLOAT_TYPE 'F'
 #define STRING_TYPE 'S'
+
+class Store;
 
 /****************************************************************************
  * ModifiedDataFrame::
@@ -383,4 +386,6 @@ class DataFrame : public Object {
             s.pln();
         }
     }
+
+    static DataFrame* fromArray(Key *key, Store *store, size_t count, float *vals);
 };

@@ -1,4 +1,5 @@
 #include "../../src/client/application.cpp"
+#include "../../src/store/network/master.h"
 
 // Trivial Application for testing
 class Trivial : public Application {
@@ -7,8 +8,8 @@ class Trivial : public Application {
 
     void run_() {
         size_t SZ = 1000 * 1000;
-        double* vals = new double[SZ];
-        double sum = 0;
+        float* vals = new float[SZ];
+        float sum = 0;
 
         for (size_t i = 0; i < SZ; ++i) {
             vals[i] = i;
@@ -16,14 +17,14 @@ class Trivial : public Application {
         }
 
         Key key("triv", 0);
-        DataFrame* df = DataFrame::fromArray(&key, &store, SZ, vals);
+        DataFrame* df = DataFrame::fromArray(&key, store, SZ, vals);
 
-        assert(df->get_double(0, 1) == 1);
+        assert(df->get_float(0, 1) == 1);
 
-        DataFrame* df2 = store->get(key);
+        DataFrame* df2 = store->get(&key);
 
         for (size_t i = 0; i < SZ; ++i) {
-            sum -= df2->get_double(0, i);
+            sum -= df2->get_float(0, i);
         }
 
         assert(sum == 0);
@@ -44,10 +45,18 @@ int test_trivial() {
 
     Trivial test(&store);
 
+    // shutdown system
+    s.shutdown();
+
+    // wait for nodes to finish
+    while (!store.is_shutdown()) {
+    }
+
     return 1;
 }
 
-void main() {
+int main() {
     assert(test_trivial());
     printf("=================trivial_application_test:test_trivial PASSED==================\n");
+    return 0;
 }

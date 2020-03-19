@@ -11,7 +11,6 @@ class Store : public Node {
    public:
     Map *map;
     size_t node_id;
-    Serializer *serializer;
 
     Store(size_t node_id, char *my_ip_address, int my_port, char *server_ip_address, int server_port) : Node(my_ip_address, my_port, server_ip_address, server_port) {
         // connect to the network
@@ -19,7 +18,6 @@ class Store : public Node {
 
         this->node_id = node_id;
         map = new Map();
-        serializer = new Serializer();
     }
 
     ~Store() {
@@ -33,7 +31,6 @@ class Store : public Node {
         }
 
         delete map;
-        delete serializer;
     }
 
     // Returns the ID of this node
@@ -55,7 +52,7 @@ class Store : public Node {
         if (key_home == node_id) {
             // Value belongs on this node
             String *val = new String(value);
-            map->put(key->get_name(), &value);
+            map->put(key, val);
         } else {
             // Value belongs on another node
             // TODO
@@ -73,7 +70,7 @@ class Store : public Node {
         size_t key_home = key->get_home_node();
 
         if (key_home == node_id) {
-            Object *val = map->get(key->get_name());
+            Object *val = map->get(key);
 
             if (val == nullptr) {
                 // Key does not exist
@@ -106,7 +103,7 @@ class Store : public Node {
             Object *val;
 
             while (val == nullptr) {
-                val = map->get(key_name);
+                val = map->get(key);
             }
 
             // All objects in the map should be string*
@@ -141,7 +138,7 @@ class Store : public Node {
 
 // Stores count vals in a single column in a DataFrame. Saves that DF in store under key and returns it.
 // Count must be less than or equal to the number of floats in vals
-static DataFrame *DataFrame::fromArray(Key *key, Store *store, size_t count, float *vals) {
+DataFrame *DataFrame::fromArray(Key *key, Store *store, size_t count, float *vals) {
     Schema *empty_schema = new Schema();
     DataFrame *df = new DataFrame(*empty_schema);
 
