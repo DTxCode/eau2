@@ -14,13 +14,24 @@ class Store : public Node {
     Serializer *serializer;
 
     Store(size_t node_id, char *my_ip_address, int my_port, char *server_ip_address, int server_port) : Node(my_ip_address, my_port, server_ip_address, server_port) {
+        // connect to the network
+        register_and_listen();
+
         this->node_id = node_id;
         map = new Map();
         serializer = new Serializer();
     }
 
     ~Store() {
-        // Not deleting values in map?
+        // We added the String* to map, so we have to delete them
+        List *keys = map->keys();
+        for (size_t i = 0; i < keys->size(); i++) {
+            Object *key = keys->get(i);
+            Object *val = map->get(key);
+
+            delete val;
+        }
+
         delete map;
         delete serializer;
     }
@@ -39,12 +50,12 @@ class Store : public Node {
     // Does not own/delete any of the given data
     void put(Key *key, DataFrame *df) {
         size_t key_home = key->get_home_node();
-        char *value = "";  //TODO:serializer->serialize_df(df);
+        char *value = serializer->serialize_dataframe(df);
 
         if (key_home == node_id) {
             // Value belongs on this node
-            //TODO uncomment
-            //map->put(key->get_name(), &value);
+            String *val = new String(value);
+            map->put(key->get_name(), &value);
         } else {
             // Value belongs on another node
             // TODO
@@ -52,25 +63,29 @@ class Store : public Node {
             // - send that node a PUT message with the value string
             exit_with_msg("Unimplemented: put a key to another node");
         }
+
+        delete[] value;
     }
 
     // Gets the value associated with the given key, possibly from another node,
-    // and returns as a DataFrame. If key doesn't exist, returns nullptr.
+    // and returns as a Distributed DataFrame. If key doesn't exist, returns nullptr.
     DataFrame *get(Key *key) {
         size_t key_home = key->get_home_node();
 
         if (key_home == node_id) {
-            //TODO uncomment
-            //Object *val = map->get(key->get_name());
-            // TODO remove
-            Object *val = nullptr;
+            Object *val = map->get(key->get_name());
 
             if (val == nullptr) {
                 // Key does not exist
                 return nullptr;
             }
 
-            DataFrame *df = nullptr;  // TODO: serializer->deserailize_df(val);
+            // All objects in the map should be string*
+            String *df_string = dynamic_cast<String *>(val);
+
+            // Deserialize string
+            DataFrame *df = serializer->deserialize_dataframe(df_string->c_str());
+
             return df;
         } else {
             // Value maybe lives on another node
@@ -91,11 +106,15 @@ class Store : public Node {
             Object *val;
 
             while (val == nullptr) {
-                // TODO uncomment
-                //val = map->get(key_name);
+                val = map->get(key_name);
             }
 
-            DataFrame *df = nullptr;  // TODO: serializer->deserailize_df(val);
+            // All objects in the map should be string*
+            String *df_string = dynamic_cast<String *>(val);
+
+            // Deserialize string
+            DataFrame *df = serializer->deserialize_dataframe(df_string->c_str());
+
             return df;
         } else {
             // Value maybe lives on another node

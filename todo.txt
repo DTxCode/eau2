@@ -1,17 +1,14 @@
 Client:
     Sorer current starts at row 1 always, discarding first row
-    Calls to dataframe.print() fail ... is this a local problem?
     Expand the example to use the dataframe after it is created
     Handle missing values
-    Actually distribute data in Application
-        - What are the keys? How does the user know them?
+    Make sorer return a distributed DF, get rid of distribute_data
 
 Store:
     Dataframe - ::fromArray/fromScalar
-    Dataframe - fix pointers in column
+    Dataframe - fix pointers in column, make columns be Distributed Arrays
     Dataframe - empty values?
     Dataframe - Row deletes String* in DF on destruction
-    Distributed Arrays?
     Serialize - need types, generic deserialize method
     Serialize - support for Dataframes [main work done, just need to add few methods for bools]
     Network - need put, get, getandwait for other nodes
