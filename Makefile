@@ -15,6 +15,8 @@ valgrind-client:
 
 # Store
 test-store:
+	g++ -std=c++11 -Wall -pthread -g tests/store/simple_serializer_test.cpp -o serial_test
+	./serial_test
 	g++ -std=c++11 -Wall -pthread -g tests/store/server_node_test.cpp -o server_node_test
 	./server_node_test
 

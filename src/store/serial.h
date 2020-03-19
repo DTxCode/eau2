@@ -5,9 +5,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "dataframe/dataframe.h"
 #include "../utils/array.h"
 #include "dataframe/column.h"
+#include "dataframe/dataframe.h"
 #include "dataframe/schema.h"
 #include "network/message.h"
 
@@ -32,11 +32,11 @@ class Serializer {
    public:
     // Serialize a given DataFrame object
     // Serialized message will take the form:
-    // "[Serialized Schema];;[Serialized Column 0]; ... ;[Serialized Column n-1]"
+    // "[Serialized Schema]~[Serialized Column 0]; ... ;[Serialized Column n-1]"
     virtual char* serialize_dataframe(DataFrame* df) {
         // Track total buffer size we need
         size_t total_str_size = 0;
-        
+
         // Serialize schema
         char* schema_str = serialize_schema(&df->get_schema());
         total_str_size += strlen(schema_str);
@@ -45,7 +45,7 @@ class Serializer {
         size_t cols = df->ncols();
         char** col_strs = new char*[cols];
         for (size_t i = 0; i < cols; i++) {
-            // Serialize column based on schema 
+            // Serialize column based on schema
             col_strs[i] = serialize_col(df->get_col_(i), df->get_schema().col_type(i));
             total_str_size += strlen(col_strs[i]);
         }
@@ -54,8 +54,8 @@ class Serializer {
 
         // Copy schema and column strings into buffer
         memcpy(serial_buffer, schema_str, strlen(schema_str));
-        strcat(serial_buffer, ";;");
-        
+        strcat(serial_buffer, "~");
+
         // Add serialized column messages to buffer, delimeted by ";"
         for (size_t j = 0; j < cols; j++) {
             strcat(serial_buffer, col_strs[j]);
@@ -64,26 +64,46 @@ class Serializer {
                 strcat(serial_buffer, ";");
             }
             delete[] col_strs[j];
-        } 
+        }
         delete[] col_strs;
         return serial_buffer;
     }
 
     // Deserialize a char* buffer into a DataFrame object
     virtual DataFrame* deserialize_dataframe(char* msg) {
-        // Tokenize message
-        char* token = strtok(msg, ";;");
-        
+        // Keep around a copy of the original message
+        char* msg_copy = new char[strlen(msg)];
+        strcpy(msg_copy, msg);
+
+        // Tokenize message to get schema section
+        char* token = strtok(msg, "~");
+
+        // Deserialize calls strtok, which breaks any subsequent calls using this msg
+        // Need to use copies of msg for further tokenizing
         Schema* schema = deserialize_schema(token);
+        char** token_copies = new char*[schema->width()];
 
-        Schema empty_schema();
+        Schema empty_schema;
 
-        // Initialize
+        // Initialize empty dataframe
         DataFrame* df = new DataFrame(empty_schema);
 
         // Deserialize each column and add it to the dataframe
         for (size_t i = 0; i < schema->width(); i++) {
-            token = strtok(nullptr, ";");
+            // Create a new message copy for this tokenizing
+            token_copies[i] = new char[strlen(msg_copy)];
+            strcpy(token_copies[i], msg_copy);
+
+            // Move token to be the column strings
+            token = strtok(token_copies[i], "~");
+            token = strtok(nullptr, "~");
+
+            token = strtok(token, ";");
+            // Move token to the correct column string
+            for (size_t j = 0; j < i; j++) {
+                token = strtok(nullptr, ";");
+            }
+
             char type = schema->col_type(i);
             if (type == INT_TYPE) {
                 df->add_column(deserialize_int_col(token), nullptr);
@@ -96,6 +116,8 @@ class Serializer {
             }
         }
 
+        delete[] token_copies;
+        delete[] msg_copy;
         delete schema;
         return df;
     }
@@ -213,7 +235,6 @@ class Serializer {
         }
         return new String(static_cast<const char*>(msg));
     }
-
 
     // Generic serialization method for Column type
     // Process is same for every column, but serialization method used for
@@ -434,21 +455,41 @@ class Serializer {
 
         return fill_schema;
     }
-    
 
-    /* For full-implementation of this API, the following stubs must be
-        implemented. Some are referenced by generic methods for serialization
-        and deserialization */
+    // Serialize a bool to a char* message
+    // true gets serialized to "1"
+    // false gets serialized to "0"
+    virtual char* serialize_bool(bool value) { 
+        char* data;
+        data = new char[2];
+        // Cast boolean to int (0 or 1), and write to buffer
+        snprintf(data, 2, "%d", (int) value);
+        return data;
+    }
 
-    // Stub implementation for reference in generic methods
-    virtual char* serialize_bool(bool value) { return nullptr; }
+    // Deserialize a boolean serialized message
+    // Expects a message in the form "1" or "0"
+    virtual bool deserialize_bool(char* msg) { 
+        int data;
+        sscanf(msg, "%d", &data);
+        // For clarity, translate 1 / 0 to true / false 
+        if (data) {
+            return true;
+        } 
+        return false;
+    }
 
-    // Stub implementation for reference in generic methods
-    virtual bool deserialize_bool(bool value) { return false; }
+    // Serialize boolean column
+    // Uses same format as other columns, see serialize_col
+    virtual char* serialize_bool_col(BoolColumn* col) {
+        return serialize_col(col, BOOL_TYPE);
+    }
+        
+    // Deserialize boolean column from char* 
+    virtual BoolColumn* deserialize_bool_col(char* msg) {
+        BoolColumn* b_c = new BoolColumn();
+        deserialize_col(msg, BOOL_TYPE, b_c);
+        return b_c;
+    }
 
-    // Stub implementation for reference in generic methods
-    virtual char* serialize_bool_col(BoolColumn* col) { return nullptr; }
-
-    // Stub implementation for reference in generic methods
-    virtual BoolColumn* deserialize_bool_col(char* msg) { return nullptr; }
 };
