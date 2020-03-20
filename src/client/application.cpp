@@ -12,7 +12,7 @@ class Application {
 
     Application(FILE* input_file, size_t from, size_t length, Store* store) {
         this->sorer = nullptr;
-	if (input_file) {
+        if (input_file) {
             sorer = new Sorer(input_file, from, length);
             // distribute_data_();
         }
@@ -23,9 +23,9 @@ class Application {
     }
 
     ~Application() {
-	if (sorer) {
-		delete sorer;
-	}
+        if (sorer) {
+            delete sorer;
+        }
     }
 
     // // Distributes data from sorer in even chunks across all nodes in the network

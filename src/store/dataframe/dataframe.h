@@ -2,11 +2,11 @@
 #include <thread>
 #include "../../utils/object.h"
 #include "../../utils/string.h"
+#include "../key.h"
 #include "column.h"
 #include "row.h"
 #include "rower.h"
 #include "schema.h"
-#include "../key.h"
 
 #define INT_TYPE 'I'
 #define BOOL_TYPE 'B'
@@ -387,5 +387,5 @@ class DataFrame : public Object {
         }
     }
 
-    static DataFrame* fromArray(Key *key, Store *store, size_t count, float *vals);
+    static DataFrame* fromArray(Key* key, Store* store, size_t count, float* vals);
 };

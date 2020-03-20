@@ -459,23 +459,23 @@ class Serializer {
     // Serialize a bool to a char* message
     // true gets serialized to "1"
     // false gets serialized to "0"
-    virtual char* serialize_bool(bool value) { 
+    virtual char* serialize_bool(bool value) {
         char* data;
         data = new char[2];
         // Cast boolean to int (0 or 1), and write to buffer
-        snprintf(data, 2, "%d", (int) value);
+        snprintf(data, 2, "%d", (int)value);
         return data;
     }
 
     // Deserialize a boolean serialized message
     // Expects a message in the form "1" or "0"
-    virtual bool deserialize_bool(char* msg) { 
+    virtual bool deserialize_bool(char* msg) {
         int data;
         sscanf(msg, "%d", &data);
-        // For clarity, translate 1 / 0 to true / false 
+        // For clarity, translate 1 / 0 to true / false
         if (data) {
             return true;
-        } 
+        }
         return false;
     }
 
@@ -484,12 +484,11 @@ class Serializer {
     virtual char* serialize_bool_col(BoolColumn* col) {
         return serialize_col(col, BOOL_TYPE);
     }
-        
-    // Deserialize boolean column from char* 
+
+    // Deserialize boolean column from char*
     virtual BoolColumn* deserialize_bool_col(char* msg) {
         BoolColumn* b_c = new BoolColumn();
         deserialize_col(msg, BOOL_TYPE, b_c);
         return b_c;
     }
-
 };
