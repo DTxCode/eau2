@@ -74,7 +74,7 @@ class Store : public Node {
 
             // Create PUT message to send to the other node, consisting of the format
             // [KEY_STRING]~[VALUE]
-            char *msg[strlen(key_str) + 1 + strlen(value)];
+            char msg[strlen(key_str) + 1 + strlen(value)];
             sprintf(msg, "%s~%s", key_str, value);
 
             Message *response = send_msg(other_node_host, other_node_port, PUT, msg);
