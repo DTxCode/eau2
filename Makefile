@@ -11,6 +11,9 @@ test-client-trivial:
 	g++ -std=c++11 -Wall -pthread -g tests/client/trivial_application_test.cpp -o trivial_app_test
 	./trivial_app_test
 
+valgrind-client-trivial:
+	g++ -std=c++11 -Wall -pthread -g tests/client/trivial_application_test.cpp -o trivial_app_test
+	valgrind --leak-check=full --track-origins=yes ./trivial_app_test
 
 # Simple sorer test
 test-client-sorer:

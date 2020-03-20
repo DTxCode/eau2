@@ -30,6 +30,7 @@ class Store : public Node {
             delete val;
         }
 
+	delete keys;
         delete map;
     }
 
