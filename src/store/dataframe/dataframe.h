@@ -16,12 +16,12 @@
 class Store;
 
 /****************************************************************************
- * ModifiedDataFrame::
+ * DataFrame::
  *
  * A DataFrame is table composed of columns of equal length. Each column
  * holds values of the same type (I, S, B, F). A dataframe has a schema that
  * describes it.
- * This ModifiedDataFrame has the ability of executing map in parallel
+ * This DataFrame has the ability of executing map in parallel
  */
 class DataFrame : public Object {
    public:
