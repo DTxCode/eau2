@@ -1,22 +1,20 @@
 Client:
-    Sorer current starts at row 1 always, discarding first row
-    Expand the example to use the dataframe after it is created
-    Make sorer return a distributed DF, get rid of distribute_data
-
+    
 Store:
     Dataframe - Change row to not own its data, make sure this doesn't break something
     Serialize - need types, generic deserialize method?
 
 m3:
-    New DistributedDataFrame class
+    1) Update exisiting DF to support missings with a bitmap
+        - this also needs serialization updates
+    2) Update columns' memory stuff with internal Arrays
+    3) New DistributedDataFrame class
        - above current DF class
        - list of keys to the individual chunks, each of which are a dataframe
        - serialization methods
-    Dataframe - ::fromArray/fromScalar
-    Update exisiting DF to support missings with a bitmap
-        - this also needs serialization updates
-    Update columns' memory stuff with internal Arrays
-    Network - need put, get, getandwait for other nodes
+    3.5) Network - need put, get, getandwait for other nodes
+    4) Update sorer to work with new DistributedDataFrame
+    5) Dataframe - ::fromArray/fromScalar defined on DistributedDataFrame?
 
 Questions:
     Network - who starts the master server?
