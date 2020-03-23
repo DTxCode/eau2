@@ -27,6 +27,7 @@ union Field {
 class Row : public Object {
    public:
     Field** fields;
+    bool* missings;
     char* field_types;
     size_t num_columns;
     size_t row_index;  // Unused, apart for set_idx() and get_idx()
@@ -45,6 +46,12 @@ class Row : public Object {
             fields[i] = new Field();
             field_types[i] = scm.col_type(i);
         }
+        
+        // Init missings to be all true in this case
+        missings = new bool[num_columns];
+        for (size_t i = 0; i < num_columns; i++) {
+            missings[i] = true;
+        }
     }
 
     ~Row() {
@@ -55,6 +62,13 @@ class Row : public Object {
 
         delete[] field_types;
         delete[] fields;
+        delete[] missings;
+    }
+    
+    // Return whether the element at the given value is a missing value
+    // Undefined behavior if the idx is out of bounds
+    bool is_missing(size_t col_idx) {
+        return missings[col_idx];
     }
 
     /** Setters: set the given column with the given value. Setting a column with
@@ -68,6 +82,11 @@ class Row : public Object {
         if (field_types[col] != INT_TYPE) {
             // column does not hold ints
             return;
+        }
+
+        // Check and update missings
+        if (missings[col]) {
+            missings[col] = false;
         }
 
         // set value in union
@@ -84,6 +103,11 @@ class Row : public Object {
             // column does not hold floats
             return;
         }
+        
+        // Check and update missings
+        if (missings[col]) {
+            missings[col] = false;
+        }
 
         // set value in union
         fields[col]->f_val = val;
@@ -98,6 +122,11 @@ class Row : public Object {
         if (field_types[col] != BOOL_TYPE) {
             // column does not hold bools
             return;
+        }
+        
+        // Check and update missings
+        if (missings[col]) {
+            missings[col] = false;
         }
 
         // set value in union
@@ -116,8 +145,31 @@ class Row : public Object {
             return;
         }
 
+        // Check and update missings
+        if (missings[col]) {
+            missings[col] = false;
+        }
+
         // set value in union
         fields[col]->s_val = val;
+    }
+
+    // Set the given column index as a missing value, default values are
+    // given depending on the schema type for that column, but the value
+    // has no meaning other than to be a place-holder
+    void set_missing(size_t col_idx) {
+        char col_type = field_types[col_idx];
+        // get appropriately typed value out of the column, and set it in the row
+        if (col_type == INT_TYPE) {
+            set(col_idx, 0);
+        } else if (col_type == BOOL_TYPE) {
+            set(col_idx, false);
+        } else if (col_type == FLOAT_TYPE) {
+            set(col_idx, (float) 0.0);
+        } else {
+            set(col_idx, new String(""));
+        }
+        missings[col_idx] = true;
     }
 
     /** Set/get the index of this row (ie. its position in the dataframe. This is
@@ -131,7 +183,9 @@ class Row : public Object {
     }
 
     /** Getters: get the value at the given column. If the column is not
-    * of the requested type, the result is undefined. */
+    * of the requested type, the result is undefined. If the value is missing,
+    * these methods provide no indication. The returned value is undefined, and
+    * the "is_missing" method should be used for sanity checking. */
     int get_int(size_t col) {
         return fields[col]->i_val;
     }

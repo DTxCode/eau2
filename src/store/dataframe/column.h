@@ -54,6 +54,12 @@ class Column : public Object {
         delete[] missings;
         missings = new_missings;
     }
+
+    // Declare the value at idx as missing, does not change or set a value
+    // Out of bounds idx is undefined behavior 
+    void set_missing(size_t idx) {
+        missings[idx] = true;
+    }
         
     /** Type converters: Return same column under its actual type, or
    *  nullptr if of the wrong type.  */
@@ -134,14 +140,13 @@ class IntColumn : public Column {
         cells = new int*[capacity];
         length = 0;
         init_missings();
-
         for (size_t row_idx = 0; row_idx < col->size(); row_idx++) {
+            int row_val = col->as_int()->get(row_idx);
+            push_back(row_val);
             // Track other columns missings
             if (col->is_missing(row_idx)) {
                 missings[row_idx] = true;
             }
-            int row_val = col->as_int()->get(row_idx);
-            push_back(row_val);
         }
     }
 
@@ -257,12 +262,12 @@ class FloatColumn : public Column {
         init_missings();
 
         for (size_t row_idx = 0; row_idx < col->size(); row_idx++) {
+            float row_val = col->as_float()->get(row_idx);
+            push_back(row_val);
             // Track other columns missings
             if (col->is_missing(row_idx)) {
                 missings[row_idx] = true;
             }
-            float row_val = col->as_float()->get(row_idx);
-            push_back(row_val);
         }
     }
 
@@ -370,14 +375,14 @@ class BoolColumn : public Column {
         capacity = 10;  // Default of 10 cells
         cells = new bool*[capacity];
         length = 0;
-
+        init_missings();
         for (size_t row_idx = 0; row_idx < col->size(); row_idx++) {
+            bool row_val = col->as_bool()->get(row_idx);
+            push_back(row_val);
             // Track other columns missings
             if (col->is_missing(row_idx)) {
                 missings[row_idx] = true;
             }
-            bool row_val = col->as_bool()->get(row_idx);
-            push_back(row_val);
         }
     }
 
@@ -487,14 +492,15 @@ class StringColumn : public Column {
         capacity = 10;  // Default of 10 cells
         cells = new String*[capacity];
         length = 0;
+        init_missings();
 
         for (size_t row_idx = 0; row_idx < col->size(); row_idx++) {
+            String* row_val = col->as_string()->get(row_idx);
+            push_back(row_val);
             // Track other columns missings
             if (col->is_missing(row_idx)) {
                 missings[row_idx] = true;
             }
-            String* row_val = col->as_string()->get(row_idx);
-            push_back(row_val);
         }
     }
 

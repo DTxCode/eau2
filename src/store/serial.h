@@ -46,6 +46,8 @@ class Serializer {
         char** col_strs = new char*[cols];
         for (size_t i = 0; i < cols; i++) {
             // Serialize column based on schema
+            Column* test_c = df->get_col_(i);
+            Schema s = df->get_schema();
             col_strs[i] = serialize_col(df->get_col_(i), df->get_schema().col_type(i));
             total_str_size += strlen(col_strs[i]);
         }

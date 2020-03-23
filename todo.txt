@@ -5,7 +5,7 @@ Store:
     Serialize - need types, generic deserialize method?
 
 m3:
-    1) Update exisiting DF to support missings with a bitmap
+    1) Update exisiting DF to support missings with a bitmap (need missings in row and column)
         - this also needs serialization updates
     2) Update columns' memory stuff with internal Arrays
     3) New DistributedDataFrame class
