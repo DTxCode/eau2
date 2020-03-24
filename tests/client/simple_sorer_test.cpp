@@ -54,7 +54,8 @@ bool test_sorer_with_missings() {
 
 int main() {
     assert(test_sorer_without_missings());
+    printf("========= test_without_missings passed ============");
     assert(test_sorer_with_missings());
-    printf("========= test_get passed ============");
+    printf("========= test_with_missings passed ============");
     return 0;
 }
