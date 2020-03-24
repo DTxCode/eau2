@@ -3,6 +3,7 @@ Client:
 Store:
     Dataframe - Change row to not own its data, make sure this doesn't break something
     Serialize - need types, generic deserialize method?
+    Network - Application needs flag to start the master server
 
 m3:
     1) Update exisiting DF to support missings with a bitmap
@@ -17,4 +18,4 @@ m3:
     5) Dataframe - ::fromArray/fromScalar defined on DistributedDataFrame?
 
 Questions:
-    Network - who starts the master server?
+    DistributedArrays?
