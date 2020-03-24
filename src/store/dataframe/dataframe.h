@@ -16,12 +16,12 @@
 class Store;
 
 /****************************************************************************
- * ModifiedDataFrame::
+ * DataFrame::
  *
  * A DataFrame is table composed of columns of equal length. Each column
  * holds values of the same type (I, S, B, F). A dataframe has a schema that
  * describes it.
- * This ModifiedDataFrame has the ability of executing map in parallel
+ * This DataFrame has the ability of executing map in parallel
  */
 class DataFrame : public Object {
    public:
@@ -137,7 +137,10 @@ class DataFrame : public Object {
     }
 
     /** Return the value at the given column and row. Accessing rows or
-    *  columns out of bounds, or request the wrong type is undefined.*/
+    *  columns out of bounds, or request the wrong type is undefined. 
+    *  The value returned by these get_ methods give no indication of 
+    *  whether that value is missing. For sanity checks, use the method
+    *  'is_missing'. */
     int get_int(size_t col, size_t row) {
         return columns[col]->as_int()->get(row);
     }
@@ -164,6 +167,11 @@ class DataFrame : public Object {
         return schema->row_idx(row.c_str());
     }
 
+    // Indicates whether the cell at col,row is a missing value
+    bool is_missing(size_t col, size_t row) {
+        return columns[col]->is_missing(row);
+    }
+
     /** Set the value at the given column and row to the given value.
     * If the column is not  of the right type or the indices are out of
     * bound, the result is undefined. 
@@ -184,6 +192,25 @@ class DataFrame : public Object {
         columns[col]->as_string()->set(row, val);
     }
 
+    // Declares the given row,col cell as missing
+    void set_missing(size_t col, size_t row) {
+        Column* c = columns[col];
+        /*char col_type = c->get_type();
+
+        // Utilize set_missing method on column
+        // Still dependent on column type
+        if (col_type == INT_TYPE) {
+            c->as_int()->set_missing(row);
+        } else if (col_type == BOOL_TYPE) {
+            c->as_bool()->set_missing(row);
+        } else if (col_type == FLOAT_TYPE) {
+            c->as_float()->set_missing(row);
+        } else {
+            c->as_string()->set_missing(row);
+        }*/
+        c->set_missing(row);
+    }
+
     /** Set the fields of the given row object with values from the columns at
     * the given offset.  If the row is not form the same schema as the
     * dataframe, results are undefined.
@@ -193,6 +220,12 @@ class DataFrame : public Object {
         for (size_t col_idx = 0; col_idx < schema->width(); col_idx++) {
             Column* col = columns[col_idx];
             char col_type = col->get_type();
+
+            // Handle missing first
+            if (col->is_missing(idx)) {
+                row.set_missing(col_idx);
+                continue;
+            }
 
             // get appropriately typed value out of the column, and set it in the row
             if (col_type == INT_TYPE) {
@@ -228,21 +261,42 @@ class DataFrame : public Object {
             Column* col = columns[col_idx];
             char col_type = col->get_type();
 
+
             // get appropriately typed value out of the row, and set it in the column
             // expect col schema to match row schema
             if (col_type == INT_TYPE) {
+                // Check for missing first
+                if (row.is_missing(col_idx)) {
+                    col->as_int()->push_back_missing();
+                    continue;
+                }
                 int val = row.get_int(col_idx);
                 col->as_int()->push_back(val);
 
             } else if (col_type == BOOL_TYPE) {
+                // Check for missing first
+                if (row.is_missing(col_idx)) {
+                    col->as_bool()->push_back_missing();
+                    continue;
+                }
                 bool val = row.get_bool(col_idx);
                 col->as_bool()->push_back(val);
 
             } else if (col_type == FLOAT_TYPE) {
+                // Check for missing first
+                if (row.is_missing(col_idx)) {
+                    col->as_float()->push_back_missing();
+                    continue;
+                }
                 float val = row.get_float(col_idx);
                 col->as_float()->push_back(val);
 
             } else {
+                // Check for missing first
+                if (row.is_missing(col_idx)) {
+                    col->as_string()->push_back_missing();
+                    continue;
+                }
                 String* val = row.get_string(col_idx);
                 col->as_string()->push_back(val);
             }
@@ -272,6 +326,12 @@ class DataFrame : public Object {
             for (size_t j = 0; j < ncols(); j++) {
                 Column* col = columns[j];
                 char col_type = col->get_type();
+
+                // Handle missings first
+                if (row->is_missing(j)) {
+                    set_missing(j, row_idx);
+                    continue;
+                }
 
                 // get appropriately typed value out of the row, and set it in the column
                 // expect col schema to match row schema

@@ -19,12 +19,48 @@ class StringColumn;
  * Represents one column of a data frame which holds values of a single type.
  * This abstract class defines methods overriden in subclasses. There is
  * one subclass per element type. Columns are mutable, equality is pointer
- * equality. */
+ * equality. Columns may have missing values, but the missing counts as
+ * a value. Missings have default values for each type, but their value
+ * has no meaning other than to maintain the type of the element. If 
+ * missing values are present, they are counted in the size of column.
+ * Missing values are different than unoccupied cells. */
 class Column : public Object {
    public:
     size_t length;
     size_t capacity;
+    bool* missings;
 
+    // Initialize missings array. Allocate memory and fill with all 'false'
+    void init_missings() {
+        missings = new bool[capacity];
+        for (size_t i = 0; i < capacity; i++) {
+            missings[i] = false;
+        }
+    }
+    
+    // Return whether the element at the given value is a missing value
+    // Undefined behavior if the idx is out of bounds
+    bool is_missing(size_t idx) {
+        return missings[idx];
+    }
+
+    // Assumes capacity has changed. Reallocate missings array and copy
+    // missings values
+    void resize_missings() {
+        bool* new_missings = new bool[capacity];
+        for (int i = 0; i < length; i++) {
+            new_missings[i] = missings[i];
+        }
+        delete[] missings;
+        missings = new_missings;
+    }
+
+    // Declare the value at idx as missing, does not change or set a value
+    // Out of bounds idx is undefined behavior 
+    void set_missing(size_t idx) {
+        missings[idx] = true;
+    }
+        
     /** Type converters: Return same column under its actual type, or
    *  nullptr if of the wrong type.  */
     virtual IntColumn* as_int() { return nullptr; }
@@ -38,6 +74,9 @@ class Column : public Object {
     virtual void push_back(bool val) { return; }
     virtual void push_back(float val) { return; }
     virtual void push_back(String* val) { return; }
+    // Adds a missing with a default value dependent on the type of the 
+    // column 
+    virtual void push_back_missing() { return; }
 
     /** Returns the number of elements in the column. */
     virtual size_t size() { return length; }
@@ -71,6 +110,7 @@ class IntColumn : public Column {
         capacity = 10;  // Default of 10 cells
         cells = new int*[capacity];
         length = 0;
+        init_missings();
     }
 
     // Create int column with n entries, listed in order in
@@ -91,6 +131,7 @@ class IntColumn : public Column {
             push_back(val);
         }
         va_end(vl);
+        init_missings();
     }
 
     // Copy constructor. Assumes other column is the same type as this one
@@ -98,10 +139,14 @@ class IntColumn : public Column {
         capacity = 10;  // Default of 10 cells
         cells = new int*[capacity];
         length = 0;
-
+        init_missings();
         for (size_t row_idx = 0; row_idx < col->size(); row_idx++) {
             int row_val = col->as_int()->get(row_idx);
             push_back(row_val);
+            // Track other columns missings
+            if (col->is_missing(row_idx)) {
+                missings[row_idx] = true;
+            }
         }
     }
 
@@ -110,8 +155,10 @@ class IntColumn : public Column {
         for (int i = 0; i < length; i++) {
             delete cells[i];
         }
+        delete[] missings;
         delete[] cells;
     }
+
 
     // Returns the integer at the given index.
     // Input index out of bounds will cause a runtime error
@@ -129,6 +176,10 @@ class IntColumn : public Column {
         if (idx >= length) {
             return;
         }
+        // Update missing bitmap
+        if (missings[idx]) {
+            missings[idx] = false;
+        }
         *cells[idx] = val;
     }
 
@@ -142,6 +193,7 @@ class IntColumn : public Column {
         }
         delete[] cells;
         cells = new_cells;
+        resize_missings();
     }
 
     // Add integer to "bottom" of column
@@ -153,6 +205,18 @@ class IntColumn : public Column {
         cells[length] = new_val;
         length++;
     }
+
+    // Add "missing" (0) to bottom of column 
+    void push_back_missing() {
+        if (length == capacity) {
+            resize();
+        }
+        int* new_val = new int(0);
+        cells[length] = new_val;
+        missings[length] = true;
+        length++;
+    }
+
 };
 
 /*************************************************************************
@@ -168,6 +232,7 @@ class FloatColumn : public Column {
         capacity = 10;
         cells = new float*[capacity];
         length = 0;
+        init_missings();
     }
 
     // Create column with n floats as starting values, in order given
@@ -186,6 +251,7 @@ class FloatColumn : public Column {
             push_back(val);
         }
         va_end(vl);
+        init_missings();
     }
 
     // Copy constructor. Assumes other column is the same type as this one
@@ -193,10 +259,15 @@ class FloatColumn : public Column {
         capacity = 10;  // Default of 10 cells
         cells = new float*[capacity];
         length = 0;
+        init_missings();
 
         for (size_t row_idx = 0; row_idx < col->size(); row_idx++) {
             float row_val = col->as_float()->get(row_idx);
             push_back(row_val);
+            // Track other columns missings
+            if (col->is_missing(row_idx)) {
+                missings[row_idx] = true;
+            }
         }
     }
 
@@ -206,6 +277,7 @@ class FloatColumn : public Column {
             delete cells[i];
         }
         delete[] cells;
+        delete[] missings;
     }
 
     // Double the capacity of the array and move (not copy) the float
@@ -218,6 +290,7 @@ class FloatColumn : public Column {
         }
         delete[] cells;
         cells = new_cells;
+        resize_missings();
     }
 
     // Get float at index idx. Runtime error if idx is out of bounds
@@ -243,7 +316,22 @@ class FloatColumn : public Column {
         if (idx >= size()) {
             return;
         }
+        // Update missing bitmap
+        if (missings[idx]) {
+            missings[idx] = false;
+        }
         *cells[idx] = val;
+    }
+    
+    // Add "missing" (0.0) to bottom of column 
+    void push_back_missing() {
+        if (length == capacity) {
+            resize();
+        }
+        float* new_val = new float(0.0);
+        cells[length] = new_val;
+        missings[length] = true;
+        length++;
     }
 };
 
@@ -260,6 +348,7 @@ class BoolColumn : public Column {
         capacity = 10;
         cells = new bool*[capacity];
         length = 0;
+        init_missings();
     }
 
     // Create column with n bools as starting values, in order given
@@ -278,6 +367,7 @@ class BoolColumn : public Column {
             push_back(val);
         }
         va_end(vl);
+        init_missings();
     }
 
     // Copy constructor. Assumes other column is the same type as this one
@@ -285,10 +375,14 @@ class BoolColumn : public Column {
         capacity = 10;  // Default of 10 cells
         cells = new bool*[capacity];
         length = 0;
-
+        init_missings();
         for (size_t row_idx = 0; row_idx < col->size(); row_idx++) {
             bool row_val = col->as_bool()->get(row_idx);
             push_back(row_val);
+            // Track other columns missings
+            if (col->is_missing(row_idx)) {
+                missings[row_idx] = true;
+            }
         }
     }
 
@@ -298,6 +392,7 @@ class BoolColumn : public Column {
             delete cells[i];
         }
         delete[] cells;
+        delete[] missings;
     }
 
     // Double the capacity of the array and move (not copy) the bool
@@ -310,6 +405,7 @@ class BoolColumn : public Column {
         }
         delete[] cells;
         cells = new_cells;
+        resize_missings();
     }
 
     // Get bool at index idx.
@@ -326,16 +422,31 @@ class BoolColumn : public Column {
         if (idx >= size()) {
             return;
         }
+        // Update missing bitmap
+        if (missings[idx]) {
+            missings[idx] = false;
+        }
         *cells[idx] = val;
     }
 
-    // push the given bool on to the 'botoom' of this column
+    // push the given bool on to the 'bottom' of this column
     void push_back(bool val) {
         if (length == capacity) {
             resize();
         }
         bool* new_val = new bool(val);
         cells[length] = new_val;
+        length++;
+    }
+    
+    // Add "missing" (true) to bottom of column 
+    void push_back_missing() {
+        if (length == capacity) {
+            resize();
+        }
+        bool* new_val = new bool(true);
+        cells[length] = new_val;
+        missings[length] = true;
         length++;
     }
 };
@@ -354,6 +465,7 @@ class StringColumn : public Column {
         capacity = 10;
         cells = new String*[capacity];
         length = 0;
+        init_missings();
     }
 
     // Create column with n String*s as starting values, in order given
@@ -372,6 +484,7 @@ class StringColumn : public Column {
             push_back(val);
         }
         va_end(vl);
+        init_missings();
     }
 
     // Copy constructor. Assumes other column is the same type as this one
@@ -379,16 +492,22 @@ class StringColumn : public Column {
         capacity = 10;  // Default of 10 cells
         cells = new String*[capacity];
         length = 0;
+        init_missings();
 
         for (size_t row_idx = 0; row_idx < col->size(); row_idx++) {
             String* row_val = col->as_string()->get(row_idx);
             push_back(row_val);
+            // Track other columns missings
+            if (col->is_missing(row_idx)) {
+                missings[row_idx] = true;
+            }
         }
     }
 
     ~StringColumn() {
         // don't delete actual string* because they're not ours
         delete[] cells;
+        delete[] missings;
     }
 
     // Double the capacity of the array and move (not copy) the String
@@ -401,6 +520,7 @@ class StringColumn : public Column {
         }
         delete[] cells;
         cells = new_cells;
+        resize_missings();
     }
 
     // Get String* at index idx.
@@ -426,6 +546,21 @@ class StringColumn : public Column {
         if (idx >= size()) {
             return;
         }
+        // Update missing bitmap
+        if (missings[idx]) {
+            missings[idx] = false;
+        }
         cells[idx] = val;
+    }
+    
+    // Add "missing" ("") to bottom of column 
+    void push_back_missing() {
+        if (length == capacity) {
+            resize();
+        }
+        String* new_val = new String("");
+        cells[length] = new_val;
+        missings[length] = true;
+        length++;
     }
 };

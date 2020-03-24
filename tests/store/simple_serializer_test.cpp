@@ -50,7 +50,8 @@ bool test_bool_serialize() {
 
 
 int main() {
-    assert(test_df_serialize());
     assert(test_bool_serialize());
+    printf("========= serialize_bool PASSED =============\n");
+    assert(test_df_serialize());
     printf("========== test_serialize_df PASSED =============\n");
 }

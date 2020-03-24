@@ -104,7 +104,7 @@ class Sorer {
                 buffer[read_idx] = '\0';
 
                 if (buffer == "") {
-                    // TODO handle empty type
+                    row->set_missing(col_idx);
                 }
 
                 // Based on schema, add data to row
@@ -177,8 +177,6 @@ class Sorer {
         while (from != 0 && fgetc(fp) != '\n') {
         }
         
-        Sys s;
-
         // Maximum number of characters possible in a row
         size_t max_row_size = 255 * num_columns;
         char buffer[max_row_size];
@@ -302,7 +300,6 @@ class Sorer {
             } else if (type == INT) {
                 schema->add_column(INT_TYPE, nullptr);
             } else {
-                // TODO missing column defaults to bool type for now
                 schema->add_column(BOOL_TYPE, nullptr);
             }
         }
