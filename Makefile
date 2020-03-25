@@ -24,13 +24,31 @@ valgrind-client-sorer:
 	g++ -std=c++11 -Wall -pthread -g tests/client/simple_sorer_test.cpp -o simple_sorer_test
 	valgrind --leak-check=full --track-origins=yes ./simple_sorer_test
 
-# Store
-test-store:
-	g++ -std=c++11 -Wall -pthread -g tests/store/simple_serializer_test.cpp -o serial_test
-	./serial_test
+### Store
+
+# Server-node test
+test-server-node:
 	g++ -std=c++11 -Wall -pthread -g tests/store/server_node_test.cpp -o server_node_test
 	./server_node_test
 
-valgrind-store:
+valgrind-server-node:
 	g++ -std=c++11 -Wall -pthread -g tests/store/server_node_test.cpp -o server_node_test
 	valgrind --leak-check=full --track-origins=yes ./server_node_test
+
+# Simple serializer test
+test-simple-serializer:
+	g++ -std=c++11 -Wall -pthread -g tests/store/simple_serializer_test.cpp -o serial_test
+	./serial_test
+
+valgrind-simple-serializer:
+	g++ -std=c++11 -Wall -pthread -g tests/store/simple_serializer_test.cpp -o serial_test
+	valgrind --leak-check=full --track-origins=yes ./serial_test
+
+# Store test
+test-store:
+	g++ -std=c++11 -Wall -pthread -g tests/store/store_test.cpp -o store_test
+	./store_test
+
+valgrind-store:
+	g++ -std=c++11 -Wall -pthread -g tests/store/store_test.cpp -o store_test
+	valgrind --leak-check=full --track-origins=yes ./store_test

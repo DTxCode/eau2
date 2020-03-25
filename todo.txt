@@ -5,7 +5,6 @@ Client:
 Store:
     Dataframe - Change row to not own its data, make sure this doesn't break something
     Serialize - need types, generic deserialize method?
-    Serialize - remove semicolons to not mess up Network layer
 
 m3:
     1) Update exisiting DF to support missings with a bitmap (need missings in row and column)
@@ -15,9 +14,10 @@ m3:
        - above current DF class
        - list of keys to the individual chunks, each of which are a dataframe
        - serialization methods
+            -  remove semicolons to not mess up Network layer
     3.5) Network - need put, get, getandwait for other nodes
-    4) Update sorer to work with new DistributedDataFrame
-    5) Dataframe - ::fromArray/fromScalar defined on DistributedDataFrame?
+    4) Dataframe - ::fromArray/fromScalar defined on DistributedDataFrame?
+    5) Update sorer to work with new DistributedDataFrame
 
 Questions:
     DistributedArrays?
