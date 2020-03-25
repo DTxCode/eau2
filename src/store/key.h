@@ -1,5 +1,6 @@
 #pragma once
 #include <stdlib.h>
+#include "../utils/helper.h"
 #include "../utils/object.h"
 
 // Represents a Key in a KeyValue Store
@@ -9,9 +10,15 @@ class Key : public Object {
     char* name;
     size_t home_node;
 
+    // Constructs a key from the given name and home_node. Uses a copy of the given name.
     Key(char* name, size_t home_node) {
-        this->name = name;
+        Sys s;
+        this->name = s.duplicate(name);
         this->home_node = home_node;
+    }
+
+    ~Key() {
+        delete[] name;
     }
 
     char* get_name() {
@@ -25,5 +32,9 @@ class Key : public Object {
     size_t hash_me() {
         size_t name_length = strlen(name);
         return name_length * (home_node + 1 + name_length);
+    }
+
+    Key* clone() {
+        return new Key(name, home_node);
     }
 };

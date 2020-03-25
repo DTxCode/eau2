@@ -21,12 +21,13 @@ class Store : public Node {
     }
 
     ~Store() {
-        // We added the String* to map, so we have to delete them
+        // Delete both keys and values from our map
         List *keys = map->keys();
         for (size_t i = 0; i < keys->size(); i++) {
             Object *key = keys->get(i);
             Object *val = map->get(key);
 
+            delete key;
             delete val;
         }
 
@@ -45,7 +46,7 @@ class Store : public Node {
     }
 
     // Saves the given Dataframe under the given key, possibly on another node
-    // Does not own/delete any of the given data
+    // Uses copies of given key/DF (does not modify or delete them)
     void put(Key *key, DataFrame *df) {
         char *value = serializer->serialize_dataframe(df);
 
@@ -55,7 +56,7 @@ class Store : public Node {
     }
 
     // Saves the given char* to the given key. For internal use only.
-    // Does not own/delete any of the given data
+    // Uses copies of given key/value (does not modify or delete them)
     void put_(Key *key, char *value) {
         char *key_str = key->get_name();
         size_t key_home = key->get_home_node();
@@ -63,7 +64,7 @@ class Store : public Node {
         if (key_home == node_id) {
             // Value belongs on this node
             String *val = new String(value);  // deleted in destructor
-            map->put(key, val);
+            map->put(key->clone(), val);
         } else {
             // Value belongs on another node
             // - use key_home to index into known_nodes list
@@ -166,7 +167,7 @@ class Store : public Node {
             // put together value_str
             char *val_str = strtok(nullptr, "\0");
 
-            put_(key, val_str);
+            put_(&key, val_str);
         }
 
         // Send ACK
