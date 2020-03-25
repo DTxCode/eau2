@@ -30,7 +30,7 @@ class Store : public Node {
             delete val;
         }
 
-	delete keys;
+        delete keys;
         delete map;
     }
 
@@ -47,22 +47,46 @@ class Store : public Node {
     // Saves the given Dataframe under the given key, possibly on another node
     // Does not own/delete any of the given data
     void put(Key *key, DataFrame *df) {
-        size_t key_home = key->get_home_node();
         char *value = serializer->serialize_dataframe(df);
+
+        put_(key, value);
+
+        delete[] value;
+    }
+
+    // Saves the given char* to the given key. For internal use only.
+    // Does not own/delete any of the given data
+    void put_(Key *key, char *value) {
+        char *key_str = key->get_name();
+        size_t key_home = key->get_home_node();
 
         if (key_home == node_id) {
             // Value belongs on this node
-            String *val = new String(value);
+            String *val = new String(value);  // deleted in destructor
             map->put(key, val);
         } else {
             // Value belongs on another node
-            // TODO
             // - use key_home to index into known_nodes list
             // - send that node a PUT message with the value string
-            exit_with_msg("Unimplemented: put a key to another node");
-        }
+            String *other_node_address = known_nodes->get(key_home);
+            String *other_node_host = network->get_host_from_address(other_node_address);
+            int other_node_port = network->get_port_from_address(other_node_address);
 
-        delete[] value;
+            // Create PUT message to send to the other node, consisting of the format
+            // [KEY_STRING]~[VALUE]
+            char *msg[len(key_str) + 1 + len(value)];
+            sprintf(msg, "%s~%s", key_str, value);
+
+            Message *response = send_msg(other_node_host, other_node_port, PUT, msg);
+
+            if (response->msg_type != ACK) {
+                printf("Node %d did not get successful ACK for its PUT request to node %d\n", node_id, key_home);
+                exit(1);
+            }
+
+            delete response;
+            delete other_node_host;
+        }
     }
 
     // Gets the value associated with the given key, possibly from another node,
@@ -130,6 +154,20 @@ class Store : public Node {
     // By default, sends empty ACK back to the message sender and prints a "message-received" string
     void handle_message(int connected_socket, Message *msg) {
         printf("Node %s:%d got message from another node with type %d and contents \"%s\"\n", my_ip_address, my_port, msg->msg_type, msg->msg);
+
+        if (msg->msg_type == PUT) {
+            // handle put request
+            char *msg_contents = msg->msg;
+
+            // put together Key
+            char *key_str = strtok(msg_contents, "~");
+            Key key(key_str, node_id);  // This node got a PUT request, so the key must live on this node.
+
+            // put together value_str
+            char *val_str = strtok(nullptr, "\0");
+
+            put_(key, val_str);
+        }
 
         // Send ACK
         Message ack(my_ip_address, my_port, ACK, "");

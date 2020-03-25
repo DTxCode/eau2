@@ -1,9 +1,11 @@
 Client:
-    
+    Application needs flag to start the master server
+    Application needs flag for default key, if input file is given
+
 Store:
     Dataframe - Change row to not own its data, make sure this doesn't break something
     Serialize - need types, generic deserialize method?
-    Network - Application needs flag to start the master server
+    Serialize - remove semicolons to not mess up Network layer
 
 m3:
     1) Update exisiting DF to support missings with a bitmap (need missings in row and column)

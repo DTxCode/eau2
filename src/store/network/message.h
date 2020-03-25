@@ -8,7 +8,10 @@ enum MessageType {
     ACK,
     REGISTER,
     DIRECTORY,
-    SHUTDOWN
+    SHUTDOWN,
+    PUT,
+    GET,
+    GETANDWAIT
 };
 
 // Represents a Message sent between nodes/servers in a network
