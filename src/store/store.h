@@ -69,12 +69,12 @@ class Store : public Node {
             // - use key_home to index into known_nodes list
             // - send that node a PUT message with the value string
             String *other_node_address = known_nodes->get(key_home);
-            String *other_node_host = network->get_host_from_address(other_node_address);
+            char *other_node_host = network->get_host_from_address(other_node_address);
             int other_node_port = network->get_port_from_address(other_node_address);
 
             // Create PUT message to send to the other node, consisting of the format
             // [KEY_STRING]~[VALUE]
-            char *msg[len(key_str) + 1 + len(value)];
+            char *msg[strlen(key_str) + 1 + strlen(value)];
             sprintf(msg, "%s~%s", key_str, value);
 
             Message *response = send_msg(other_node_host, other_node_port, PUT, msg);
@@ -85,7 +85,7 @@ class Store : public Node {
             }
 
             delete response;
-            delete other_node_host;
+            delete[] other_node_host;
         }
     }
 
