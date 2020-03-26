@@ -1,10 +1,12 @@
 Client:
     Application needs flag to start the master server
     Application needs flag for default key, if input file is given
+       - Update sorer to work with new DistributedDataFrame
 
 Store:
     Dataframe - Change row to not own its data, make sure this doesn't break something
     Serialize - need types, generic deserialize method?
+    Fix busy loops in store/node
 
 m3:
     1) Update column/rows serialization to include missings
@@ -12,13 +14,9 @@ m3:
        - above current DF class
        - list of keys to the individual chunks, each of which are a dataframe
        - serialization methods
-            -  remove semicolons to not mess up Network layer
     3) Network - need put, get, getandwait for other nodes
                - thread syncing?
-               - waitAndNotify?
     4) Dataframe - ::fromArray/fromScalar defined on DistributedDataFrame?
-    5) Update sorer to work with new DistributedDataFrame
-    6) waitAndNotify for loops
 
 Questions:
     DistributedArrays?

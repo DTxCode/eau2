@@ -7,6 +7,8 @@
 #include "network/node.h"
 #include "serial.h"
 
+#define GETANDWAIT_SLEEP 25
+
 // Represents a KeyValue with local data as well as the capability to fetch data from other KeyValue stores.
 // USAGE:
 //   - User calls public Store.get() and Store.put() that work on Distributed DataFrames only
@@ -186,49 +188,35 @@ class Store : public Node {
         return serialized_value;
     }
 
-    // Same as get(), but if the key doesn't exist, blocks until it does.
-    DataFrame *getAndWait(Key *key) {
-        size_t key_home = key->get_home_node();
-        char *key_name = key->get_name();
+    // Gets the value associated with the given key, possibly from another node,
+    // and returns as a DataFrame. If key doesn't exist, the method blocks until it does.
+    // Helper method for Distributed DataFrames. Not meant to be used by end users.
+    DataFrame *getAndWait_(Key *key) {
+        DataFrame *df = get_(key);
 
-        if (key_home == node_id) {
-            Object *val = nullptr;
-
-            while (val == nullptr) {
-                val = map->get(key);  // TODO: need sync
-                // TODO: waitandNotify
-            }
-
-            // All objects in the map should be string*
-            String *df_string = dynamic_cast<String *>(val);
-
-            // Deserialize string
-            DataFrame *df = serializer->deserialize_dataframe(df_string->c_str());
-
-            return df;
-        } else {
-            // Value maybe lives on another node
-            // TODO
-            // - use key_home to index into known_nodes list
-            // - send that node a GETWAIT message with the key->get_name()
-            // - deserailize result into a DF
-            exit_with_msg("Unimplemented: getAndWait a key from another node");
+        // TODO ways to improve this:
+        // - for local get, could do waitAndNotify method instead of this busy loop
+        // - for network get, use above method + timeout
+        while (df == nullptr) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(GETANDWAIT_SLEEP));
+            df = get_(key);
         }
+
+        return df;
     }
 
     // OVERRIDE
     // Handler for all messages that come into this node
     // Some sort of reply is expected to be written to the given socket
     // By default, sends empty ACK back to the message sender and prints a "message-received" string
-    void handle_message(int connected_socket, Message *msg) {
+    void
+    handle_message(int connected_socket, Message *msg) {
         printf("Node %s:%d got message from another node with type %d and contents \"%s\"\n", my_ip_address, my_port, msg->msg_type, msg->msg);
 
         if (msg->msg_type == PUT) {
             handle_put_(connected_socket, msg);
         } else if (msg->msg_type == GET) {
             handle_get_(connected_socket, msg);
-        } else if (msg->msg_type == GETANDWAIT) {
-            handle_get_and_wait_(msg);
         } else {
             printf("WARN: Store got a message from another node with unknown message type %d\n", msg->msg_type);
         }
@@ -272,11 +260,6 @@ class Store : public Node {
 
             delete[] serialized_value;
         }
-    }
-
-    // Called when this store gets a GETANDWAIT request from another node
-    void handle_get_and_wait_(Message *msg) {
-        // TODO
     }
 };
 

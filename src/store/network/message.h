@@ -11,8 +11,7 @@ enum MessageType {
     DIRECTORY,
     SHUTDOWN,
     PUT,
-    GET,
-    GETANDWAIT
+    GET
 };
 
 // Represents a Message sent between nodes/servers in a network
