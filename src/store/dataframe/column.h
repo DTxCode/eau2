@@ -74,7 +74,7 @@ class Column : public Object {
         for (size_t i = 0; i < num_chunks; i++) {
             new_missings[i] = new bool[INTERNAL_CHUNK_SIZE];
         }
-        for (int i = 0; i < (length / INTERNAL_CHUNK_SIZE); i++) {
+        for (size_t i = 0; i < (length / INTERNAL_CHUNK_SIZE); i++) {
             new_missings[i] = missings[i];
         }
         delete[] missings;
@@ -152,7 +152,7 @@ class IntColumn : public Column {
         num_chunks = 10;
         capacity = num_chunks * INTERNAL_CHUNK_SIZE;
         // Always make enough space
-        if (n > capacity) {
+        if ((size_t) n > capacity) {
             capacity = n;
             num_chunks = (n / INTERNAL_CHUNK_SIZE) + 1;
         }
@@ -196,7 +196,7 @@ class IntColumn : public Column {
 
     // Delete column array and int pointers
     ~IntColumn() {
-        for (int i = 0; i < num_chunks; i++) {
+        for (size_t i = 0; i < num_chunks; i++) {
             delete[] cells[i];
             delete[] missings[i];
         }
@@ -234,7 +234,6 @@ class IntColumn : public Column {
     // Double the capacity of the array and move (not copy) the integer
     // pointers in to new array
     void resize() {
-        size_t old_num_chunks = num_chunks;
         num_chunks = 2 * num_chunks;
         capacity = INTERNAL_CHUNK_SIZE * num_chunks;
         int** new_cells = new int*[num_chunks];
@@ -242,7 +241,7 @@ class IntColumn : public Column {
         for (size_t i = 0; i < num_chunks; i++) {
             new_cells[i] = new int[INTERNAL_CHUNK_SIZE];
         }
-        for (int i = 0; i < (length / INTERNAL_CHUNK_SIZE); i++) {
+        for (size_t i = 0; i < (length / INTERNAL_CHUNK_SIZE); i++) {
             // Move array pointers (internal arrays not being delete)
             new_cells[i] = cells[i];
         }
@@ -301,7 +300,7 @@ class FloatColumn : public Column {
         num_chunks = 10;
         capacity = num_chunks * INTERNAL_CHUNK_SIZE;
         // Always make enough space
-        if (n > capacity) {
+        if ((size_t) n > capacity) {
             capacity = n;
             num_chunks = (n / INTERNAL_CHUNK_SIZE) + 1;
         }
@@ -345,7 +344,7 @@ class FloatColumn : public Column {
 
     // Delete column array and float pointers
     ~FloatColumn() {
-        for (int i = 0; i < num_chunks; i++) {
+        for (size_t i = 0; i < num_chunks; i++) {
             delete[] cells[i];
             delete[] missings;
         }
@@ -356,7 +355,6 @@ class FloatColumn : public Column {
     // Double the capacity of the array and move (not copy) the float
     // pointers in to new array
     void resize() {
-        size_t old_num_chunks = num_chunks;
         num_chunks = 2 * num_chunks;
         capacity = INTERNAL_CHUNK_SIZE * num_chunks;
         float** new_cells = new float*[num_chunks];
@@ -364,7 +362,7 @@ class FloatColumn : public Column {
         for (size_t i = 0; i < num_chunks; i++) {
             new_cells[i] = new float[INTERNAL_CHUNK_SIZE];
         }
-        for (int i = 0; i < (length / INTERNAL_CHUNK_SIZE); i++) {
+        for (size_t i = 0; i < (length / INTERNAL_CHUNK_SIZE); i++) {
             // Move array pointers (internal arrays not being deleted)
             new_cells[i] = cells[i];
         }
@@ -447,7 +445,7 @@ class BoolColumn : public Column {
         num_chunks = 10;
         capacity = num_chunks * INTERNAL_CHUNK_SIZE;
         // Always make enough space
-        if (n > capacity) {
+        if ((size_t) n > capacity) {
             capacity = n;
             num_chunks = (n / INTERNAL_CHUNK_SIZE) + 1;
         }
@@ -491,7 +489,7 @@ class BoolColumn : public Column {
 
     // Delete column array and bool pointers
     ~BoolColumn() {
-        for (int i = 0; i < num_chunks; i++) {
+        for (size_t i = 0; i < num_chunks; i++) {
             delete[] cells[i];
             delete[] missings[i];
         }
@@ -502,7 +500,6 @@ class BoolColumn : public Column {
     // Double the capacity of the array and move (not copy) the bool
     // pointers in to new array
     void resize() {
-        size_t old_num_chunks = num_chunks;
         num_chunks = 2 * num_chunks;
         capacity = INTERNAL_CHUNK_SIZE * num_chunks;
         bool** new_cells = new bool*[num_chunks];
@@ -595,7 +592,7 @@ class StringColumn : public Column {
         num_chunks = 10;
         capacity = num_chunks * INTERNAL_CHUNK_SIZE;
         // Always make enough space
-        if (n > capacity) {
+        if ((size_t) n > capacity) {
             capacity = n;
             num_chunks = (n / INTERNAL_CHUNK_SIZE) + 1;
         }
@@ -639,7 +636,7 @@ class StringColumn : public Column {
 
     ~StringColumn() {
         // don't delete actual string* because they're not ours
-        for (int i = 0; i < num_chunks; i++) {
+        for (size_t i = 0; i < num_chunks; i++) {
             delete[] cells[i];
             delete[] missings[i];
         }
@@ -650,7 +647,6 @@ class StringColumn : public Column {
     // Double the capacity of the array and move (not copy) the String
     // pointers in to new array
     void resize() {
-        size_t old_num_chunks = num_chunks;
         num_chunks = 2 * num_chunks;
         capacity = INTERNAL_CHUNK_SIZE * num_chunks;
         String*** new_cells = new String**[num_chunks];
@@ -658,7 +654,7 @@ class StringColumn : public Column {
         for (size_t i = 0; i < num_chunks; i++) {
             new_cells[i] = new String*[INTERNAL_CHUNK_SIZE];
         }
-        for (int i = 0; i < (length / INTERNAL_CHUNK_SIZE); i++) {
+        for (size_t i = 0; i < (length / INTERNAL_CHUNK_SIZE); i++) {
             // Move array pointers (internal arrays not being delete)
             new_cells[i] = cells[i];
         }

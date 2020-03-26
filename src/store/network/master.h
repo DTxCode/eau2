@@ -58,7 +58,7 @@ class Server {
         }
 
         printf("Server is shutting down itself and %zu other nodes...\n", registered_nodes->size());
-        Message shutdown_msg(my_ip_address, my_port, SHUTDOWN, "");
+        Message shutdown_msg(my_ip_address, my_port, SHUTDOWN, (char*) "");
 
         // Loop over all the nodes this server knows about
         for (size_t node_idx = 0; node_idx < registered_nodes->size(); node_idx++) {
@@ -118,7 +118,7 @@ class Server {
         printf("Server got registration request from node: %s\n", registration_msg->msg);
 
         // Send ACK back to node
-        Message ack(my_ip_address, my_port, ACK, "");
+        Message ack(my_ip_address, my_port, ACK, (char*) "");
         network->write_msg(connection, &ack);
         close(connection);
 

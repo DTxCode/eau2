@@ -172,7 +172,7 @@ class Network {
 
         // first extract how many bytes we're expecting from this socket
         // read size - 1 to always ensure there's a null terminator
-        int bytes_read = read(socket, buffer, max_message_chunk_size - 1);
+        size_t bytes_read = read(socket, buffer, max_message_chunk_size - 1);
 
         if (bytes_read < 0) {
             perror("ERROR reading from socket");
@@ -219,12 +219,12 @@ class Network {
     void write_to_socket_(int socket, char* msg_to_send) {
         // Prepend message length to message
         size_t length = strlen(msg_to_send);
-        size_t num_digits_in_length = snprintf(NULL, 0, "%d", length);
+        size_t num_digits_in_length = snprintf(NULL, 0, "%zu", length);
 
         // + 1 for semicolon between length and message, + 1 for null terminator
         char prepended_message[num_digits_in_length + 1 + length + 1];
 
-        sprintf(prepended_message, "%d;%s", length, msg_to_send);
+        sprintf(prepended_message, "%zu;%s", length, msg_to_send);
 
         // Send message to server
         int bytes_written = write(socket, prepended_message, strlen(prepended_message));

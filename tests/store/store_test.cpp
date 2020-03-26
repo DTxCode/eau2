@@ -1,19 +1,18 @@
-#pragma once
 #include <assert.h>
 #include "../../src/store/network/master.h"
 #include "../../src/store/store.h"
 
 // Tests creating a server and a store, and then putting/getting from the same store
 bool test_simple_put() {
-    char* master_ip = "127.0.0.1";
+    char* master_ip = (char*) "127.0.0.1";
     int master_port = 8888;
     Server s(master_ip, master_port);
     s.listen_for_clients();
 
-    Store store1(0, "127.0.0.1", 7000, master_ip, master_port);
+    Store store1(0, (char*) "127.0.0.1", 7000, master_ip, master_port);
 
     // Create key and DF
-    Key k("key", 0);
+    Key k((char*) "key", 0);
 
     IntColumn* i_c = new IntColumn(4, 1, 2, 3, 5);
     Schema empty_schema;
@@ -42,17 +41,17 @@ bool test_simple_put() {
 
 // Tests creating a server and two stores, and then having one store put a dataframe on the other store.
 bool test_network_put() {
-    char* master_ip = "127.0.0.1";
+    char* master_ip = (char*) "127.0.0.1";
     int master_port = 8888;
     Server s(master_ip, master_port);
     s.listen_for_clients();
 
-    Store store1(0, "127.0.0.1", 7000, master_ip, master_port);
+    Store store1(0, (char*) "127.0.0.1", 7000, master_ip, master_port);
 
-    Store store2(1, "127.0.0.1", 7001, master_ip, master_port);
+    Store store2(1, (char*) "127.0.0.1", 7001, master_ip, master_port);
 
     // Send PUT request from store1 to store2
-    Key k("key", 1);  // key to store on another node
+    Key k((char*) "key", 1);  // key to store on another node
 
     IntColumn* i_c = new IntColumn(4, 1, 2, 3, 5);
     Schema empty_schema;

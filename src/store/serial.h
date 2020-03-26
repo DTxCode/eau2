@@ -30,6 +30,9 @@
 // design philosophy found here for any additional types not supported here.
 class Serializer {
    public:
+
+    virtual ~Serializer(){}
+
     // Serialize a given DataFrame object
     // Serialized message will take the form:
     // "[Serialized Schema]~[Serialized Column 0]; ... ;[Serialized Column n-1]"
@@ -46,7 +49,6 @@ class Serializer {
         char** col_strs = new char*[cols];
         for (size_t i = 0; i < cols; i++) {
             // Serialize column based on schema
-            Column* test_c = df->get_col_(i);
             Schema s = df->get_schema();
             col_strs[i] = serialize_col(df->get_col_(i), df->get_schema().col_type(i));
             total_str_size += strlen(col_strs[i]);
@@ -393,14 +395,14 @@ class Serializer {
         char_str[1] = '\0';
 
         // Track all column types and names as Strings
-        for (int i = 0; i < schema->width(); i++) {
+        for (size_t i = 0; i < schema->width(); i++) {
             char_str[0] = schema->col_type(i);
             col_type_strs.push_back(new String(char_str));
             col_name_strs.push_back(schema->col_name(i));
         }
 
         // Track all row name Strings
-        for (int j = 0; j < schema->length(); j++) {
+        for (size_t j = 0; j < schema->length(); j++) {
             row_name_strs.push_back(schema->row_name(j));
         }
 
@@ -446,12 +448,12 @@ class Serializer {
         size_t row_count = row_names->size();
         char* col_type_str;
         // Add each column with a type and a name
-        for (int i = 0; i < col_count; i++) {
+        for (size_t i = 0; i < col_count; i++) {
             col_type_str = col_types->get(i)->c_str();
             fill_schema->add_column(col_type_str[0], col_names->get(i));
         }
         // Add each row by name
-        for (int j = 0; j < row_count; j++) {
+        for (size_t j = 0; j < row_count; j++) {
             fill_schema->add_row(row_names->get(j));
         }
 

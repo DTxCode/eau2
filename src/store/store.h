@@ -70,7 +70,6 @@ class Store : public Node {
     // Saves the given char* to the given key. For internal use only.
     // Uses copies of given key/value (does not modify or delete them)
     void put_char_(Key *key, char *value) {
-        char *key_str = key->get_name();
         size_t key_home = key->get_home_node();
 
         if (key_home == node_id) {
@@ -105,7 +104,7 @@ class Store : public Node {
         Message *response = send_msg(other_node_host, other_node_port, PUT, msg);
 
         if (response->msg_type != ACK) {
-            printf("Node %d did not get successful ACK for its PUT request to node %d\n", node_id, key_home);
+            printf("Node %zu did not get successful ACK for its PUT request to node %zu\n", node_id, key_home);
             exit(1);
         }
 
@@ -178,7 +177,7 @@ class Store : public Node {
             // key does not exist
             return nullptr;
         } else if (response->msg_type != ACK) {
-            printf("Node %d did not get successful NACK or ACK for its GET request to node %d\n", node_id, key_home);
+            printf("Node %zu did not get successful NACK or ACK for its GET request to node %zu\n", node_id, key_home);
             exit(1);
         }
 
@@ -230,7 +229,7 @@ class Store : public Node {
         if (msg->msg_type == PUT) {
             handle_put_(connected_socket, msg);
         } else if (msg->msg_type == GET) {
-            handle_get_(connnected_socket, msg);
+            handle_get_(connected_socket, msg);
         } else if (msg->msg_type == GETANDWAIT) {
             handle_get_and_wait_(msg);
         } else {
@@ -253,7 +252,7 @@ class Store : public Node {
         put_char_(&key, val_str);
 
         // Send ACK
-        Message ack(my_ip_address, my_port, ACK, "");
+        Message ack(my_ip_address, my_port, ACK, (char *) "");
         network->write_msg(connected_socket, &ack);
     }
 
@@ -267,7 +266,7 @@ class Store : public Node {
 
         if (serialized_value == nullptr) {
             // Value doesn't exist, so send NACK
-            Message nack(my_ip_address, my_port, NACK, "");
+            Message nack(my_ip_address, my_port, NACK, (char*) "");
             network->write_msg(connected_socket, &nack);
         } else {
             // Send ACK with serialized value
@@ -300,7 +299,7 @@ DataFrame *DataFrame::fromArray(Key *key, Store *store, size_t count, float *val
     df->add_column(&col, nullptr);
 
     // add DF to store under key
-    store->put(key, df);
+    store->put_(key, df);
 
     return df;
 }

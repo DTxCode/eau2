@@ -180,7 +180,7 @@ class MaxSeenFielder : public Fielder {
         // empty
     }
 
-    size_t get_max() {
+    int get_max() {
         return max;
     }
 };

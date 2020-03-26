@@ -187,7 +187,7 @@ class Node {
         known_nodes_lock.unlock();
 
         // Send ACK
-        Message ack(my_ip_address, my_port, ACK, "");
+        Message ack(my_ip_address, my_port, ACK, (char*) "");
         network->write_msg(connected_socket, &ack);
     }
 
@@ -197,7 +197,7 @@ class Node {
         printf("Node at %s:%d is shutting down\n", my_ip_address, my_port);
 
         // Send ACK
-        Message ack(my_ip_address, my_port, ACK, "");
+        Message ack(my_ip_address, my_port, ACK, (char*) "");
         network->write_msg(connected_socket, &ack);
 
         shutting_down = true;
@@ -210,7 +210,7 @@ class Node {
     // By default, sends empty ACK back to the message sender and prints a "message-received" string
     virtual void handle_message(int connected_socket, Message *msg) {
         // Send ACK
-        Message ack(my_ip_address, my_port, ACK, "");
+        Message ack(my_ip_address, my_port, ACK, (char*) "");
         network->write_msg(connected_socket, &ack);
 
         printf("Node %s:%d got message from another node with type %d and contents \"%s\"\n", my_ip_address, my_port, msg->msg_type, msg->msg);
