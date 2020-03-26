@@ -9,7 +9,7 @@ bool test_simple_put() {
     Server s(master_ip, master_port);
     s.listen_for_clients();
 
-    Store store1(0, (char*) "127.0.0.1", 7000, master_ip, master_port);
+    Store store1(0, (char*) "127.0.0.1", 8000, master_ip, master_port);
 
     // Create key and DF
     Key k((char*) "key", 0);
@@ -42,7 +42,7 @@ bool test_simple_put() {
 // Tests creating a server and two stores, and then having one store put a dataframe on the other store.
 bool test_network_put() {
     char* master_ip = (char*) "127.0.0.1";
-    int master_port = 8888;
+    int master_port = 7777;
     Server s(master_ip, master_port);
     s.listen_for_clients();
 

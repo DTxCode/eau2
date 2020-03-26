@@ -37,4 +37,18 @@ class Key : public Object {
     Key* clone() {
         return new Key(name, home_node);
     }
+
+    bool equals(Object* other) {
+	if (other == nullptr) return false;
+	if (other == this) return true;
+
+	Key* other_key = dynamic_cast<Key*>(other);
+
+	if (other_key == nullptr) return false;
+
+	if (equal_strings(other_key->name, name) && other_key->home_node == home_node) return true;
+
+
+	return false;
+	}
 };
