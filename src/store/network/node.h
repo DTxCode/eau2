@@ -8,6 +8,7 @@
 #include <stropts.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <mutex>
 #include <thread>
 #include "../serial.h"
 #include "message.h"
@@ -31,6 +32,7 @@ class Node {
     bool registered;        // Whether this node is registered with the master server
     bool shutting_down;     // Whether this node is shutting down. Used by (infinite) spawned thread to know to shut down
     Serializer *serializer;
+    std::mutex known_nodes_lock;
 
     Node(char *my_ip_address, int my_port, char *server_ip_address, int server_port) {
         this->my_ip_address = my_ip_address;
@@ -53,6 +55,8 @@ class Node {
             listener->join();
         }
 
+        // Grab known_nodes lock
+        known_nodes_lock.lock();
         // Cleanup existing directory list, if it exists
         if (known_nodes != nullptr) {
             for (size_t i = 0; i < known_nodes->size(); i++) {
@@ -61,6 +65,7 @@ class Node {
 
             delete known_nodes;
         }
+        known_nodes_lock.unlock();
 
         delete listener;
         delete network;
@@ -168,6 +173,7 @@ class Node {
         char *new_directory = msg->msg;
 
         // Cleanup existing directory list, if it exists
+        known_nodes_lock.lock();
         if (known_nodes != nullptr) {
             for (size_t i = 0; i < known_nodes->size(); i++) {
                 delete known_nodes->get(i);
@@ -178,6 +184,7 @@ class Node {
 
         // Save new directory list
         known_nodes = serializer->deserialize_string_array(new_directory);
+        known_nodes_lock.unlock();
 
         // Send ACK
         Message ack(my_ip_address, my_port, ACK, "");

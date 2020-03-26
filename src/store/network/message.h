@@ -6,6 +6,7 @@
 
 enum MessageType {
     ACK,
+    NACK,
     REGISTER,
     DIRECTORY,
     SHUTDOWN,
@@ -24,7 +25,6 @@ class Message {
     char* original_string;  // saved to be deleted in destructor
 
     // Constructs a Message with the given fields
-    // NOTE: `msg` cannot contain any semicolons!
     Message(char* sender_ip_address, int sender_port, MessageType msg_type, char* msg) {
         this->sender_ip_address = sender_ip_address;
         this->sender_port = sender_port;
@@ -72,7 +72,7 @@ class Message {
         msg_type = static_cast<MessageType>(atoi(msg_type_string));
 
         // can be empty string
-        msg = strtok(nullptr, ";");
+        msg = strtok(nullptr, "\0");
     }
 
     // Returns a string representation of this Message in the format

@@ -21,8 +21,8 @@ bool test_simple_put() {
     df.add_column(i_c, nullptr);
 
     // put in store and then get it out
-    store1.put(&k, &df);
-    DataFrame* df2 = store1.get(&k);
+    store1.put_(&k, &df);
+    DataFrame* df2 = store1.get_(&k);
 
     assert(df.get_int(0, 0) == df2->get_int(0, 0));
     assert(df.get_int(0, 1) == df2->get_int(0, 1));
@@ -59,9 +59,9 @@ bool test_network_put() {
     DataFrame df(empty_schema);
     df.add_column(i_c, nullptr);
 
-    // put on first node, and then get from second ndoe
-    store1.put(&k, &df);
-    DataFrame* df2 = store2.get(&k);
+    // put on first node, and then get from second node
+    store1.put_(&k, &df);
+    DataFrame* df2 = store2.get_(&k);
 
     assert(df.get_int(0, 0) == df2->get_int(0, 0));
     assert(df.get_int(0, 1) == df2->get_int(0, 1));

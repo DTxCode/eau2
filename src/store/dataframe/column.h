@@ -14,7 +14,7 @@ class IntColumn;
 class BoolColumn;
 class FloatColumn;
 class StringColumn;
-    
+
 /** INDEXING MATH
 *   ~ Desired value at 'logical' index 114
 *   ~ Internal array index that stores this index is FLOOR(114 / INTERNAL_CHUNK_SIZE)
@@ -30,7 +30,8 @@ class StringColumn;
  * * Columns are mutable, equality is pointr equality. 
  * * Columns may have missing values, but the missing counts as a value. 
  * Missings have default values for each type, but their value
- * has no meaning other than to maintain the type of the element. If 
+ * has no meaning other than to maintain the type of the element. Users are expected
+ * to check if a cell is missing before using a fetched value. If 
  * missing values are present, they are counted in the size of column.
  * Missing values are different than unoccupied cells. 
  * * Internally, values are stored in an array of arrays. Each of the lowest
@@ -40,10 +41,10 @@ class StringColumn;
  * into a new outer array. Missings are stored in the same way. */
 class Column : public Object {
    public:
-    size_t length; // Count of values(including missings)
-    size_t capacity; // Count of cells available
-    size_t num_chunks; // Count of how many internal 'chunk' arrays were using
-    bool** missings; // Bitmap tracker for missing values
+    size_t length;      // Count of values(including missings)
+    size_t capacity;    // Count of cells available
+    size_t num_chunks;  // Count of how many internal 'chunk' arrays were using
+    bool** missings;    // Bitmap tracker for missing values
 
     // Initialize missings array of arrays
     // Allocate memory and fill with all 'false'
@@ -56,11 +57,11 @@ class Column : public Object {
             }
         }
     }
-    
+
     // Return whether the element at the given value is a missing value
     // Undefined behavior if the idx is out of bounds
     bool is_missing(size_t idx) {
-        size_t array_idx = idx / INTERNAL_CHUNK_SIZE; // Will round down (floor)
+        size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
         return missings[array_idx][local_idx];
     }
@@ -81,13 +82,13 @@ class Column : public Object {
     }
 
     // Declare the value at idx as missing, does not change or set a value
-    // Out of bounds idx is undefined behavior 
+    // Out of bounds idx is undefined behavior
     void set_missing(size_t idx) {
-        size_t array_idx = idx / INTERNAL_CHUNK_SIZE; // Will round down (floor)
+        size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
         missings[array_idx][local_idx] = true;
     }
-        
+
     /** Type converters: Return same column under its actual type, or
    *  nullptr if of the wrong type.  */
     virtual IntColumn* as_int() { return nullptr; }
@@ -101,8 +102,8 @@ class Column : public Object {
     virtual void push_back(bool val) { return; }
     virtual void push_back(float val) { return; }
     virtual void push_back(String* val) { return; }
-    // Adds a missing with a default value dependent on the type of the 
-    // column 
+    // Adds a missing with a default value dependent on the type of the
+    // column
     virtual void push_back_missing() { return; }
 
     /** Returns the number of elements in the column. */
@@ -131,7 +132,6 @@ class Column : public Object {
 class IntColumn : public Column {
    public:
     int** cells;
-
 
     // Create empty int column
     IntColumn() {
@@ -207,9 +207,9 @@ class IntColumn : public Column {
     // Returns the integer at the given index.
     // Input index out of bounds will cause a runtime error
     int get(size_t idx) {
-        size_t array_idx = idx / INTERNAL_CHUNK_SIZE; // Will round down (floor)
+        size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
-        return cells[array_idx][local_idx];  
+        return cells[array_idx][local_idx];
     }
 
     // Returns this column as an integer column
@@ -222,7 +222,7 @@ class IntColumn : public Column {
         if (idx >= length) {
             return;
         }
-        size_t array_idx = idx / INTERNAL_CHUNK_SIZE; // Will round down (floor)
+        size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
         // Update missing bitmap
         if (is_missing(idx)) {
@@ -244,7 +244,7 @@ class IntColumn : public Column {
         }
         for (int i = 0; i < (length / INTERNAL_CHUNK_SIZE); i++) {
             // Move array pointers (internal arrays not being delete)
-            new_cells[i] = cells[i]; 
+            new_cells[i] = cells[i];
         }
         delete[] cells;
         cells = new_cells;
@@ -256,24 +256,23 @@ class IntColumn : public Column {
         if (length == capacity) {
             resize();
         }
-        size_t array_idx = length / INTERNAL_CHUNK_SIZE; // Will round down (floor)
+        size_t array_idx = length / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = length % INTERNAL_CHUNK_SIZE;
         cells[array_idx][local_idx] = val;
         length++;
     }
 
-    // Add "missing" (0) to bottom of column 
+    // Add "missing" (0) to bottom of column
     void push_back_missing() {
         if (length == capacity) {
             resize();
         }
-        size_t array_idx = length / INTERNAL_CHUNK_SIZE; // Will round down (floor)
+        size_t array_idx = length / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = length % INTERNAL_CHUNK_SIZE;
         cells[array_idx][local_idx] = 0;
         missings[array_idx][local_idx] = true;
         length++;
     }
-
 };
 
 /*************************************************************************
@@ -367,7 +366,7 @@ class FloatColumn : public Column {
         }
         for (int i = 0; i < (length / INTERNAL_CHUNK_SIZE); i++) {
             // Move array pointers (internal arrays not being deleted)
-            new_cells[i] = cells[i]; 
+            new_cells[i] = cells[i];
         }
         delete[] cells;
         cells = new_cells;
@@ -376,9 +375,9 @@ class FloatColumn : public Column {
 
     // Get float at index idx. Runtime error if idx is out of bounds
     float get(size_t idx) {
-        size_t array_idx = idx / INTERNAL_CHUNK_SIZE; // Will round down (floor)
+        size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
-        return cells[array_idx][local_idx];  
+        return cells[array_idx][local_idx];
     }
 
     // Add given float to "bottom" of the column.
@@ -386,7 +385,7 @@ class FloatColumn : public Column {
         if (length == capacity) {
             resize();
         }
-        size_t array_idx = length / INTERNAL_CHUNK_SIZE; // Will round down (floor)
+        size_t array_idx = length / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = length % INTERNAL_CHUNK_SIZE;
         cells[array_idx][local_idx] = val;
         length++;
@@ -400,7 +399,7 @@ class FloatColumn : public Column {
         if (idx >= size()) {
             return;
         }
-        size_t array_idx = idx / INTERNAL_CHUNK_SIZE; // Will round down (floor)
+        size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
         // Update missing bitmap
         if (is_missing(idx)) {
@@ -408,15 +407,15 @@ class FloatColumn : public Column {
         }
         cells[array_idx][local_idx] = val;
     }
-    
-    // Add "missing" (0.0) to bottom of column 
+
+    // Add "missing" (0.0) to bottom of column
     void push_back_missing() {
         if (length == capacity) {
             resize();
         }
-        size_t array_idx = length / INTERNAL_CHUNK_SIZE; // Will round down (floor)
+        size_t array_idx = length / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = length % INTERNAL_CHUNK_SIZE;
-        cells[array_idx][local_idx] = (float) 0.0;
+        cells[array_idx][local_idx] = (float)0.0;
         missings[array_idx][local_idx] = true;
         length++;
     }
@@ -513,7 +512,7 @@ class BoolColumn : public Column {
         }
         for (size_t i = 0; i < (length / INTERNAL_CHUNK_SIZE); i++) {
             // Move array pointers (internal arrays not being delete)
-            new_cells[i] = cells[i]; 
+            new_cells[i] = cells[i];
         }
         delete[] cells;
         cells = new_cells;
@@ -523,9 +522,9 @@ class BoolColumn : public Column {
     // Get bool at index idx.
     // Runtime error if idx is out of bounds
     bool get(size_t idx) {
-        size_t array_idx = idx / INTERNAL_CHUNK_SIZE; // Will round down (floor)
+        size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
-        return cells[array_idx][local_idx];  
+        return cells[array_idx][local_idx];
     }
 
     // Return this column as a BoolColumn
@@ -536,7 +535,7 @@ class BoolColumn : public Column {
         if (idx >= length) {
             return;
         }
-        size_t array_idx = idx / INTERNAL_CHUNK_SIZE; // Will round down (floor)
+        size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
         // Update missing bitmap
         if (is_missing(idx)) {
@@ -550,18 +549,18 @@ class BoolColumn : public Column {
         if (length == capacity) {
             resize();
         }
-        size_t array_idx = length / INTERNAL_CHUNK_SIZE; // Will round down (floor)
+        size_t array_idx = length / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = length % INTERNAL_CHUNK_SIZE;
         cells[array_idx][local_idx] = val;
         length++;
     }
-    
-    // Add "missing" (true) to bottom of column 
+
+    // Add "missing" (true) to bottom of column
     void push_back_missing() {
         if (length == capacity) {
             resize();
         }
-        size_t array_idx = length / INTERNAL_CHUNK_SIZE; // Will round down (floor)
+        size_t array_idx = length / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = length % INTERNAL_CHUNK_SIZE;
         cells[array_idx][local_idx] = true;
         missings[array_idx][local_idx] = true;
@@ -661,7 +660,7 @@ class StringColumn : public Column {
         }
         for (int i = 0; i < (length / INTERNAL_CHUNK_SIZE); i++) {
             // Move array pointers (internal arrays not being delete)
-            new_cells[i] = cells[i]; 
+            new_cells[i] = cells[i];
         }
         delete[] cells;
         cells = new_cells;
@@ -671,9 +670,9 @@ class StringColumn : public Column {
     // Get String* at index idx.
     // Runtime error if idx is out of bounds
     String* get(size_t idx) {
-        size_t array_idx = idx / INTERNAL_CHUNK_SIZE; // Will round down (floor)
+        size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
-        return cells[array_idx][local_idx];  
+        return cells[array_idx][local_idx];
     }
 
     // Add given String* on to 'bottom' of this column
@@ -681,7 +680,7 @@ class StringColumn : public Column {
         if (length == capacity) {
             resize();
         }
-        size_t array_idx = length / INTERNAL_CHUNK_SIZE; // Will round down (floor)
+        size_t array_idx = length / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = length % INTERNAL_CHUNK_SIZE;
         cells[array_idx][local_idx] = val;
         length++;
@@ -695,7 +694,7 @@ class StringColumn : public Column {
         if (idx >= length) {
             return;
         }
-        size_t array_idx = idx / INTERNAL_CHUNK_SIZE; // Will round down (floor)
+        size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
         // Update missing bitmap
         if (is_missing(idx)) {
@@ -703,13 +702,13 @@ class StringColumn : public Column {
         }
         cells[array_idx][local_idx] = val;
     }
-    
-    // Add "missing" ("") to bottom of column 
+
+    // Add "missing" ("") to bottom of column
     void push_back_missing() {
         if (length == capacity) {
             resize();
         }
-        size_t array_idx = length / INTERNAL_CHUNK_SIZE; // Will round down (floor)
+        size_t array_idx = length / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = length % INTERNAL_CHUNK_SIZE;
         cells[array_idx][local_idx] = new String("");
         missings[array_idx][local_idx] = true;
