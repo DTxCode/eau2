@@ -2,9 +2,9 @@
 //lang::Cpp
 
 #include <chrono>
+#include <climits>
 #include <cstdlib>
 #include <cstring>
-#include <climits>
 #include <ctime>
 #include <iostream>
 
@@ -196,4 +196,10 @@ bool contains_char(char* array, char c) {
     }
 
     return false;
+}
+
+char* duplicate(char* s) {
+    char* res = new char[strlen(s) + 1];
+    strcpy(res, s);
+    return res;
 }

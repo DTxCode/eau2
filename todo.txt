@@ -7,17 +7,18 @@ Store:
     Serialize - need types, generic deserialize method?
 
 m3:
-    1) Update exisiting DF to support missings with a bitmap (need missings in row and column)
-        - this also needs serialization updates
-    2) Update columns' memory stuff with internal Arrays
-    3) New DistributedDataFrame class
+    1) Update column/rows serialization to include missings
+    2) New DistributedDataFrame class
        - above current DF class
        - list of keys to the individual chunks, each of which are a dataframe
        - serialization methods
             -  remove semicolons to not mess up Network layer
-    3.5) Network - need put, get, getandwait for other nodes
+    3) Network - need put, get, getandwait for other nodes
+               - thread syncing?
+               - waitAndNotify?
     4) Dataframe - ::fromArray/fromScalar defined on DistributedDataFrame?
     5) Update sorer to work with new DistributedDataFrame
-
+    6) Fix compiler errors
+    
 Questions:
     DistributedArrays?
