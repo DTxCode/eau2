@@ -1,7 +1,7 @@
 #pragma once
 #include <assert.h>
 #include "../../src/store/network/master.h"
-#include "../../src/store/store.h."
+#include "../../src/store/store.h"
 
 // Tests creating a server and a store, and then putting/getting from the same store
 bool test_simple_put() {
