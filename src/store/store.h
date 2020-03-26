@@ -18,9 +18,6 @@ class Store : public Node {
     size_t node_id;
 
     Store(size_t node_id, char *my_ip_address, int my_port, char *server_ip_address, int server_port) : Node(my_ip_address, my_port, server_ip_address, server_port) {
-        // connect to the network
-        register_and_listen();
-
         this->node_id = node_id;
         map = new Map();
     }
@@ -252,7 +249,7 @@ class Store : public Node {
         put_char_(&key, val_str);
 
         // Send ACK
-        Message ack(my_ip_address, my_port, ACK, (char *) "");
+        Message ack(my_ip_address, my_port, ACK, (char *)"");
         network->write_msg(connected_socket, &ack);
     }
 
@@ -266,7 +263,7 @@ class Store : public Node {
 
         if (serialized_value == nullptr) {
             // Value doesn't exist, so send NACK
-            Message nack(my_ip_address, my_port, NACK, (char*) "");
+            Message nack(my_ip_address, my_port, NACK, (char *)"");
             network->write_msg(connected_socket, &nack);
         } else {
             // Send ACK with serialized value

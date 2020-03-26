@@ -18,7 +18,7 @@ m3:
                - waitAndNotify?
     4) Dataframe - ::fromArray/fromScalar defined on DistributedDataFrame?
     5) Update sorer to work with new DistributedDataFrame
-    6) Fix compiler errors
-    
+    6) waitAndNotify for loops
+
 Questions:
     DistributedArrays?

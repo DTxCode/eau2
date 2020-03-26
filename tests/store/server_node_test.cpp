@@ -14,8 +14,7 @@ class TestNode : public Node {
     }
 
     void handle_message(int connected_socket, Message* msg) {
-    	printf("Node %s:%d got message from another node with type %d and contents \"%s\"\n", my_ip_address, my_port, msg->msg_type, msg->msg);
-   
+        printf("Node %s:%d got message from another node with type %d and contents \"%s\"\n", my_ip_address, my_port, msg->msg_type, msg->msg);
 
         // Send ACK
         Message ack(my_ip_address, my_port, ACK, "");
@@ -38,10 +37,8 @@ bool test_simple_message() {
     s.listen_for_clients();
 
     TestNode node1("127.0.0.1", 7000, master_ip, master_port);
-    node1.register_and_listen();
 
     TestNode node2("127.0.0.1", 7001, master_ip, master_port);
-    node2.register_and_listen();
 
     // Send empty ACK message from node1 to node2
     Message* response = node1.send_msg("127.0.0.1", 7001, ACK, "Hello from node 1!");
@@ -51,6 +48,7 @@ bool test_simple_message() {
     s.shutdown();
 
     // wait for nodes to finish
+    // TODO replace with waitAndNotify
     while (!node1.is_shutdown()) {
     }
     while (!node2.is_shutdown()) {
