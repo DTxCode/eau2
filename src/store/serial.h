@@ -51,13 +51,13 @@ class Serializer {
             // Serialize column based on schema
             Schema s = df->get_schema();
             col_strs[i] = serialize_col(df->get_col_(i), df->get_schema().col_type(i));
-            total_str_size += strlen(col_strs[i]);
+            total_str_size += strlen(col_strs[i]) + 1; // +1 for semicolons below
         }
 
         char* serial_buffer = new char[total_str_size];
 
         // Copy schema and column strings into buffer
-        memcpy(serial_buffer, schema_str, strlen(schema_str));
+        strcpy(serial_buffer, schema_str); //, strlen(schema_str));
         strcat(serial_buffer, "~");
 
         // Add serialized column messages to buffer, delimeted by ";"
