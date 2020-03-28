@@ -202,17 +202,17 @@ class Serializer {
     virtual char* serialize_size_t(size_t value) {
         char* data;
         // Do a fake write to check how much space we need
-        size_t buf_size = snprintf(nullptr, 0, "%lu", value) + 1;
+        size_t buf_size = snprintf(nullptr, 0, "%zu", value) + 1;
         data = new char[buf_size];
         // Do a real write with proper amount of space
-        snprintf(data, buf_size, "%lu", value);
+        snprintf(data, buf_size, "%zu", value);
         return data;
     }
 
     // De-serialize a character array in to an size_t value
     virtual size_t deserialize_size_t(char* msg) {
-        int data;
-        sscanf(msg, "%lu", &data);
+        size_t data;
+        sscanf(msg, "%zu", &data);
         return data;
     }
 
@@ -286,9 +286,8 @@ class Serializer {
     // Deserialize a char* into a Key object
     // Expects char* form of "[serialized Key name],[serialized Key home_node]"
     virtual Key* deserialize_key(char* msg) {
-        char* name_token = strtok(msg, ",");  // Get first val before ,
-        char* node_token = strtok(msg, ",");
-        node_token = strtok(nullptr, ",");  // Get second val after ,
+        char* name_token = strtok(msg, ","); // Get first val before ,
+        char* node_token = strtok(nullptr, ",");
         size_t node_id = deserialize_size_t(node_token);
         return new Key(name_token, node_id);
     }
@@ -313,7 +312,7 @@ class Serializer {
             // Using static_casts to avoid performance hits from casting
             // This relies on well-formed user input
             if (type == INT_TYPE) {
-                IntColumn* typed_col = static_cast<IntColumn*>(col);
+                IntColumn* typed_col = dynamic_cast<IntColumn*>(col);
                 cell_strings[i] = serialize_int(typed_col->get(i));
             } else if (type == FLOAT_TYPE) {
                 FloatColumn* typed_col = static_cast<FloatColumn*>(col);
