@@ -4,7 +4,7 @@
 #include "../../utils/object.h"
 #include "../../utils/string.h"
 #include "../key.h"
-//#include "../store.h"
+#include "../store.h"
 
 #define INT_TYPE 'I'
 #define BOOL_TYPE 'B'
@@ -12,7 +12,7 @@
 #define STRING_TYPE 'S'
 #define INTERNAL_CHUNK_SIZE 10000
 
-class Store {
+/*class Store {
     public:
     
     
@@ -22,7 +22,7 @@ size_t this_node();
 bool* get_bool_array_(Key* k);
 int* get_int_array_(Key* k);
     
-    };
+    };*/
 
 class IntColumn;
 class BoolColumn;
