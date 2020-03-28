@@ -162,13 +162,13 @@ class Serializer {
     // Deserialize boolean column from char*
     virtual BoolColumn* deserialize_bool_col(char* msg); 
 
-    virtual char* serialize_bools(bool* bools);
-    virtual char* serialize_ints(int* ints);
-    virtual char* serialize_floats(float* floats);
-    virtual char* serialize_strings(String* strings);
+    virtual char* serialize_bools(bool* bools, size_t num_values);
+    virtual char* serialize_ints(int* ints, size_t num_values);
+    virtual char* serialize_floats(float* floats, size_t num_values);
+    virtual char* serialize_strings(String** strings, size_t num_values);
 
-    virtual bool* deserialize_bools(char* value);
-    virtual int* deserialize_ints(char* value);
-    virtual float* deserialize_floats(char* value);
-    virtual String* deserialize_strings(char* value);
+    virtual bool* deserialize_bools(char* msg);
+    virtual int* deserialize_ints(char* msg);
+    virtual float* deserialize_floats(char* msg);
+    virtual String** deserialize_strings(char* msg);
 };

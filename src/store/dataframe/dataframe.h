@@ -7,13 +7,14 @@
 #include "row.h"
 #include "rower.h"
 #include "schema.h"
+#include "../store.h"
 
 #define INT_TYPE 'I'
 #define BOOL_TYPE 'B'
 #define FLOAT_TYPE 'F'
 #define STRING_TYPE 'S'
 
-class Store;
+//class Store;
 
 /****************************************************************************
  * DistributedDataFrame::
