@@ -30,8 +30,7 @@
 // design philosophy found here for any additional types not supported here.
 class Serializer {
    public:
-
-    virtual ~Serializer(){}
+    virtual ~Serializer() {}
 
     // Serialize a given DataFrame object
     // Serialized message will take the form:
@@ -51,13 +50,13 @@ class Serializer {
             // Serialize column based on schema
             Schema s = df->get_schema();
             col_strs[i] = serialize_col(df->get_col_(i), df->get_schema().col_type(i));
-            total_str_size += strlen(col_strs[i]) + 1; // +1 for semicolons below
+            total_str_size += strlen(col_strs[i]) + 1;  // +1 for semicolons below
         }
 
         char* serial_buffer = new char[total_str_size];
 
         // Copy schema and column strings into buffer
-        strcpy(serial_buffer, schema_str); //, strlen(schema_str));
+        strcpy(serial_buffer, schema_str);  //, strlen(schema_str));
         strcat(serial_buffer, "~");
 
         // Add serialized column messages to buffer, delimeted by ";"
@@ -123,7 +122,7 @@ class Serializer {
 
         delete[] token_copies;
         delete[] msg_copy;
-//        delete[] msg;
+        //        delete[] msg;
         delete schema;
         return df;
     }
@@ -138,7 +137,7 @@ class Serializer {
     // Leverage built-in Message constructor which works
     // from its to_string() representation (used for serialization)
     virtual Message* deserialize_message(char* msg) {
-        Message* m = new Message(msg); // Copies msg
+        Message* m = new Message(msg);  // Copies msg
         //delete[] msg;
         return m;
     }
@@ -198,7 +197,7 @@ class Serializer {
         sscanf(msg, "%d", &data);
         return data;
     }
-    
+
     // Serialize an size_t (unsigned long) to a character array
     virtual char* serialize_size_t(size_t value) {
         char* data;
@@ -262,7 +261,7 @@ class Serializer {
         return new String(static_cast<const char*>(msg));
     }
 
-    // Serialize pointer to Key* object 
+    // Serialize pointer to Key* object
     // Creates form "[serialized Key name],[serialized Key home_node]"
     virtual char* serialize_key(Key* value) {
         char* data;
@@ -276,7 +275,7 @@ class Serializer {
         size_t name_buf_size = snprintf(nullptr, 0, "%s", value->get_name()) + 1;
         char* serialized_home_node = serialize_size_t(value->get_home_node());
         size_t node_buf_size = snprintf(nullptr, 0, "%s", serialized_home_node) + 1;
-        data = new char[name_buf_size + node_buf_size + 1]; // + 1 for comma
+        data = new char[name_buf_size + node_buf_size + 1];  // + 1 for comma
         strcpy(data, value->get_name());
         strcat(data, ",");
         strcat(data, serialized_home_node);
@@ -287,13 +286,12 @@ class Serializer {
     // Deserialize a char* into a Key object
     // Expects char* form of "[serialized Key name],[serialized Key home_node]"
     virtual Key* deserialize_key(char* msg) {
-        char* name_token = strtok(msg, ","); // Get first val before ,
+        char* name_token = strtok(msg, ",");  // Get first val before ,
         char* node_token = strtok(msg, ",");
-        node_token = strtok(nullptr, ","); // Get second val after ,
+        node_token = strtok(nullptr, ",");  // Get second val after ,
         size_t node_id = deserialize_size_t(node_token);
         return new Key(name_token, node_id);
     }
-
 
     // Generic serialization method for Column type
     // Process is same for every column, but serialization method used for
@@ -551,4 +549,15 @@ class Serializer {
         deserialize_col(msg, BOOL_TYPE, b_c);
         return b_c;
     }
+
+    char* serialize_bools(bool* bools) {}
+    char* serialize_ints(int* ints) {}
+    char* serialize_floats(float* floats) {}
+    char* serialize_strings(String* strings) {}
+
+    bool* deserialize_bools(char* value) {}
+    int* deserialize_ints(char* value) {}
+    float* deserialize_floats(char* value) {}
+    String* deserialize_strings(char* value) {}
+
 };

@@ -13,7 +13,7 @@
 #define FLOAT_TYPE 'F'
 #define STRING_TYPE 'S'
 
-//class Store;
+class Store;
 
 /****************************************************************************
  * DistributedDataFrame::
@@ -255,7 +255,6 @@ class DataFrame : public Object {
         for (size_t col_idx = 0; col_idx < schema->width(); col_idx++) {
             Column* col = columns[col_idx];
             char col_type = col->get_type();
-
 
             // get appropriately typed value out of the row, and set it in the column
             // expect col schema to match row schema

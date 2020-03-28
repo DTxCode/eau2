@@ -4,30 +4,13 @@
 #include "../../utils/object.h"
 #include "../../utils/string.h"
 #include "../key.h"
-//#include "../store.h"
+#include "../store.h"
 
 #define INT_TYPE 'I'
 #define BOOL_TYPE 'B'
 #define FLOAT_TYPE 'F'
 #define STRING_TYPE 'S'
 #define INTERNAL_CHUNK_SIZE 10000
-
-class Store {
-    public:
-    
-    
-void put_(Key* k, bool* bs);
-void put_(Key* k, int* is);
-size_t this_node();
-bool* get_bool_array_(Key* k);
-int* get_int_array_(Key* k);
-    
-    
-    
-    
-    
-    
-    };
 
 class IntColumn;
 class BoolColumn;
@@ -58,25 +41,24 @@ class StringColumn;
  * of these internal arrays. This structure allows for resizing witout the need
  * for copying all cell values. Instead pointers to each chunk are simply moved
  * into a new outer array. Missings are stored in the same way. */
- 
 
- /* Distributed update:
+/* Distributed update:
  * Column tracks two list of keys, one for cells, one for missings. 
  * Each key represents a chunk of data, whether it is the cell values 
  * or missing values. A Column has an associated store (KVS) that it 
- * communicates with. */ 
+ * communicates with. */
 class Column : public Object {
     // TODO may have off-by-one errors with resizing
 
    public:
-    size_t length;      // Count of values(including missings)
-    size_t capacity;    // Count of cells available
-    size_t num_chunks;  // Count of how many internal 'chunk' arrays were using
-    Key** missings_keys; // Keys to bool chunks that make up missing bitmap
-    Key** chunk_keys; // Keys to each chunk of values in this column
-    Store* store; // KVS 
+    size_t length;        // Count of values(including missings)
+    size_t capacity;      // Count of cells available
+    size_t num_chunks;    // Count of how many internal 'chunk' arrays were using
+    Key** missings_keys;  // Keys to bool chunks that make up missing bitmap
+    Key** chunk_keys;     // Keys to each chunk of values in this column
+    Store* store;         // KVS
     // local missings array (cache) TODO
-    bool** missings; // Leaving this is so it compiles
+    bool** missings;  // Leaving this is so it compiles
 
     // Assumes Keys are initialized
     // For each missing key, allocates an array of booleans all set to false
@@ -89,16 +71,16 @@ class Column : public Object {
             for (size_t j = 0; j < INTERNAL_CHUNK_SIZE; j++) {
                 missings[i][j] = false;
             }
-            
-            store->put_(missings_keys[i], missings[i]); // TODO put_ method for each array type?
-            delete[] missings[i]; // DONT NEED IT AFTER ITS IN STORE
+
+            store->put_(missings_keys[i], missings[i]);  // TODO put_ method for each array type?
+            delete[] missings[i];                        // DONT NEED IT AFTER ITS IN STORE
         }
-        delete[] missings; // MISSINGS COULD BE STACK ALLOCATED INSTEAD
+        delete[] missings;  // MISSINGS COULD BE STACK ALLOCATED INSTEAD
     }
 
-    // Initialize all keys. After this method. Both Key lists should be 
-    // populated with 'num_chunks' Key objects. These represent the 
-    // Keys to the chunks, in order. Each Key will be unique. 
+    // Initialize all keys. After this method. Both Key lists should be
+    // populated with 'num_chunks' Key objects. These represent the
+    // Keys to the chunks, in order. Each Key will be unique.
     void init_keys() {
         missings_keys = new Key*[num_chunks];
         chunk_keys = new Key*[num_chunks];
@@ -129,10 +111,10 @@ class Column : public Object {
     }
 
     // Generate a random number, and turn it in to a char* to be used in a Key
-    // Ensure that the generated Key does not already exist in our lists of 
+    // Ensure that the generated Key does not already exist in our lists of
     // Keys
     Key* generate_key() {
-        size_t rand_key = rand(); // random number as key
+        size_t rand_key = rand();  // random number as key
         char* key;
         // Do a fake write to check how much space we need
         size_t buf_size = snprintf(nullptr, 0, "%lu", rand_key) + 1;
@@ -142,10 +124,10 @@ class Column : public Object {
         // Check this key against all existing keys in this column
         for (size_t i = 0; i < num_chunks; i++) {
             if (strcmp(key, chunk_keys[i]->get_name()) == 0) {
-                return generate_key(); // Start over, need unique key
+                return generate_key();  // Start over, need unique key
             }
             if (strcmp(key, missings_keys[i]->get_name()) == 0) {
-                return generate_key(); // Start over, need unique key
+                return generate_key();  // Start over, need unique key
             }
         }
         // We have a unique key, make a Key and return it
@@ -161,13 +143,13 @@ class Column : public Object {
         for (size_t i = (length / INTERNAL_CHUNK_SIZE) + 1; i < num_chunks; i++) {
             new_missings[i] = new bool[INTERNAL_CHUNK_SIZE];
         }
-        for (size_t i = 0; i < (length / INTERNAL_CHUNK_SIZE) + 1; i++) { // TODO other resize methods are off by 1 
+        for (size_t i = 0; i < (length / INTERNAL_CHUNK_SIZE) + 1; i++) {  // TODO other resize methods are off by 1
             new_missings[i] = missings[i];
         }
         delete[] missings;
         missings = new_missings;
     }
-    
+
     // Return whether the element at the given value is a missing value
     // Undefined behavior if the idx is out of bounds
     bool is_missing(size_t idx) {
@@ -176,11 +158,10 @@ class Column : public Object {
         Key* k = missings_keys[array_idx];
         bool* missings = store->get_bool_array_(k);
         bool val = missings[local_idx];
-        delete[] missings; // No longer need it
+        delete[] missings;  // No longer need it
         return val;
         //return missings[array_idx][local_idx];
     }
-
 
     // Declare the value at idx as missing, does not change or set a value
     // Out of bounds idx is undefined behavior
@@ -264,7 +245,7 @@ class IntColumn : public Column {
         init_keys();
         init_missings();
         // Always make enough space
-        if ((size_t) n > capacity) {
+        if ((size_t)n > capacity) {
             capacity = n;
             num_chunks = (n / INTERNAL_CHUNK_SIZE) + 1;
         }
@@ -311,7 +292,7 @@ class IntColumn : public Column {
 
     // Delete column array and int pointers
     // TODO what do we own and what do we not?
-    // Own Keys that we made, do not own Store 
+    // Own Keys that we made, do not own Store
     ~IntColumn() {
         for (size_t i = 0; i < num_chunks; i++) {
             delete missings_keys[i];
@@ -366,13 +347,13 @@ class IntColumn : public Column {
         size_t old_chunks = num_chunks;
         num_chunks = 2 * num_chunks;
         capacity = INTERNAL_CHUNK_SIZE * num_chunks;
-        resize_keys(); // Chunk_keys is now twice the size as before
+        resize_keys();  // Chunk_keys is now twice the size as before
         resize_missings();
         for (size_t i = old_chunks; i < num_chunks; i++) {
             store->put_(chunk_keys[i], new int[INTERNAL_CHUNK_SIZE]);
             store->put_(missings_keys[i], new bool[INTERNAL_CHUNK_SIZE]);
         }
-        
+
         /*int** new_cells = new int*[num_chunks];
         // Array of integer arrays
         for (size_t i = 0; i < num_chunks; i++) {
@@ -399,7 +380,7 @@ class IntColumn : public Column {
         cells[local_idx] = val;
         store->put_(k, cells);
         length++;
-        delete[] cells; // TODO ?
+        delete[] cells;  // TODO ?
     }
 
     // Add "missing" (0) to bottom of column
@@ -444,7 +425,7 @@ class FloatColumn : public Column {
         num_chunks = 10;
         capacity = num_chunks * INTERNAL_CHUNK_SIZE;
         // Always make enough space
-        if ((size_t) n > capacity) {
+        if ((size_t)n > capacity) {
             capacity = n;
             num_chunks = (n / INTERNAL_CHUNK_SIZE) + 1;
         }
@@ -589,7 +570,7 @@ class BoolColumn : public Column {
         num_chunks = 10;
         capacity = num_chunks * INTERNAL_CHUNK_SIZE;
         // Always make enough space
-        if ((size_t) n > capacity) {
+        if ((size_t)n > capacity) {
             capacity = n;
             num_chunks = (n / INTERNAL_CHUNK_SIZE) + 1;
         }
@@ -736,7 +717,7 @@ class StringColumn : public Column {
         num_chunks = 10;
         capacity = num_chunks * INTERNAL_CHUNK_SIZE;
         // Always make enough space
-        if ((size_t) n > capacity) {
+        if ((size_t)n > capacity) {
             capacity = n;
             num_chunks = (n / INTERNAL_CHUNK_SIZE) + 1;
         }
