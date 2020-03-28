@@ -1,10 +1,14 @@
 #pragma once
 #include <stdlib.h>
 #include <mutex>
-#include "../utils/map.h"
-#include "../utils/string.h"
-#include "key.h"
+//#include "../utils/map.h"
+//#include "../utils/string.h"
+//#include "key.h"
 #include "network/node.h"
+
+class String;
+class Key;
+class Map;
 
 // Represents a KeyValue with local data as well as the capability to fetch data from other KeyValue stores.
 // USAGE:
@@ -18,6 +22,8 @@ class Store : public Node {
 
     Store(size_t node_id, char* my_ip_address, int my_port, char* server_ip_address, int server_port);
 
+    ~Store();
+
     size_t this_node();
     size_t num_nodes();
 
@@ -25,9 +31,24 @@ class Store : public Node {
     void put_(Key* k, int* ints);
     void put_(Key* k, float* floats);
     void put_(Key* k, String* strings);
+    void put_char_(Key* k, char* value);
+
+    void send_put_request_(Key* k, char* value);
 
     bool* get_bool_array_(Key* k);
     int* get_int_array_(Key* k);
     float* get_float_array_(Key* k);
     String* get_string_array_(Key* k);
+
+    char* get_char_(Key* k);
+
+    char* send_get_request_(Key* k);
+
+    void handle_message(int connected_socket, Message* msg);
+
+    void handle_put_(int connected_socket, Message* msg);
+
+    void handle_get_(int connected_socket, Message* msg);
+
+
 };

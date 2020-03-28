@@ -1,12 +1,12 @@
 #pragma once
-#include "store.h"
 #include <mutex>
+#include "store.h"
 #include "../utils/map.h"
 #include "dataframe/dataframe.h"
 #include "key.h"
 #include "network/message.h"
 #include "network/node.h"
-#include "serial.h"
+#include "serial.cpp"
 
 #define GETANDWAIT_SLEEP 25
 
@@ -46,6 +46,23 @@ size_t Store::num_nodes() {
     return num_nodes;
 }
 
+// Saves the given char* to the given key. For internal use only.
+// Uses copies of given key/value (does not modify or delete them)
+void Store::put_char_(Key *key, char *value) {
+    size_t key_home = key->get_home_node();
+
+    if (key_home == node_id) {
+        // Value belongs on this node
+        String *val = new String(value);  // deleted in destructor
+        map_lock.lock();
+        map->put(key->clone(), val);
+        map_lock.unlock();
+    } else {
+        // Value belongs on another node
+        send_put_request_(key, value);
+    }
+}
+
 /*
     The following put_ methods save the given arrays under the given key, possibly on another node/
     They are helper method for DistributedColumns. Not meant to be used by end users.
@@ -83,25 +100,8 @@ void Store::put_(Key *k, String *strings) {
     delete[] value;
 }
 
-// Saves the given char* to the given key. For internal use only.
-// Uses copies of given key/value (does not modify or delete them)
-void put_char_(Key *key, char *value) {
-    size_t key_home = key->get_home_node();
-
-    if (key_home == node_id) {
-        // Value belongs on this node
-        String *val = new String(value);  // deleted in destructor
-        map_lock.lock();
-        map->put(key->clone(), val);
-        map_lock.unlock();
-    } else {
-        // Value belongs on another node
-        send_put_request_(key, value);
-    }
-}
-
 // Asks another node to PUT the given key/value
-void send_put_request_(Key *key, char *value) {
+void Store::send_put_request_(Key *key, char *value) {
     char *key_str = key->get_name();
     size_t key_home = key->get_home_node();
 
@@ -192,7 +192,7 @@ String *Store::get_string_array_(Key *k) {
 // Gets a copy of the value associated with the given key, possibly from another node,
 // and returns as a char*. If key doesn't exist, returns nullptr.
 // For internal use only.
-char *get_char_(Key *key) {
+char *Store::get_char_(Key *key) {
     size_t key_home = key->get_home_node();
 
     if (key_home == node_id) {
@@ -219,7 +219,7 @@ char *get_char_(Key *key) {
 
 // Asks another node to GET the value associated with the given key
 // Returns a heap-allocated value, or nullptr
-char *send_get_request_(Key *key) {
+char *Store::send_get_request_(Key *key) {
     char *key_str = key->get_name();
     size_t key_home = key->get_home_node();
 
@@ -285,7 +285,7 @@ void Store::handle_message(int connected_socket, Message *msg) {
 }
 
 // Called when this store gets a PUT request from another node
-void handle_put_(int connected_socket, Message *msg) {
+void Store::handle_put_(int connected_socket, Message *msg) {
     char *msg_contents = msg->msg;
 
     // put together Key
@@ -304,7 +304,7 @@ void handle_put_(int connected_socket, Message *msg) {
 }
 
 // Called when this store gets a GET request from another node
-void handle_get_(int connected_socket, Message *msg) {
+void Store::handle_get_(int connected_socket, Message *msg) {
     // Message consists of just the key
     char *key_str = msg->msg;
     Key key(key_str, node_id);  // This node got a GET request, so the key must live on this node.
@@ -326,7 +326,7 @@ void handle_get_(int connected_socket, Message *msg) {
 
 // Stores count vals in a single column in a DataFrame. Saves that DF in store under key and returns it.
 // Count must be less than or equal to the number of floats in vals
-DataFrame *DataFrame::fromArray(Key *key, Store *store, size_t count, float *vals) {
+/*DataFrame *DataFrame::fromArray(Key *key, Store *store, size_t count, float *vals) {
     Schema *empty_schema = new Schema();
     DataFrame *df = new DataFrame(*empty_schema);
 
@@ -343,4 +343,4 @@ DataFrame *DataFrame::fromArray(Key *key, Store *store, size_t count, float *val
     store->put_(key, df);
 
     return df;
-}
+}*/

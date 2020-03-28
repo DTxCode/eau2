@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <mutex>
 #include <thread>
+#include "../../utils/array.h"
 #include "../serial.h"
 #include "message.h"
 #include "network.h"
