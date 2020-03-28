@@ -532,13 +532,204 @@ BoolColumn* Serializer::deserialize_bool_col(char* msg) {
     return b_c;
 }
 
-char* Serializer::serialize_bools(bool* bools) { return nullptr; }
- char* Serializer::serialize_ints(int* ints) { return nullptr; }
-char* Serializer::serialize_floats(float* floats) { return nullptr; }
-char* Serializer::serialize_strings(String* strings) { return nullptr; }
+// Serializer a c-array of bools into a char* formed
+// [bool],[bool],[bool] ...
+char* Serializer::serialize_bools(bool* bools, size_t num_values) { 
+    char* data;
+    if (nullptr == bools) { 
+        data = new char[1];
+        data[0] = '\0';
+        return data;
+    }
 
- bool* Serializer::deserialize_bools(char* value) { return nullptr; }
-int* Serializer::deserialize_ints(char* value) { return nullptr; }
-float* Serializer::deserialize_floats(char* value) { return nullptr; }
-String* Serializer::deserialize_strings(char* value) { return nullptr;}
+    size_t length = num_values; 
 
+    // 1 char per bool, 1 per comma, 1 for null-terminator
+    size_t buf_size = (length * 2) + 1;
+    
+    data = new char[buf_size];
+    strcpy(data, serialize_bool(bools[0]));
+
+    for (size_t i = 1; i < length; i++) {
+        strcat(data, ",");  // CSV
+        strcat(data, serialize_bool(bools[i]));
+    }
+    return data;
+}
+
+char* Serializer::serialize_ints(int* ints, size_t num_values) { 
+    char* data;
+    if (nullptr == ints) { 
+        data = new char[1];
+        data[0] = '\0';
+        return data;
+    }
+
+    size_t length = num_values;
+    size_t buf_size = length + 1;
+    char** int_tokens = new char*[length];
+    for (size_t i = 0; i < length; i++) {
+        int_tokens[i] = serialize_int(ints[i]);
+        buf_size += strlen(int_tokens[i]);
+    }
+
+    data = new char[buf_size];
+    strcpy(data, int_tokens[0]);
+
+    for (size_t i = 1; i < length; i++) {
+        strcat(data, ",");  // CSV
+        strcat(data, int_tokens[i]);
+        delete[] int_tokens[i];
+    }
+    delete[] int_tokens;
+    return data;
+}
+
+char* Serializer::serialize_floats(float* floats, size_t num_values) { 
+    char* data;
+    if (nullptr == floats) { 
+        data = new char[1];
+        data[0] = '\0';
+        return data;
+    }
+
+    size_t length = num_values;
+    size_t buf_size = length + 1;
+    char** float_tokens = new char*[length];
+    for (size_t i = 0; i < length; i++) {
+        float_tokens[i] = serialize_float(floats[i]);
+        buf_size += strlen(float_tokens[i]);
+    }
+
+    data = new char[buf_size];
+    strcpy(data, float_tokens[0]);
+
+    for (size_t i = 1; i < length; i++) {
+        strcat(data, ",");  // CSV
+        strcat(data, float_tokens[i]);
+        delete[] float_tokens[i];
+    }
+    delete[] float_tokens;
+    return data;
+}
+
+char* Serializer::serialize_strings(String** strings, size_t num_values) { 
+    char* data;
+    if (nullptr == strings) { 
+        data = new char[1];
+        data[0] = '\0';
+        return data;
+    }
+
+    size_t length = num_values;
+    size_t buf_size = length + 1;
+    char** string_tokens = new char*[length];
+    for (size_t i = 0; i < length; i++) {
+        string_tokens[i] = serialize_string(strings[i]);
+        buf_size += strlen(string_tokens[i]);
+    }
+
+    data = new char[buf_size];
+    strcpy(data, string_tokens[0]);
+
+    for (size_t i = 1; i < length; i++) {
+        strcat(data, ",");  // CSV
+        strcat(data, string_tokens[i]);
+        delete[] string_tokens[i];
+    }
+    delete[] string_tokens;
+    return data;
+}
+
+// Deserializer a char* msg into a c-array of bools
+bool* Serializer::deserialize_bools(char* msg) {
+    bool bools_temp[strlen(msg)]; // Temporarily oversize the storage
+    char* token;
+    // Tokenize message
+    token = strtok(msg, ",");
+    size_t idx = 0;
+    // For all tokens in the message, deserialize them based on type
+    // and add them to the column via push_back
+    while (token) {
+        bools_temp[idx] = deserialize_bool(token);
+        token = strtok(nullptr, ",");
+        idx++; // After token is created 
+    }
+    
+    bool* bools_final = new bool[idx];
+    for (size_t i = 0 ; i < idx; i++) {
+        bools_final[i] = bools_temp[i];
+    }
+
+    delete msg;
+    return bools_final;
+}
+
+int* Serializer::deserialize_ints(char* msg) { 
+    int ints_temp[strlen(msg)]; // Temporarily oversize the storage
+    char* token;
+    // Tokenize message
+    token = strtok(msg, ",");
+    size_t idx = 0;
+    // For all tokens in the message, deserialize them based on type
+    // and add them to the column via push_back
+    while (token) {
+        ints_temp[idx] = deserialize_int(token);
+        token = strtok(nullptr, ",");
+        idx++; // After token is created 
+    }
+    
+    int* ints_final = new int[idx];
+    for (size_t i = 0 ; i < idx; i++) {
+        ints_final[i] = ints_temp[i];
+    }
+
+    delete msg;
+    return ints_final;
+}
+
+float* Serializer::deserialize_floats(char* msg) { 
+    float floats_temp[strlen(msg)]; // Temporarily oversize the storage
+    char* token;
+    // Tokenize message
+    token = strtok(msg, ",");
+    size_t idx = 0;
+    // For all tokens in the message, deserialize them based on type
+    // and add them to the column via push_back
+    while (token) {
+        floats_temp[idx] = deserialize_float(token);
+        token = strtok(nullptr, ",");
+        idx++; // After token is created 
+    }
+    
+    float* floats_final = new float[idx];
+    for (size_t i = 0 ; i < idx; i++) {
+        floats_final[i] = floats_temp[i];
+    }
+
+    delete msg;
+    return floats_final;
+}
+
+String** Serializer::deserialize_strings(char* msg) { 
+    String* strings_temp[strlen(msg)]; // Temporarily oversize the storage
+    char* token;
+    // Tokenize message
+    token = strtok(msg, ",");
+    size_t idx = 0;
+    // For all tokens in the message, deserialize them based on type
+    // and add them to the column via push_back
+    while (token) {
+        strings_temp[idx] = deserialize_string(token);
+        token = strtok(nullptr, ",");
+        idx++; // After token is created 
+    }
+    
+    String** strings_final = new String*[idx];
+    for (size_t i = 0 ; i < idx; i++) {
+        strings_final[i] = strings_temp[i];
+    }
+
+    delete msg;
+    return strings_final;
+}

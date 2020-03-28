@@ -1,6 +1,6 @@
 #pragma once
-//#include "../../src/store/dataframe/dataframe.h"
-#include "../../src/store/serial.h"
+#include "../../src/store/dataframe/dataframe.h"
+#include "../../src/store/serial.cpp"
 
 // Test that dataframe serialization works as intended
 /*bool test_df_serialize() {
@@ -54,7 +54,7 @@ bool test_key_serialize() {
 
 
 // Test boolean serialization (newly added in Milestone 1)
-/*bool test_bool_serialize() {
+bool test_bool_serialize() {
     bool b1 = true;
     bool b2 = false;
     Serializer serial;
@@ -70,14 +70,87 @@ bool test_key_serialize() {
     bool new_b2 = serial.deserialize_bool(serialized_b2);
 
     return (new_b1 && !new_b2);
-}*/
+}
 
+bool test_bool_array_serialize() {
+    size_t num_bools = 5;
+    bool bools1[num_bools];
+    for (size_t i = 0; i < num_bools; i++) {
+        bools1[i] = true;
+    }
+
+    Serializer serial;
+
+    Sys s;
+    char* ser_bools1 = serial.serialize_bools(bools1, num_bools);
+
+    s.p(ser_bools1);
+
+    bool* new_bools1 = serial.deserialize_bools(ser_bools1);
+    bool ret_value = true;
+    for (size_t i = 0; i < num_bools; i++) {
+        ret_value = ret_value && new_bools1[i];
+    }
+
+    return ret_value;
+}
+
+bool test_int_array_serialize() {
+    size_t num_ints = 5;
+    int ints1[num_ints];
+    for (size_t i = 0; i < num_ints; i++) {
+        ints1[i] = 127;
+    }
+
+    Serializer serial;
+
+    Sys s;
+    char* ser_ints1 = serial.serialize_ints(ints1, num_ints);
+
+    s.p(ser_ints1);
+
+    int* new_ints1 = serial.deserialize_ints(ser_ints1);
+    bool ret_value = true;
+    for (size_t i = 0; i < num_ints; i++) {
+        ret_value = ret_value && (127 == new_ints1[i]);
+    }
+
+    return ret_value;
+}
+
+bool test_string_array_serialize() {
+    size_t num_strings = 5;
+    String* strings1[num_strings];
+    for (size_t i = 0; i < num_strings; i++) {
+        strings1[i] = new String("testing");;
+    }
+
+    Serializer serial;
+
+    Sys s;
+    char* ser_strings1 = serial.serialize_strings(strings1, num_strings);
+
+    s.p(ser_strings1);
+
+    String** new_strings1 = serial.deserialize_strings(ser_strings1);
+    bool ret_value = true;
+    for (size_t i = 0; i < num_strings; i++) {
+        ret_value = ret_value && (strcmp(new_strings1[i]->c_str(), "testing") == 0);
+    }
+
+    return ret_value;
+}
 
 int main() {
+    assert(test_string_array_serialize());  
+    assert(test_int_array_serialize());
+    printf("========= serialize_int_array PASSED =============\n");
+    assert(test_bool_array_serialize());
+    printf("========= serialize_bool_array PASSED =============\n");
     assert(test_key_serialize());
     printf("========= serialize_key PASSED =============\n");
-    /*assert(test_bool_serialize());
+    assert(test_bool_serialize());
     printf("========= serialize_bool PASSED =============\n");
-    assert(test_df_serialize());
+    /*assert(test_df_serialize());
     printf("========== test_serialize_df PASSED =============\n");*/
 }
