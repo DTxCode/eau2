@@ -74,7 +74,7 @@ bool test_network_put_get() {
     int ints[2] = {1, 2};
     float floats[2] = {(float)1.0, (float)2.0};
     String s1("hi"), s2("bye");
-    String* strings[2] = {s1, s2};
+    String strings[2] = {s1, s2};
 
     // put in other store and then get it out
     store1.put_(&k1, bools);
@@ -90,7 +90,7 @@ bool test_network_put_get() {
     assert(bools[1] == bools2[1]);
     assert(ints[1] == ints2[1]);
     assert(floats[1] == floats2[1]);
-    assert(strings[1] == strings2[1]);
+    assert(strings[1].equals(strings2[1]));
 
     delete[] strings2;
 
