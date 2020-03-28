@@ -6,7 +6,9 @@ Client:
 Store:
     Dataframe - Change row to not own its data, make sure this doesn't break something
     Serialize - need types, generic deserialize method?
+    Serialize - memory leaks
     Fix busy loops in store/node
+        - getAndWait could be improved
 
 m3:
     1) Update column/rows serialization to include missings
@@ -14,8 +16,7 @@ m3:
        - above current DF class
        - list of keys to the individual chunks, each of which are a dataframe
        - serialization methods
-    3) Network - need put, get, getandwait for other nodes
-               - thread syncing?
+    3) Network - Need public put/get/getandwait for DistributedDataFrames
     4) Dataframe - ::fromArray/fromScalar defined on DistributedDataFrame?
 
 Questions:
