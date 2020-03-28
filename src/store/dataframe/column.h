@@ -3,13 +3,31 @@
 #include <stdlib.h>
 #include "../../utils/object.h"
 #include "../../utils/string.h"
-#include "../store.h"
+#include "../key.h"
+//#include "../store.h"
 
 #define INT_TYPE 'I'
 #define BOOL_TYPE 'B'
 #define FLOAT_TYPE 'F'
 #define STRING_TYPE 'S'
-#define INTERNAL_CHUNK_SIZE 100
+#define INTERNAL_CHUNK_SIZE 10000
+
+class Store {
+    public:
+    
+    
+void put_(Key* k, bool* bs);
+void put_(Key* k, int* is);
+size_t this_node();
+bool* get_bool_array_(Key* k);
+int* get_int_array_(Key* k);
+    
+    
+    
+    
+    
+    
+    };
 
 class IntColumn;
 class BoolColumn;
@@ -72,8 +90,8 @@ class Column : public Object {
                 missings[i][j] = false;
             }
             
-            store->put_(missings_keys[i], missings[i]) // TODO put_ method for each array type?
-            delete[] missings[i] // DONT NEED IT AFTER ITS IN STORE
+            store->put_(missings_keys[i], missings[i]); // TODO put_ method for each array type?
+            delete[] missings[i]; // DONT NEED IT AFTER ITS IN STORE
         }
         delete[] missings; // MISSINGS COULD BE STACK ALLOCATED INSTEAD
     }
@@ -117,10 +135,10 @@ class Column : public Object {
         size_t rand_key = rand(); // random number as key
         char* key;
         // Do a fake write to check how much space we need
-        size_t buf_size = snprintf(nullptr, 0, "%d", rand_key) + 1;
+        size_t buf_size = snprintf(nullptr, 0, "%lu", rand_key) + 1;
         key = new char[buf_size];
         // Do a real write with proper amount of space
-        snprintf(key, buf_size, "%d", rand_key);
+        snprintf(key, buf_size, "%lu", rand_key);
         // Check this key against all existing keys in this column
         for (size_t i = 0; i < num_chunks; i++) {
             if (strcmp(key, chunk_keys[i]->get_name()) == 0) {
@@ -156,7 +174,7 @@ class Column : public Object {
         size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
         Key* k = missings_keys[array_idx];
-        bool* missings = store->get(k);
+        bool* missings = store->get_bool_array_(k);
         bool val = missings[local_idx];
         delete[] missings; // No longer need it
         return val;
@@ -171,7 +189,7 @@ class Column : public Object {
         size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
         //missings[array_idx][local_idx] = true;
         Key* k = missings_keys[array_idx];
-        bool* missings = store->get(k);
+        bool* missings = store->get_bool_array_(k);
         missings[local_idx] = true;
         store->put_(k, missings);
         delete[] missings;
@@ -232,7 +250,7 @@ class IntColumn : public Column {
         // Array of integer arrays
         for (size_t i = 0; i < num_chunks; i++) {
             //cells[i] = new int[INTERNAL_CHUNK_SIZE];
-            store->put(chunk_keys[i], new int[INTERNAL_CHUNK_SIZE]);
+            store->put_(chunk_keys[i], new int[INTERNAL_CHUNK_SIZE]);
         }
         length = 0;
     }
@@ -254,7 +272,7 @@ class IntColumn : public Column {
         // Array of integer arrays
         for (size_t i = 0; i < num_chunks; i++) {
             //cells[i] = new int[INTERNAL_CHUNK_SIZE];
-            store->put(chunk_keys[i], new int[INTERNAL_CHUNK_SIZE]);
+            store->put_(chunk_keys[i], new int[INTERNAL_CHUNK_SIZE]);
         }
         length = 0;
         va_list vl;
@@ -278,7 +296,7 @@ class IntColumn : public Column {
         // Array of integer arrays
         for (size_t i = 0; i < num_chunks; i++) {
             //cells[i] = new int[INTERNAL_CHUNK_SIZE];
-            store->put(chunk_keys[i], new int[INTERNAL_CHUNK_SIZE]);
+            store->put_(chunk_keys[i], new int[INTERNAL_CHUNK_SIZE]);
         }
         length = 0;
         for (size_t row_idx = 0; row_idx < col->size(); row_idx++) {
@@ -301,7 +319,7 @@ class IntColumn : public Column {
             //delete[] cells[i];
             //delete[] missings[i];
         }
-        delete[] missing_keys;
+        delete[] missings_keys;
         delete[] chunk_keys;
         //delete[] missings;
         //delete[] cells;
@@ -313,7 +331,7 @@ class IntColumn : public Column {
         size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
         Key* k = chunk_keys[array_idx];
-        int* cells = store->get(k);
+        int* cells = store->get_int_array_(k);
         int val = cells[local_idx];
         delete[] cells;
 
@@ -337,7 +355,7 @@ class IntColumn : public Column {
             set_missing(idx);
         }
         Key* k = chunk_keys[array_idx];
-        int* cells = store->get(k);
+        int* cells = store->get_int_array_(k);
         cells[local_idx] = val;
         store->put_(k, cells);
         delete[] cells;
@@ -351,8 +369,8 @@ class IntColumn : public Column {
         resize_keys(); // Chunk_keys is now twice the size as before
         resize_missings();
         for (size_t i = old_chunks; i < num_chunks; i++) {
-            store->put(chunk_keys[i], new int[INTERNAL_CHUNK_SIZE]);
-            store->put(missings_keys[i], new bool[INTERNAL_CHUNK_SIZE]);
+            store->put_(chunk_keys[i], new int[INTERNAL_CHUNK_SIZE]);
+            store->put_(missings_keys[i], new bool[INTERNAL_CHUNK_SIZE]);
         }
         
         /*int** new_cells = new int*[num_chunks];
@@ -377,7 +395,7 @@ class IntColumn : public Column {
         size_t array_idx = length / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = length % INTERNAL_CHUNK_SIZE;
         Key* k = chunk_keys[array_idx];
-        int* cells = store->get(k);
+        int* cells = store->get_int_array_(k);
         cells[local_idx] = val;
         store->put_(k, cells);
         length++;
@@ -392,7 +410,7 @@ class IntColumn : public Column {
         size_t array_idx = length / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = length % INTERNAL_CHUNK_SIZE;
         Key* k = missings_keys[array_idx];
-        bool* cells = store->get(k);
+        bool* cells = store->get_bool_array_(k);
         cells[local_idx] = true;
         store->put_(k, cells);
         length++;

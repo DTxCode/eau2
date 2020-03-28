@@ -13,9 +13,7 @@
 #define FLOAT_TYPE 'F'
 #define STRING_TYPE 'S'
 
-class Store;
-
-
+//class Store;
 
 /****************************************************************************
  * DistributedDataFrame::
