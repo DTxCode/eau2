@@ -3,12 +3,31 @@
 #include <stdlib.h>
 #include "../../utils/object.h"
 #include "../../utils/string.h"
+#include "../key.h"
+//#include "../store.h"
 
 #define INT_TYPE 'I'
 #define BOOL_TYPE 'B'
 #define FLOAT_TYPE 'F'
 #define STRING_TYPE 'S'
-#define INTERNAL_CHUNK_SIZE 100
+#define INTERNAL_CHUNK_SIZE 10000
+
+class Store {
+    public:
+    
+    
+void put_(Key* k, bool* bs);
+void put_(Key* k, int* is);
+size_t this_node();
+bool* get_bool_array_(Key* k);
+int* get_int_array_(Key* k);
+    
+    
+    
+    
+    
+    
+    };
 
 class IntColumn;
 class BoolColumn;
@@ -39,31 +58,98 @@ class StringColumn;
  * of these internal arrays. This structure allows for resizing witout the need
  * for copying all cell values. Instead pointers to each chunk are simply moved
  * into a new outer array. Missings are stored in the same way. */
+ 
+
+ /* Distributed update:
+ * Column tracks two list of keys, one for cells, one for missings. 
+ * Each key represents a chunk of data, whether it is the cell values 
+ * or missing values. A Column has an associated store (KVS) that it 
+ * communicates with. */ 
 class Column : public Object {
+    // TODO may have off-by-one errors with resizing
+
    public:
     size_t length;      // Count of values(including missings)
     size_t capacity;    // Count of cells available
     size_t num_chunks;  // Count of how many internal 'chunk' arrays were using
-    bool** missings;    // Bitmap tracker for missing values
+    Key** missings_keys; // Keys to bool chunks that make up missing bitmap
+    Key** chunk_keys; // Keys to each chunk of values in this column
+    Store* store; // KVS 
+    // local missings array (cache) TODO
+    bool** missings; // Leaving this is so it compiles
 
-    // Initialize missings array of arrays
-    // Allocate memory and fill with all 'false'
+    // Assumes Keys are initialized
+    // For each missing key, allocates an array of booleans all set to false
+    // Stores this array in the KVS under the pre-determined key for that
+    // chunk of missings
     void init_missings() {
-        missings = new bool*[num_chunks];
+        bool** missings = new bool*[num_chunks];
         for (size_t i = 0; i < num_chunks; i++) {
             missings[i] = new bool[INTERNAL_CHUNK_SIZE];
             for (size_t j = 0; j < INTERNAL_CHUNK_SIZE; j++) {
                 missings[i][j] = false;
             }
+            
+            store->put_(missings_keys[i], missings[i]); // TODO put_ method for each array type?
+            delete[] missings[i]; // DONT NEED IT AFTER ITS IN STORE
+        }
+        delete[] missings; // MISSINGS COULD BE STACK ALLOCATED INSTEAD
+    }
+
+    // Initialize all keys. After this method. Both Key lists should be 
+    // populated with 'num_chunks' Key objects. These represent the 
+    // Keys to the chunks, in order. Each Key will be unique. 
+    void init_keys() {
+        missings_keys = new Key*[num_chunks];
+        chunk_keys = new Key*[num_chunks];
+        for (size_t i = 0; i < num_chunks; i++) {
+            missings_keys[i] = generate_key();
+            chunk_keys[i] = generate_key();
         }
     }
 
-    // Return whether the element at the given value is a missing value
-    // Undefined behavior if the idx is out of bounds
-    bool is_missing(size_t idx) {
-        size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
-        size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
-        return missings[array_idx][local_idx];
+    // Resize Keys arrays to be up-to-date with number of chunks
+    void resize_keys() {
+        Key** new_missings_keys = new Key*[num_chunks];
+        Key** new_chunk_keys = new Key*[num_chunks];
+        // Keep keys we had before
+        for (size_t i = 0; i < (length / INTERNAL_CHUNK_SIZE) + 1; i++) {
+            new_missings_keys[i] = missings_keys[i];
+            new_chunk_keys[i] = chunk_keys[i];
+        }
+        // Make new ones for new space
+        for (size_t j = (length / INTERNAL_CHUNK_SIZE) + 2; j < num_chunks; j++) {
+            new_missings_keys[j] = generate_key();
+            new_chunk_keys[j] = generate_key();
+        }
+        delete[] missings_keys;
+        delete[] chunk_keys;
+        missings_keys = new_missings_keys;
+        chunk_keys = new_chunk_keys;
+    }
+
+    // Generate a random number, and turn it in to a char* to be used in a Key
+    // Ensure that the generated Key does not already exist in our lists of 
+    // Keys
+    Key* generate_key() {
+        size_t rand_key = rand(); // random number as key
+        char* key;
+        // Do a fake write to check how much space we need
+        size_t buf_size = snprintf(nullptr, 0, "%lu", rand_key) + 1;
+        key = new char[buf_size];
+        // Do a real write with proper amount of space
+        snprintf(key, buf_size, "%lu", rand_key);
+        // Check this key against all existing keys in this column
+        for (size_t i = 0; i < num_chunks; i++) {
+            if (strcmp(key, chunk_keys[i]->get_name()) == 0) {
+                return generate_key(); // Start over, need unique key
+            }
+            if (strcmp(key, missings_keys[i]->get_name()) == 0) {
+                return generate_key(); // Start over, need unique key
+            }
+        }
+        // We have a unique key, make a Key and return it
+        return new Key(key, store->this_node());
     }
 
     // Assumes capacity has changed. Reallocate missings array and copy
@@ -71,22 +157,42 @@ class Column : public Object {
     void resize_missings() {
         bool** new_missings = new bool*[num_chunks];
         // Can we avoid initializing first N chunks that were copying?
-        for (size_t i = 0; i < num_chunks; i++) {
+        // TODO this feels very fragile
+        for (size_t i = (length / INTERNAL_CHUNK_SIZE) + 1; i < num_chunks; i++) {
             new_missings[i] = new bool[INTERNAL_CHUNK_SIZE];
         }
-        for (size_t i = 0; i < (length / INTERNAL_CHUNK_SIZE); i++) {
+        for (size_t i = 0; i < (length / INTERNAL_CHUNK_SIZE) + 1; i++) { // TODO other resize methods are off by 1 
             new_missings[i] = missings[i];
         }
         delete[] missings;
         missings = new_missings;
     }
+    
+    // Return whether the element at the given value is a missing value
+    // Undefined behavior if the idx is out of bounds
+    bool is_missing(size_t idx) {
+        size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
+        size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
+        Key* k = missings_keys[array_idx];
+        bool* missings = store->get_bool_array_(k);
+        bool val = missings[local_idx];
+        delete[] missings; // No longer need it
+        return val;
+        //return missings[array_idx][local_idx];
+    }
+
 
     // Declare the value at idx as missing, does not change or set a value
     // Out of bounds idx is undefined behavior
     void set_missing(size_t idx) {
         size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
-        missings[array_idx][local_idx] = true;
+        //missings[array_idx][local_idx] = true;
+        Key* k = missings_keys[array_idx];
+        bool* missings = store->get_bool_array_(k);
+        missings[local_idx] = true;
+        store->put_(k, missings);
+        delete[] missings;
     }
 
     /** Type converters: Return same column under its actual type, or
@@ -131,35 +237,42 @@ class Column : public Object {
  */
 class IntColumn : public Column {
    public:
-    int** cells;
+    // int** cells; //TODO should have a local cache for some values
 
     // Create empty int column
-    IntColumn() {
+    IntColumn(Store* s) {
+        store = s;
         num_chunks = 10;
         capacity = num_chunks * INTERNAL_CHUNK_SIZE;
-        cells = new int*[num_chunks];
+        init_keys();
+        init_missings();
+        //cells = new int*[num_chunks];
         // Array of integer arrays
         for (size_t i = 0; i < num_chunks; i++) {
-            cells[i] = new int[INTERNAL_CHUNK_SIZE];
+            //cells[i] = new int[INTERNAL_CHUNK_SIZE];
+            store->put_(chunk_keys[i], new int[INTERNAL_CHUNK_SIZE]);
         }
         length = 0;
-        init_missings();
     }
 
     // Create int column with n entries, listed in order in
     // the succeeding parameters
-    IntColumn(int n, ...) {
+    IntColumn(Store* s, int n, ...) {
+        store = s;
         num_chunks = 10;
         capacity = num_chunks * INTERNAL_CHUNK_SIZE;
+        init_keys();
+        init_missings();
         // Always make enough space
         if ((size_t) n > capacity) {
             capacity = n;
             num_chunks = (n / INTERNAL_CHUNK_SIZE) + 1;
         }
-        cells = new int*[num_chunks];
+        //cells = new int*[num_chunks];
         // Array of integer arrays
         for (size_t i = 0; i < num_chunks; i++) {
-            cells[i] = new int[INTERNAL_CHUNK_SIZE];
+            //cells[i] = new int[INTERNAL_CHUNK_SIZE];
+            store->put_(chunk_keys[i], new int[INTERNAL_CHUNK_SIZE]);
         }
         length = 0;
         va_list vl;
@@ -170,20 +283,22 @@ class IntColumn : public Column {
             push_back(val);
         }
         va_end(vl);
-        init_missings();
     }
 
     // Copy constructor. Assumes other column is the same type as this one
-    IntColumn(Column* col) {
+    IntColumn(Store* s, Column* col) {
+        store = s;
         num_chunks = 10;
         capacity = num_chunks * INTERNAL_CHUNK_SIZE;
-        cells = new int*[num_chunks];
+        init_missings();
+        init_keys();
+        //cells = new int*[num_chunks];
         // Array of integer arrays
         for (size_t i = 0; i < num_chunks; i++) {
-            cells[i] = new int[INTERNAL_CHUNK_SIZE];
+            //cells[i] = new int[INTERNAL_CHUNK_SIZE];
+            store->put_(chunk_keys[i], new int[INTERNAL_CHUNK_SIZE]);
         }
         length = 0;
-        init_missings();
         for (size_t row_idx = 0; row_idx < col->size(); row_idx++) {
             int row_val = col->as_int()->get(row_idx);
             push_back(row_val);
@@ -195,13 +310,19 @@ class IntColumn : public Column {
     }
 
     // Delete column array and int pointers
+    // TODO what do we own and what do we not?
+    // Own Keys that we made, do not own Store 
     ~IntColumn() {
         for (size_t i = 0; i < num_chunks; i++) {
-            delete[] cells[i];
-            delete[] missings[i];
+            delete missings_keys[i];
+            delete chunk_keys[i];
+            //delete[] cells[i];
+            //delete[] missings[i];
         }
-        delete[] missings;
-        delete[] cells;
+        delete[] missings_keys;
+        delete[] chunk_keys;
+        //delete[] missings;
+        //delete[] cells;
     }
 
     // Returns the integer at the given index.
@@ -209,7 +330,12 @@ class IntColumn : public Column {
     int get(size_t idx) {
         size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
-        return cells[array_idx][local_idx];
+        Key* k = chunk_keys[array_idx];
+        int* cells = store->get_int_array_(k);
+        int val = cells[local_idx];
+        delete[] cells;
+
+        return val;
     }
 
     // Returns this column as an integer column
@@ -226,17 +352,28 @@ class IntColumn : public Column {
         size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
         // Update missing bitmap
         if (is_missing(idx)) {
-            missings[array_idx][local_idx] = false;
+            set_missing(idx);
         }
-        cells[array_idx][local_idx] = val;
+        Key* k = chunk_keys[array_idx];
+        int* cells = store->get_int_array_(k);
+        cells[local_idx] = val;
+        store->put_(k, cells);
+        delete[] cells;
     }
 
-    // Double the capacity of the array and move (not copy) the integer
-    // pointers in to new array
+    // Add more keys to our lists of keys to accomodate for more items
     void resize() {
+        size_t old_chunks = num_chunks;
         num_chunks = 2 * num_chunks;
         capacity = INTERNAL_CHUNK_SIZE * num_chunks;
-        int** new_cells = new int*[num_chunks];
+        resize_keys(); // Chunk_keys is now twice the size as before
+        resize_missings();
+        for (size_t i = old_chunks; i < num_chunks; i++) {
+            store->put_(chunk_keys[i], new int[INTERNAL_CHUNK_SIZE]);
+            store->put_(missings_keys[i], new bool[INTERNAL_CHUNK_SIZE]);
+        }
+        
+        /*int** new_cells = new int*[num_chunks];
         // Array of integer arrays
         for (size_t i = 0; i < num_chunks; i++) {
             new_cells[i] = new int[INTERNAL_CHUNK_SIZE];
@@ -247,7 +384,7 @@ class IntColumn : public Column {
         }
         delete[] cells;
         cells = new_cells;
-        resize_missings();
+        resize_missings();*/
     }
 
     // Add integer to "bottom" of column
@@ -257,8 +394,12 @@ class IntColumn : public Column {
         }
         size_t array_idx = length / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = length % INTERNAL_CHUNK_SIZE;
-        cells[array_idx][local_idx] = val;
+        Key* k = chunk_keys[array_idx];
+        int* cells = store->get_int_array_(k);
+        cells[local_idx] = val;
+        store->put_(k, cells);
         length++;
+        delete[] cells; // TODO ?
     }
 
     // Add "missing" (0) to bottom of column
@@ -268,9 +409,12 @@ class IntColumn : public Column {
         }
         size_t array_idx = length / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = length % INTERNAL_CHUNK_SIZE;
-        cells[array_idx][local_idx] = 0;
-        missings[array_idx][local_idx] = true;
+        Key* k = missings_keys[array_idx];
+        bool* cells = store->get_bool_array_(k);
+        cells[local_idx] = true;
+        store->put_(k, cells);
         length++;
+        delete[] cells;
     }
 };
 

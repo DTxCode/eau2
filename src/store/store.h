@@ -193,7 +193,9 @@ class Store : public Node {
     // Helper method for Distributed DataFrames. Not meant to be used by end users.
     DataFrame *getAndWait_(Key *key) {
         DataFrame *df = get_(key);
-
+        
+	std::this_thread::sleep_for(std::chrono::milliseconds(5));
+ 
         // TODO ways to improve this:
         // - for local get, could do waitAndNotify method instead of this busy loop
         // - for network get, use above method + timeout

@@ -13,7 +13,24 @@
 #define FLOAT_TYPE 'F'
 #define STRING_TYPE 'S'
 
-class Store;
+//class Store;
+
+/****************************************************************************
+ * DistributedDataFrame::
+ *
+ * A DistributedDataFrame outwardly looks the same as a normal DataFrame. 
+ * It supports normal query operations. Internally however, it represents
+ * a list of Keys which point to serialized DataFrames. To support
+ * normal operations, a DDF communicates with a KVS to retrieve the DataFrames
+ * and calls on them to fulfill queries and requests. This list of DataFrames
+ * together represents the overall dataframe. That means that list of keys is
+ * ordered such that the 'chunks' represented by the DFs line up. This also 
+ * means the DDF still follows a single Schema. It cannot represent DataFrames
+ * with different Schemas. 
+ * - Still maintains its own Schema (matching with all DFs in it)
+ *
+    LIKELY NOT NEEDED. Columns distributed instead
+ */
 
 /****************************************************************************
  * DataFrame::
@@ -80,7 +97,7 @@ class DataFrame : public Object {
     /** Adds a column this dataframe, updates the schema, the new column
     * is external, and appears as the last column of the dataframe, the
     * name is optional and external. A nullptr colum is undefined. */
-    void add_column(Column* col, String* name) {
+    virtual void add_column(Column* col, String* name) {
         // If this is not the first column being added, only accept it if
         // it has the same number of rows as what's already in the dataframe
         if (schema->length() != 0 && col->size() != schema->length()) {
@@ -141,34 +158,24 @@ class DataFrame : public Object {
     *  The value returned by these get_ methods give no indication of 
     *  whether that value is missing. For sanity checks, use the method
     *  'is_missing'. */
-    int get_int(size_t col, size_t row) {
+    virtual int get_int(size_t col, size_t row) {
         return columns[col]->as_int()->get(row);
     }
 
-    bool get_bool(size_t col, size_t row) {
+    virtual bool get_bool(size_t col, size_t row) {
         return columns[col]->as_bool()->get(row);
     }
 
-    float get_float(size_t col, size_t row) {
+    virtual float get_float(size_t col, size_t row) {
         return columns[col]->as_float()->get(row);
     }
 
-    String* get_string(size_t col, size_t row) {
+    virtual String* get_string(size_t col, size_t row) {
         return columns[col]->as_string()->get(row);
     }
 
-    /** Return the offset of the given column name or -1 if no such col. */
-    int get_col(String& col) {
-        return schema->col_idx(col.c_str());
-    }
-
-    /** Return the offset of the given row name or -1 if no such row. */
-    int get_row(String& row) {
-        return schema->row_idx(row.c_str());
-    }
-
     // Indicates whether the cell at col,row is a missing value
-    bool is_missing(size_t col, size_t row) {
+    virtual bool is_missing(size_t col, size_t row) {
         return columns[col]->is_missing(row);
     }
 
@@ -176,38 +183,26 @@ class DataFrame : public Object {
     * If the column is not  of the right type or the indices are out of
     * bound, the result is undefined. 
     * Runtime error if invalid type or index. */
-    void set(size_t col, size_t row, int val) {
+    virtual void set(size_t col, size_t row, int val) {
         columns[col]->as_int()->set(row, val);
     }
 
-    void set(size_t col, size_t row, bool val) {
+    virtual void set(size_t col, size_t row, bool val) {
         columns[col]->as_bool()->set(row, val);
     }
 
-    void set(size_t col, size_t row, float val) {
+    virtual void set(size_t col, size_t row, float val) {
         columns[col]->as_float()->set(row, val);
     }
 
-    void set(size_t col, size_t row, String* val) {
+    virtual void set(size_t col, size_t row, String* val) {
         columns[col]->as_string()->set(row, val);
     }
 
     // Declares the given row,col cell as missing
-    void set_missing(size_t col, size_t row) {
+    virtual void set_missing(size_t col, size_t row) {
         Column* c = columns[col];
-        /*char col_type = c->get_type();
 
-        // Utilize set_missing method on column
-        // Still dependent on column type
-        if (col_type == INT_TYPE) {
-            c->as_int()->set_missing(row);
-        } else if (col_type == BOOL_TYPE) {
-            c->as_bool()->set_missing(row);
-        } else if (col_type == FLOAT_TYPE) {
-            c->as_float()->set_missing(row);
-        } else {
-            c->as_string()->set_missing(row);
-        }*/
         c->set_missing(row);
     }
 
@@ -215,7 +210,7 @@ class DataFrame : public Object {
     * the given offset.  If the row is not form the same schema as the
     * dataframe, results are undefined.
     */
-    void fill_row(size_t idx, Row& row) {
+    virtual void fill_row(size_t idx, Row& row) {
         // loop over all of the columns
         for (size_t col_idx = 0; col_idx < schema->width(); col_idx++) {
             Column* col = columns[col_idx];
@@ -245,9 +240,9 @@ class DataFrame : public Object {
     }
 
     /** Add a row at the end of this dataframe. The row is expected to have
-   *  the right schema and be filled with values, otherwise undedined.
-   * Won't add row if it's not of the right width.  */
-    void add_row(Row& row) {
+    *  the right schema and be filled with values, otherwise undedined.
+    * Won't add row if it's not of the right width.  */
+    virtual void add_row(Row& row) {
         if (row.width() != schema->width()) {
             // dont add row of incorrect width
             return;
@@ -304,12 +299,12 @@ class DataFrame : public Object {
     }
 
     /** The number of rows in the dataframe. */
-    size_t nrows() {
+    virtual size_t nrows() {
         return schema->length();
     }
 
     /** The number of columns in the dataframe.*/
-    size_t ncols() {
+    virtual size_t ncols() {
         return schema->width();
     }
 
@@ -349,13 +344,13 @@ class DataFrame : public Object {
     }
 
     /** Visit rows in order */
-    void map(Rower& r) {
+    virtual void map(Rower& r) {
         map_chunk(0, nrows() - 1, r);
     }
 
     /** This method clones the Rower and executes the map in parallel. Join
     used at the end to merge the results */
-    void pmap(Rower& r) {
+    virtual void pmap(Rower& r) {
         size_t cpu_cores = 4;  // 1 thread per cpu core
         if (nrows() < cpu_cores) {
             map(r);  // Only parallelize if # of rows makes sense to parallelize
@@ -389,7 +384,7 @@ class DataFrame : public Object {
 
     /** Create a new dataframe, constructed from rows for which the given Rower
     * returned true from its accept method. */
-    DataFrame* filter(Rower& r) {
+    virtual DataFrame* filter(Rower& r) {
         DataFrame* new_df = new DataFrame(get_schema());
 
         // pass this row to the Rower and add to new_df is rower accepts it
@@ -407,7 +402,7 @@ class DataFrame : public Object {
     }
 
     /** Print the dataframe in SoR format to standard output. */
-    void print() {
+    virtual void print() {
         // Use helper for printing
         Sys s;
 
