@@ -1,6 +1,6 @@
 #pragma once
-#include <mutex>
 #include "store.h"
+#include <mutex>
 #include "../utils/map.h"
 #include "dataframe/dataframe.h"
 #include "key.h"
@@ -46,6 +46,16 @@ size_t Store::num_nodes() {
     return num_nodes;
 }
 
+// Stores the given DistributedDataFrame in the store, possibly on another node.
+// Does not modify or delete given vales
+void Store::put(Key *k, DistributedDataFrame *df) {
+    char *value = serializer->serialize_distributed_dataframe(df);
+
+    put_char_(k, value);
+
+    delete[] value;
+}
+
 // Saves the given char* to the given key. For internal use only.
 // Uses copies of given key/value (does not modify or delete them)
 void Store::put_char_(Key *key, char *value) {
@@ -68,32 +78,32 @@ void Store::put_char_(Key *key, char *value) {
     They are helper method for DistributedColumns. Not meant to be used by end users.
     Uses copies of given key/array (does not modify or delete them)
 */
-void Store::put_(Key *k, bool *bools) {
-    char *value = serializer->serialize_bools(bools);
+void Store::put_(Key *k, bool *bools, size_t num) {
+    char *value = serializer->serialize_bools(bools, num);
 
     put_char_(k, value);
 
     delete[] value;
 }
 
-void Store::put_(Key *k, int *ints) {
-    char *value = serializer->serialize_ints(ints);
+void Store::put_(Key *k, int *ints, size_t num) {
+    char *value = serializer->serialize_ints(ints, num);
 
     put_char_(k, value);
 
     delete[] value;
 }
 
-void Store::put_(Key *k, float *floats) {
-    char *value = serializer->serialize_floats(floats);
+void Store::put_(Key *k, float *floats, size_t num) {
+    char *value = serializer->serialize_floats(floats, num);
 
     put_char_(k, value);
 
     delete[] value;
 }
 
-void Store::put_(Key *k, String *strings) {
-    char *value = serializer->serialize_strings(strings);
+void Store::put_(Key *k, String **strings, size_t num) {
+    char *value = serializer->serialize_strings(strings, num);
 
     put_char_(k, value);
 
@@ -126,6 +136,23 @@ void Store::send_put_request_(Key *key, char *value) {
 
     delete response;
     delete[] other_node_host;
+}
+
+// Gets the given key for a DistributedDataFrame from the store, possibly from another node.
+// If key doesn't exist, returns nullptr.
+// Does not modify or delete given key
+DistributedDataFrame *Store::get(Key *k) {
+    char *serialized_df = get_char_(k);
+
+    if (serialized_df == nullptr) {
+        return nullptr;
+    }
+
+    DistributedDataFrame *df = serializer->deserialize_distributed_dataframe(serialized_df);
+
+    delete[] serialized_df;
+
+    return df;
 }
 
 /*
@@ -175,14 +202,14 @@ float *Store::get_float_array_(Key *k) {
     return floats;
 }
 
-String *Store::get_string_array_(Key *k) {
+String **Store::get_string_array_(Key *k) {
     char *serialized_array = get_char_(k);
 
     if (serialized_array == nullptr) {
         return nullptr;
     }
 
-    String *strings = serializer->deserialize_strings(serialized_array);
+    String **strings = serializer->deserialize_strings(serialized_array);
 
     delete[] serialized_array;
 
@@ -249,24 +276,22 @@ char *Store::send_get_request_(Key *key) {
     return serialized_value;
 }
 
-// // Gets the value associated with the given key, possibly from another node,
-// // and returns as a DataFrame. If key doesn't exist, the method blocks until it does.
-// // Helper method for Distributed DataFrames. Not meant to be used by end users.
-// DataFrame *getAndWait_(Key *key) {
-//     DataFrame *df = get_(key);
+// Gets the given key for a DistributedDataFrame from the store, possibly from another node.
+// If key doesn't exist, blocks until it does. Never returns nullptr.
+// Does not modify or delete given key
+DistributedDataFrame *Store::waitAndGet(Key *k) {
+    DistributedDataFrame *df = get(k);
 
-//     std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    // TODO ways to improve this:
+    // - for local get, could do waitAndNotify method instead of this busy loop
+    // - for network get, use above method + timeout
+    while (df == nullptr) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(GETANDWAIT_SLEEP));
+        df = get(k);
+    }
 
-//     // TODO ways to improve this:
-//     // - for local get, could do waitAndNotify method instead of this busy loop
-//     // - for network get, use above method + timeout
-//     while (df == nullptr) {
-//         std::this_thread::sleep_for(std::chrono::milliseconds(GETANDWAIT_SLEEP));
-//         df = get_(key);
-//     }
-
-//     return df;
-// }
+    return df;
+}
 
 // OVERRIDE
 // Handler for all messages that come into this node
@@ -324,23 +349,85 @@ void Store::handle_get_(int connected_socket, Message *msg) {
     }
 }
 
-// Stores count vals in a single column in a DataFrame. Saves that DF in store under key and returns it.
+// The following formArray methods store `count` `vals` in a single column in a DistributedDataFrame.
+// Saves that DDF in store under key and returns it.
 // Count must be less than or equal to the number of floats in vals
-/*DataFrame *DataFrame::fromArray(Key *key, Store *store, size_t count, float *vals) {
-    Schema *empty_schema = new Schema();
-    DataFrame *df = new DataFrame(*empty_schema);
-
-    FloatColumn col;
+DistributedDataFrame *DataFrame::fromArray(Key *key, Store *store, size_t count, float *vals) {
+    DistributedFloatColumn col(store);
 
     for (size_t i = 0; i < count; i++) {
         col.push_back(vals[i]);
     }
 
+    return fromDistributedColumn(key, store, col);
+}
+
+DistributedDataFrame *DataFrame::fromArray(Key *key, Store *store, size_t count, bool *vals) {
+    DistributedBoolColumn col(store);
+
+    for (size_t i = 0; i < count; i++) {
+        col.push_back(vals[i]);
+    }
+
+    return fromDistributedColumn(key, store, col);
+}
+
+DistributedDataFrame *DataFrame::fromArray(Key *key, Store *store, size_t count, int *vals) {
+    DistributedIntColumn col(store);
+
+    for (size_t i = 0; i < count; i++) {
+        col.push_back(vals[i]);
+    }
+
+    return fromDistributedColumn(key, store, col);
+}
+
+DistributedDataFrame *DataFrame::fromArray(Key *key, Store *store, size_t count, String **vals) {
+    DistributedStringColumn col(store);
+
+    for (size_t i = 0; i < count; i++) {
+        col.push_back(vals[i]);
+    }
+
+    return fromDistributedColumn(key, store, col);
+}
+
+// Stores copy of col in store under key
+DistributedDataFrame *DataFrame::fromDistributedColumn(Key *key, Store *store, DistributedColumn *col) {
+    Schema *empty_schema = new Schema();
+    DistributedDataFrame *df = new DistributedDataFrame(store, *empty_schema);
+
     // add column to DF
     df->add_column(&col, nullptr);
 
     // add DF to store under key
-    store->put_(key, df);
+    store->put(key, df);
 
     return df;
-}*/
+}
+
+// The following fromScalar methods store `val` in a single cell in a DistributedDataFrame.
+// Saves that DDF in store under key and returns it.
+DistributedDataFrame *DataFrame::fromScalar(Key *key, Store *store, float val) {
+    DistributedFloatColumn col(store, val);
+
+    return fromDistributedColumn(key, store, col);
+}
+
+DistributedDataFrame *DataFrame::fromScalar(Key *key, Store *store, bool val) {
+    DistributedBoolColumn col(store, val);
+
+    return fromDistributedColumn(key, store, col);
+}
+
+DistributedDataFrame *DataFrame::fromScalar(Key *key, Store *store, int val) {
+    DistributedIntColumn col(store, val);
+
+    return fromDistributedColumn(key, store, col);
+}
+
+DistributedDataFrame *DataFrame::fromScalar(Key *key, Store *store, String *val) {
+    DistributedStringColumn col(store, val);
+
+    return fromDistributedColumn(key, store, col);
+}

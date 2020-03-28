@@ -62,7 +62,7 @@ class DataFrame : public Object {
         set_empty_cols_(schema);
     }
 
-    ~DataFrame() {
+    virtual ~DataFrame() {
         for (size_t col_idx = 0; col_idx < schema->width(); col_idx++) {
             delete columns[col_idx];
         }
@@ -72,7 +72,7 @@ class DataFrame : public Object {
     }
 
     // Creates and sets empty columns in this dataframe according to the given schema
-    void set_empty_cols_(Schema* schema) {
+    virtual void set_empty_cols_(Schema* schema) {
         for (size_t col_idx = 0; col_idx < schema->width(); col_idx++) {
             char col_type = schema->col_type(col_idx);
 
@@ -134,7 +134,7 @@ class DataFrame : public Object {
     }
 
     // returns a copy of the given column
-    Column* get_col_copy_(Column* col) {
+    virtual Column* get_col_copy_(Column* col) {
         char col_type = col->get_type();
 
         if (col_type == INT_TYPE) {
@@ -310,7 +310,7 @@ class DataFrame : public Object {
     /** Helper function to visit a chunk of rows in order. Row_start and 
         row_end must be valid row indices, or behavior is undefined. **/
     void map_chunk(size_t row_start, size_t row_end, Rower& r) {
-        Row* row = new Row(*schema);
+        Row* row = new Row(*schema);  // TODO no need to be heap allocated
         for (size_t row_idx = row_start; row_idx <= row_end; row_idx++) {
             fill_row(row_idx, *row);
 
@@ -442,4 +442,78 @@ class DataFrame : public Object {
     }
 
     static DataFrame* fromArray(Key* key, Store* store, size_t count, float* vals);
+    static DataFrame* fromArray(Key* key, Store* store, size_t count, bool* vals);
+    static DataFrame* fromArray(Key* key, Store* store, size_t count, int* vals);
+    static DataFrame* fromArray(Key* key, Store* store, size_t count, String** vals);
+    static DataFrame* fromDistributedColumn(Key* key, Store* store, DistributedColumn* col);
+
+    static DataFrame* fromScalar(Key* key, Store* store, float val);
+    static DataFrame* fromScalar(Key* key, Store* store, bool val);
+    static DataFrame* fromScalar(Key* key, Store* store, int val);
+    static DataFrame* fromScalar(Key* key, Store* store, String* val);
+};
+
+// DistributedDataFrame is a DataFrame that has all of its data in DistributedColumns
+class DistributedDataFrame : public DataFrame {
+   public:
+    Store* store;
+
+    DistributedDataFrame(Store* store, DataFrame& df) : DataFrame(df) {
+        this->store = store;
+    }
+
+    DistributedDataFrame(Store* store, Schema& scm) : DataFrame(scm) {
+        this->store = store;
+    }
+
+    // Creates and sets empty columns in this dataframe according to the given schema
+    void set_empty_cols_(Schema* schema) {
+        for (size_t col_idx = 0; col_idx < schema->width(); col_idx++) {
+            char col_type = schema->col_type(col_idx);
+
+            if (col_type == INT_TYPE) {
+                columns[col_idx] = new DistributedIntColumn(store);
+            } else if (col_type == BOOL_TYPE) {
+                columns[col_idx] = new DistributedBoolColumn(store);
+            } else if (col_type == FLOAT_TYPE) {
+                columns[col_idx] = new DistributedFloatColumn(store);
+            } else {
+                columns[col_idx] = new DistributedStringColumn(store);
+            }
+        }
+    }
+
+    // returns a copy of the given column
+    Column* get_col_copy_(Column* col) {
+        char col_type = col->get_type();
+
+        if (col_type == INT_TYPE) {
+            return new DistributedIntColumn(store, col);
+        } else if (col_type == BOOL_TYPE) {
+            return new DistributedBoolColumn(store, col);
+        } else if (col_type == FLOAT_TYPE) {
+            return new DistributedFloatColumn(store, col);
+        } else {
+            return new DistributedStringColumn(store, col);
+        }
+    }
+
+    /** Create a new dataframe, constructed from rows for which the given Rower
+    * returned true from its accept method. */
+    DataFrame* filter(Rower& r) {
+        DistributedDataFrame* new_df = new DistributedDataFrame(store, get_schema());
+
+        // pass this row to the Rower and add to new_df is rower accepts it
+        Row* row = new Row(*schema);
+        for (size_t row_idx = 0; row_idx < nrows(); row_idx++) {
+            fill_row(row_idx, *row);
+
+            bool accept = r.accept(*row);
+            if (accept) {
+                new_df->add_row(*row);
+            }
+        }
+
+        return new_df;
+    }
 };

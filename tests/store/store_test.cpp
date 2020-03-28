@@ -22,7 +22,7 @@ bool test_simple_put_get() {
     int ints[2] = {1, 2};
     float floats[2] = {(float)1.0, (float)2.0};
     String s1("hi"), s2("bye");
-    String strings[2] = {s1, s2};
+    String* strings[2] = {&s1, &s2};
 
     // put in store and then get it out
     store.put_(&k1, bools);
@@ -38,9 +38,10 @@ bool test_simple_put_get() {
     assert(bools[1] == bools2[1]);
     assert(ints[1] == ints2[1]);
     assert(floats[1] == floats2[1]);
-    assert(strings[1].equals(&strings2[1]));
+    assert(strings[1]->equals(&strings2[1]));
 
-    delete[] strings2;
+    delete strings2[0];
+    delete strings2[1];
 
     // shutdown system
     s.shutdown();
@@ -74,7 +75,7 @@ bool test_network_put_get() {
     int ints[2] = {1, 2};
     float floats[2] = {(float)1.0, (float)2.0};
     String s1("hi"), s2("bye");
-    String strings[2] = {s1, s2};
+    String* strings[2] = {&s1, &s2};
 
     // put in other store and then get it out
     store1.put_(&k1, bools);
@@ -90,9 +91,10 @@ bool test_network_put_get() {
     assert(bools[1] == bools2[1]);
     assert(ints[1] == ints2[1]);
     assert(floats[1] == floats2[1]);
-    assert(strings[1].equals(strings2[1]));
+    assert(strings[1]->equals(strings2[1]));
 
-    delete[] strings2;
+    delete strings2[0];
+    delete strings2[1];
 
     // shutdown system
     s.shutdown();
@@ -106,53 +108,95 @@ bool test_network_put_get() {
     return true;
 }
 
-// // Tests creating a server and two stores, and then having one store put a dataframe on the other store
-// // and then also get it from the other store using getAndWait
-// bool test_network_getAndWait() {
-//     char* master_ip = (char*)"127.0.0.1";
-//     int master_port = 6777;
-//     Server s(master_ip, master_port);
-//     s.listen_for_clients();
+// Test whether store can put and get a distributed data frame
+bool test_network_distributed_df() {
+    char* master_ip = (char*)"127.0.0.1";
+    int master_port = 6777;
+    Server s(master_ip, master_port);
+    s.listen_for_clients();
 
-//     Store store1(0, (char*)"127.0.0.1", 6000, master_ip, master_port);
+    Store store1(0, (char*)"127.0.0.1", 6000, master_ip, master_port);
 
-//     Store store2(1, (char*)"127.0.0.1", 6001, master_ip, master_port);
+    Store store2(1, (char*)"127.0.0.1", 6001, master_ip, master_port);
 
-//     // Send PUT request from store1 to store2
-//     Key k((char*)"key", 1);  // key to store on another node
+    // key to store on another node
+    Key k((char*)"key", 1);
 
-//     IntColumn* i_c = new IntColumn(4, 1, 2, 3, 5);
-//     Schema empty_schema;
-//     DataFrame df(empty_schema);
-//     df.add_column(i_c, nullptr);
+    DistributedIntColumn* i_c = new DistributedIntColumn(4, 1, 2, 3, 5);
+    Schema empty_schema;
+    DistributedDataFrame df(empty_schema);
+    df.add_column(i_c, nullptr);
 
-//     // put on first node, and then get from second node
-//     store1.put_(&k, &df);
-//     DataFrame* df2 = store1.getAndWait_(&k);
+    // Put and get the DDF to/from the other node
+    store1.put(&k, &df);
+    DistributedDataFrame* df2 = store1.get(&k);
 
-//     assert(df.get_int(0, 0) == df2->get_int(0, 0));
-//     assert(df.get_int(0, 1) == df2->get_int(0, 1));
-//     assert(df.get_int(0, 2) == df2->get_int(0, 2));
-//     assert(df.get_int(0, 3) == df2->get_int(0, 3));
-//     assert(df.get_int(0, 4) == df2->get_int(0, 4));
+    assert(df.get_int(0, 0) == df2->get_int(0, 0));
+    assert(df.get_int(0, 1) == df2->get_int(0, 1));
+    assert(df.get_int(0, 2) == df2->get_int(0, 2));
+    assert(df.get_int(0, 3) == df2->get_int(0, 3));
+    assert(df.get_int(0, 4) == df2->get_int(0, 4));
 
-//     // shutdown system
-//     s.shutdown();
+    // shutdown system
+    s.shutdown();
 
-//     // wait for nodes to finish
-//     while (!store1.is_shutdown()) {
-//     }
-//     while (!store2.is_shutdown()) {
-//     }
+    // wait for nodes to finish
+    while (!store1.is_shutdown()) {
+    }
+    while (!store2.is_shutdown()) {
+    }
 
-//     return true;
-// }
+    return true;
+}
+
+// Test whether store can put and waitAndGet a distributed data frame
+bool test_network_distributed_df_waitAndGet() {
+    char* master_ip = (char*)"127.0.0.1";
+    int master_port = 5777;
+    Server s(master_ip, master_port);
+    s.listen_for_clients();
+
+    Store store1(0, (char*)"127.0.0.1", 5000, master_ip, master_port);
+
+    Store store2(1, (char*)"127.0.0.1", 5001, master_ip, master_port);
+
+    // key to store on another node
+    Key k((char*)"key", 1);
+
+    DistributedIntColumn* i_c = new DistributedIntColumn(4, 1, 2, 3, 5);
+    Schema empty_schema;
+    DistributedDataFrame df(empty_schema);
+    df.add_column(i_c, nullptr);
+
+    // Put and get the DDF to/from the other node
+    store1.put(&k, &df);
+    DistributedDataFrame* df2 = store1.waitAndGet(&k);
+
+    assert(df.get_int(0, 0) == df2->get_int(0, 0));
+    assert(df.get_int(0, 1) == df2->get_int(0, 1));
+    assert(df.get_int(0, 2) == df2->get_int(0, 2));
+    assert(df.get_int(0, 3) == df2->get_int(0, 3));
+    assert(df.get_int(0, 4) == df2->get_int(0, 4));
+
+    // shutdown system
+    s.shutdown();
+
+    // wait for nodes to finish
+    while (!store1.is_shutdown()) {
+    }
+    while (!store2.is_shutdown()) {
+    }
+
+    return true;
+}
 
 int main() {
     assert(test_simple_put_get());
     printf("========== test_simple_put_get PASSED =============\n");
     assert(test_network_put_get());
     printf("========== test_network_put_get PASSED =============\n");
-    // assert(test_network_getAndWait());
-    // printf("========== test_network_getAndWait PASSED =============\n");
+    assert(test_network_distributed_df());
+    printf("========== test_network_distributed_df PASSED =============\n");
+    assert(test_network_distributed_df_waitAndGet());
+    printf("========== test_network_distributed_df_waitAndGet PASSED =============\n");
 }
