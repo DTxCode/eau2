@@ -118,10 +118,12 @@ class Serializer {
             } else {
                 df->add_column(deserialize_string_col(token), nullptr);
             }
+            //delete[] token_copies[i];
         }
 
         delete[] token_copies;
         delete[] msg_copy;
+//        delete[] msg;
         delete schema;
         return df;
     }
@@ -136,7 +138,9 @@ class Serializer {
     // Leverage built-in Message constructor which works
     // from its to_string() representation (used for serialization)
     virtual Message* deserialize_message(char* msg) {
-        return new Message(msg);
+        Message* m = new Message(msg); // Copies msg
+        //delete[] msg;
+        return m;
     }
 
     // Serialize an IntColumn
@@ -194,6 +198,24 @@ class Serializer {
         sscanf(msg, "%d", &data);
         return data;
     }
+    
+    // Serialize an size_t (unsigned long) to a character array
+    virtual char* serialize_size_t(size_t value) {
+        char* data;
+        // Do a fake write to check how much space we need
+        size_t buf_size = snprintf(nullptr, 0, "%lu", value) + 1;
+        data = new char[buf_size];
+        // Do a real write with proper amount of space
+        snprintf(data, buf_size, "%lu", value);
+        return data;
+    }
+
+    // De-serialize a character array in to an size_t value
+    virtual size_t deserialize_size_t(char* msg) {
+        int data;
+        sscanf(msg, "%lu", &data);
+        return data;
+    }
 
     // Serialize a float to a character array
     virtual char* serialize_float(float value) {
@@ -239,6 +261,39 @@ class Serializer {
         }
         return new String(static_cast<const char*>(msg));
     }
+
+    // Serialize pointer to Key* object 
+    // Creates form "[serialized Key name],[serialized Key home_node]"
+    virtual char* serialize_key(Key* value) {
+        char* data;
+        // Handle nullptr case --> return "\0"
+        if (nullptr == value) {
+            data = new char[1];
+            data[0] = '\0';
+            return data;
+        }
+        // Do a fake write to check how much space we need
+        size_t name_buf_size = snprintf(nullptr, 0, "%s", value->get_name()) + 1;
+        char* serialized_home_node = serialize_size_t(value->get_home_node());
+        size_t node_buf_size = snprintf(nullptr, 0, "%s", serialized_home_node) + 1;
+        data = new char[name_buf_size + node_buf_size + 1]; // + 1 for comma
+        strcpy(data, value->get_name());
+        strcat(data, ",");
+        strcat(data, serialized_home_node);
+        delete[] serialized_home_node;
+        return data;
+    }
+
+    // Deserialize a char* into a Key object
+    // Expects char* form of "[serialized Key name],[serialized Key home_node]"
+    virtual Key* deserialize_key(char* msg) {
+        char* name_token = strtok(msg, ","); // Get first val before ,
+        char* node_token = strtok(msg, ",");
+        node_token = strtok(nullptr, ","); // Get second val after ,
+        size_t node_id = deserialize_size_t(node_token);
+        return new Key(name_token, node_id);
+    }
+
 
     // Generic serialization method for Column type
     // Process is same for every column, but serialization method used for
@@ -321,6 +376,7 @@ class Serializer {
             }
             token = strtok(nullptr, ",");
         }
+        delete msg;
     }
 
     // Serialize StringArray object

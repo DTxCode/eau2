@@ -29,6 +29,30 @@ bool test_df_serialize() {
     return new_df->get_bool(1, 3);
 }
 
+// Test Key serialization (newly added in Milestone 3)
+bool test_key_serialize() {
+    Key k1((char*)"tester", 2);
+    Key k2((char*)"ano ther",45);
+
+    Serializer serial;
+
+    char* serialized_k1 = serial.serialize_key(&k1);
+    char* serialized_k2 = serial.serialize_key(&k2);
+
+    Sys s;
+    s.p(serialized_k1);
+    s.p(serialized_k2);
+    
+    Key* new_k1 = serial.deserialize_key(serialized_k1);
+    Key* new_k2 = serial.deserialize_key(serialized_k2);
+
+    bool ret_value = (k1.equals(new_k1) && k2.equals(new_k2));
+    delete new_k1;
+    delete new_k2;
+    return ret_value;
+}
+
+
 // Test boolean serialization (newly added in Milestone 1)
 bool test_bool_serialize() {
     bool b1 = true;
@@ -50,6 +74,8 @@ bool test_bool_serialize() {
 
 
 int main() {
+    assert(test_key_serialize());
+    printf("========= serialize_key PASSED =============\n");
     assert(test_bool_serialize());
     printf("========= serialize_bool PASSED =============\n");
     assert(test_df_serialize());
