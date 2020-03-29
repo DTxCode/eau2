@@ -28,6 +28,10 @@ class Application {
         }
     }
 
+    size_t this_node() {
+        return store->this_node();
+    }
+
     // // Distributes data from sorer in even chunks across all nodes in the network
     // void distribute_data_() {
     //     int num_nodes = store->num_nodes();
