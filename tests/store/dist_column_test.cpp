@@ -1,8 +1,8 @@
 #pragma once
-#include "../../src/store/store.cpp"
-#include "../../src/store/dataframe/column.h"
 #include <assert.h>
+#include "../../src/store/dataframe/column.h"
 #include "../../src/store/network/master.h"
+#include "../../src/store/store.cpp"
 
 bool test_distributed_column() {
     char* master_ip = (char*)"127.0.0.1";
@@ -14,16 +14,15 @@ bool test_distributed_column() {
 
     DistributedIntColumn dist_intc(&store1);
 
-    printf("here\n");
-
-    for (size_t i = 0; i < 1000000; i++) {
-        dist_intc.push_back((i % 17));
+    for (size_t i = 0; i < 100000; i++) {
+        dist_intc.push_back(i);
     }
-    printf("here\n");
 
-    int dummy = dist_intc.get(182322);
+    int val = dist_intc.get(125);
 
-    return (dummy >= 0);
+    assert(val == 125);
+
+    return true;
 }
 
 int main() {
@@ -31,4 +30,3 @@ int main() {
     printf("=========== test_dist_column PASSED =========\n");
     return 0;
 }
-
