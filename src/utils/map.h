@@ -157,7 +157,7 @@ class Map : public Object {
             Pair* pair = dynamic_cast<Pair*>(entry);
 
             // if a key from the pair matches the given key, return the pair val
-            if (pair->get_first()->equals(key)) {
+	    if (pair->get_first()->equals(key)) {
                 return pair->get_second();
             }
         }

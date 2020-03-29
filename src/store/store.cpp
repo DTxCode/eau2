@@ -19,15 +19,17 @@ Store::~Store() {
     // Delete both keys and values from our map
     map_lock.lock();
     List *keys = map->keys();
+	List* vals = map->values();
+
     for (size_t i = 0; i < keys->size(); i++) {
         Object *key = keys->get(i);
-        Object *val = map->get(key);
-
+        Object *val = vals->get(i);
         delete key;
         delete val;
     }
 
     delete keys;
+    delete vals;
     delete map;
     map_lock.unlock();
 }
@@ -183,7 +185,7 @@ int *Store::get_int_array_(Key *k) {
 
     int *ints = serializer->deserialize_ints(serialized_array);
 
-    delete[] serialized_array;
+    //delete[] serialized_array;
 
     return ints;
 }
@@ -298,7 +300,7 @@ DistributedDataFrame *Store::waitAndGet(Key *k) {
 // Some sort of reply is expected to be written to the given socket
 // By default, sends empty ACK back to the message sender and prints a "message-received" string
 void Store::handle_message(int connected_socket, Message *msg) {
-    printf("Node %s:%d got message from another node with type %d and contents \"%s\"\n", my_ip_address, my_port, msg->msg_type, msg->msg);
+   // printf("Node %s:%d got message from another node with type %d and contents \"%s\"\n", my_ip_address, my_port, msg->msg_type, msg->msg);
 
     if (msg->msg_type == PUT) {
         handle_put_(connected_socket, msg);

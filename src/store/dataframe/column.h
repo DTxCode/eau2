@@ -786,8 +786,8 @@ class DistributedColumn : virtual public Column {
         missings_keys = new Key*[num_chunks];
         chunk_keys = new Key*[num_chunks];
         for (size_t i = 0; i < num_chunks; i++) {
-            missings_keys[i] = generate_key_dist();
-            chunk_keys[i] = generate_key_dist();
+            missings_keys[i] = generate_key_dist(i);
+            chunk_keys[i] = generate_key_dist(i);
         }
     }
 
@@ -808,8 +808,8 @@ class DistributedColumn : virtual public Column {
 
         // Make new ones for new space
         for (size_t j = old_num_chunks; j < num_chunks; j++) {
-            new_missings_keys[j] = generate_key_dist();
-            new_chunk_keys[j] = generate_key_dist();
+            new_missings_keys[j] = generate_key_dist(j);
+            new_chunk_keys[j] = generate_key_dist(j);
         }
         delete[] missings_keys;
         delete[] chunk_keys;
@@ -820,7 +820,7 @@ class DistributedColumn : virtual public Column {
     // Generate a random number, and turn it in to a char* to be used in a Key
     // Ensure that the generated Key does not already exist in our lists of
     // Keys
-    virtual Key* generate_key_dist() {
+    virtual Key* generate_key_dist(size_t corresponding_chunk_id) {
         size_t rand_key = rand();  // random number as key
 
         // Do a fake write to check how much space we need
@@ -833,15 +833,16 @@ class DistributedColumn : virtual public Column {
         // Check this key against all existing keys in this column
         for (size_t i = 0; i < num_chunks; i++) {
             if (chunk_keys[i] && strcmp(key, chunk_keys[i]->get_name()) == 0) {
-                return generate_key_dist();  // Start over, need unique key
+                return generate_key_dist(i);  // Start over, need unique key
             }
             if (missings_keys[i] && strcmp(key, missings_keys[i]->get_name()) == 0) {
-                return generate_key_dist();  // Start over, need unique key
+                return generate_key_dist(i);  // Start over, need unique key
             }
         }
 
         // We have a unique key, make a Key and return it
-        return new Key(key, store->this_node());
+	size_t chunk_node = corresponding_chunk_id % store->num_nodes();
+        return new Key(key, chunk_node);
     }
 
     // Assumes capacity has changed. Reallocate missings array and copy

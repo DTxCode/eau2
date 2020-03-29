@@ -1,4 +1,3 @@
-#pragma once
 #include <assert.h>
 #include "../../src/store/dataframe/column.h"
 #include "../../src/store/network/master.h"
@@ -11,14 +10,19 @@ bool test_distributed_column() {
     s.listen_for_clients();
 
     Store store1(0, (char*)"127.0.0.1", 6000, master_ip, master_port);
+    Store store2(1, (char*)"127.0.0.1", 6001, master_ip, master_port);
 
     DistributedIntColumn dist_intc(&store1);
 
-    for (size_t i = 0; i < 100000; i++) {
-        dist_intc.push_back(i);
+    for (size_t i = 0; i < 1000; i++) {
+	    dist_intc.push_back(i);
     }
 
     int val = dist_intc.get(125);
+
+	s.shutdown();
+	while(!store1.is_shutdown()) {}
+	while(!store2.is_shutdown()) {}
 
     assert(val == 125);
 
