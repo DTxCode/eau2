@@ -1155,7 +1155,7 @@ class DistributedBoolColumn : public DistributedColumn, public BoolColumn {
         size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
         // Update missing bitmap
         if (is_missing_dist(idx)) {
-            set_missing_dist(idx);
+            set_missing_dist(idx, true);
         }
         Key* k = chunk_keys[array_idx];
         bool* cells = store->get_bool_array_(k);
@@ -1275,7 +1275,7 @@ class DistributedFloatColumn : public DistributedColumn, public FloatColumn {
             push_back(row_val);
             // Track other columns missings
             if (col->is_missing(row_idx)) {
-                set_missing_dist(row_idx);
+                set_missing_dist(row_idx, true);
             }
         }
     }
@@ -1318,7 +1318,7 @@ class DistributedFloatColumn : public DistributedColumn, public FloatColumn {
         size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
         // Update missing bitmap
         if (is_missing_dist(idx)) {
-            set_missing_dist(idx);
+            set_missing_dist(idx, true);
         }
         Key* k = chunk_keys[array_idx];
         float* cells = store->get_float_array_(k);
@@ -1439,7 +1439,7 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
             push_back(row_val);
             // Track other columns missings
             if (col->is_missing(row_idx)) {
-                set_missing_dist(row_idx);
+                set_missing_dist(row_idx, true);
             }
         }
     }
@@ -1482,7 +1482,7 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
         size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
         // Update missing bitmap
         if (is_missing_dist(idx)) {
-            set_missing_dist(idx);
+            set_missing_dist(idx, true);
         }
         Key* k = chunk_keys[array_idx];
         String** cells = store->get_string_array_(k);
