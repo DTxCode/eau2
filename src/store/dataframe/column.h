@@ -900,7 +900,7 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
         init_missings_dist();
 
         // Put default integer array for each chunk
-        int* ints[INTERNAL_CHUNK_SIZE];
+        int ints[INTERNAL_CHUNK_SIZE];
         for (size_t i = 0; i < num_chunks; i++) {
             store->put_(chunk_keys[i], ints, INTERNAL_CHUNK_SIZE);
         }
@@ -923,7 +923,7 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
         init_missings_dist();
 
         // Put default integer array for each chunk
-        int* ints[INTERNAL_CHUNK_SIZE];
+        int ints[INTERNAL_CHUNK_SIZE];
         for (size_t i = 0; i < num_chunks; i++) {
             store->put_(chunk_keys[i], ints, INTERNAL_CHUNK_SIZE);
         }
@@ -948,7 +948,7 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
         init_keys_dist();
 
         // Put default integer array for each chunk
-        int* ints[INTERNAL_CHUNK_SIZE];
+        int ints[INTERNAL_CHUNK_SIZE];
         for (size_t i = 0; i < num_chunks; i++) {
             store->put_(chunk_keys[i], ints, INTERNAL_CHUNK_SIZE);
         }
@@ -1011,7 +1011,7 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
         resize_missings_dist();
 
         // add default int array to new chunks
-        int* ints[INTERNAL_CHUNK_SIZE];
+        int ints[INTERNAL_CHUNK_SIZE];
         for (size_t i = old_num_chunks; i < num_chunks; i++) {
             store->put_(chunk_keys[i], ints, INTERNAL_CHUNK_SIZE);
         }
