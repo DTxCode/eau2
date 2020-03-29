@@ -15,6 +15,7 @@
 #define STRING_TYPE 'S'
 
 //class Store;
+class DistributedDataFrame;
 
 /****************************************************************************
  * DistributedDataFrame::
@@ -442,16 +443,16 @@ class DataFrame : public Object {
         }
     }
 
-    static DataFrame* fromArray(Key* key, Store* store, size_t count, float* vals);
-    static DataFrame* fromArray(Key* key, Store* store, size_t count, bool* vals);
-    static DataFrame* fromArray(Key* key, Store* store, size_t count, int* vals);
-    static DataFrame* fromArray(Key* key, Store* store, size_t count, String** vals);
-    static DataFrame* fromDistributedColumn(Key* key, Store* store, DistributedColumn* col);
+    static DistributedDataFrame* fromArray(Key* key, Store* store, size_t count, float* vals);
+    static DistributedDataFrame* fromArray(Key* key, Store* store, size_t count, bool* vals);
+    static DistributedDataFrame* fromArray(Key* key, Store* store, size_t count, int* vals);
+    static DistributedDataFrame* fromArray(Key* key, Store* store, size_t count, String** vals);
+    static DistributedDataFrame* fromDistributedColumn(Key* key, Store* store, DistributedColumn* col);
 
-    static DataFrame* fromScalar(Key* key, Store* store, float val);
-    static DataFrame* fromScalar(Key* key, Store* store, bool val);
-    static DataFrame* fromScalar(Key* key, Store* store, int val);
-    static DataFrame* fromScalar(Key* key, Store* store, String* val);
+    static DistributedDataFrame* fromScalar(Key* key, Store* store, float val);
+    static DistributedDataFrame* fromScalar(Key* key, Store* store, bool val);
+    static DistributedDataFrame* fromScalar(Key* key, Store* store, int val);
+    static DistributedDataFrame* fromScalar(Key* key, Store* store, String* val);
 };
 
 // DistributedDataFrame is a DataFrame that has all of its data in DistributedColumns
@@ -468,7 +469,7 @@ class DistributedDataFrame : public DataFrame {
     }
 
     // Creates and sets empty columns in this dataframe according to the given schema
-    void set_empty_cols_(Schema* schema) {
+/*    void set_empty_cols_(Schema* schema) {
         for (size_t col_idx = 0; col_idx < schema->width(); col_idx++) {
             char col_type = schema->col_type(col_idx);
 
@@ -482,10 +483,10 @@ class DistributedDataFrame : public DataFrame {
                 columns[col_idx] = new DistributedStringColumn(store);
             }
         }
-    }
+    } */
 
     // returns a copy of the given column
-    Column* get_col_copy_(Column* col) {
+    /*Column* get_col_copy_(Column* col) {
         char col_type = col->get_type();
 
         if (col_type == INT_TYPE) {
@@ -497,11 +498,11 @@ class DistributedDataFrame : public DataFrame {
         } else {
             return new DistributedStringColumn(store, col);
         }
-    }
+    }*/
 
     /** Create a new dataframe, constructed from rows for which the given Rower
     * returned true from its accept method. */
-    DataFrame* filter(Rower& r) {
+    /*DataFrame* filter(Rower& r) {
         DistributedDataFrame* new_df = new DistributedDataFrame(store, get_schema());
 
         // pass this row to the Rower and add to new_df is rower accepts it
@@ -516,5 +517,5 @@ class DistributedDataFrame : public DataFrame {
         }
 
         return new_df;
-    }
+    }*/
 };

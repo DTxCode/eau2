@@ -109,6 +109,12 @@ DataFrame* Serializer::deserialize_dataframe(char* msg) {
     delete schema;
     return df;
 }
+    
+// TODO impl thse
+char* Serializer::serialize_distributed_dataframe(DistributedDataFrame* df) { return nullptr; }
+
+// Deserialize a char* buffer into a DataFrame object
+DistributedDataFrame* Serializer::deserialize_distributed_dataframe(char* msg) { return nullptr; }
 
 // Serialize a Message object
 char* Serializer::serialize_message(Message* msg) {
@@ -298,13 +304,13 @@ Key* Serializer::deserialize_key(char* msg) {
             IntColumn* typed_col = dynamic_cast<IntColumn*>(col);
             cell_strings[i] = serialize_int(typed_col->get(i));
         } else if (type == FLOAT_TYPE) {
-            FloatColumn* typed_col = static_cast<FloatColumn*>(col);
+            FloatColumn* typed_col = dynamic_cast<FloatColumn*>(col);
             cell_strings[i] = serialize_float(typed_col->get(i));
         } else if (type == STRING_TYPE) {
-            StringColumn* typed_col = static_cast<StringColumn*>(col);
+            StringColumn* typed_col = dynamic_cast<StringColumn*>(col);
             cell_strings[i] = serialize_string(typed_col->get(i));
         } else if (type == BOOL_TYPE) {
-            BoolColumn* typed_col = static_cast<BoolColumn*>(col);
+            BoolColumn* typed_col = dynamic_cast<BoolColumn*>(col);
             cell_strings[i] = serialize_bool(typed_col->get(i));
         }
 

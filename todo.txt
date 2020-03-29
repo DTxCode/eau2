@@ -18,6 +18,7 @@ m3:
        - serialization methods
     3) Network - Need public put/get/getandwait for DistributedDataFrames
     4) Dataframe - ::fromArray/fromScalar defined on DistributedDataFrame?
+    5) Need to change Bool,Float,String column methods to be virtual for Dist columns
 
 Questions:
     DistributedArrays?

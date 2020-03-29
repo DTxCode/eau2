@@ -359,7 +359,7 @@ DistributedDataFrame *DataFrame::fromArray(Key *key, Store *store, size_t count,
         col.push_back(vals[i]);
     }
 
-    return fromDistributedColumn(key, store, col);
+    return fromDistributedColumn(key, store, &col);
 }
 
 DistributedDataFrame *DataFrame::fromArray(Key *key, Store *store, size_t count, bool *vals) {
@@ -369,7 +369,7 @@ DistributedDataFrame *DataFrame::fromArray(Key *key, Store *store, size_t count,
         col.push_back(vals[i]);
     }
 
-    return fromDistributedColumn(key, store, col);
+    return fromDistributedColumn(key, store, &col);
 }
 
 DistributedDataFrame *DataFrame::fromArray(Key *key, Store *store, size_t count, int *vals) {
@@ -379,7 +379,7 @@ DistributedDataFrame *DataFrame::fromArray(Key *key, Store *store, size_t count,
         col.push_back(vals[i]);
     }
 
-    return fromDistributedColumn(key, store, col);
+    return fromDistributedColumn(key, store, &col);
 }
 
 DistributedDataFrame *DataFrame::fromArray(Key *key, Store *store, size_t count, String **vals) {
@@ -389,7 +389,7 @@ DistributedDataFrame *DataFrame::fromArray(Key *key, Store *store, size_t count,
         col.push_back(vals[i]);
     }
 
-    return fromDistributedColumn(key, store, col);
+    return fromDistributedColumn(key, store, &col);
 }
 
 // Stores copy of col in store under key
@@ -398,7 +398,7 @@ DistributedDataFrame *DataFrame::fromDistributedColumn(Key *key, Store *store, D
     DistributedDataFrame *df = new DistributedDataFrame(store, *empty_schema);
 
     // add column to DF
-    df->add_column(&col, nullptr);
+    df->add_column(col, nullptr);
 
     // add DF to store under key
     store->put(key, df);
@@ -409,25 +409,25 @@ DistributedDataFrame *DataFrame::fromDistributedColumn(Key *key, Store *store, D
 // The following fromScalar methods store `val` in a single cell in a DistributedDataFrame.
 // Saves that DDF in store under key and returns it.
 DistributedDataFrame *DataFrame::fromScalar(Key *key, Store *store, float val) {
-    DistributedFloatColumn col(store, val);
+    DistributedFloatColumn col(store, 1, val);
 
-    return fromDistributedColumn(key, store, col);
+    return fromDistributedColumn(key, store, &col);
 }
 
 DistributedDataFrame *DataFrame::fromScalar(Key *key, Store *store, bool val) {
-    DistributedBoolColumn col(store, val);
+    DistributedBoolColumn col(store, 1, val);
 
-    return fromDistributedColumn(key, store, col);
+    return fromDistributedColumn(key, store, &col);
 }
 
 DistributedDataFrame *DataFrame::fromScalar(Key *key, Store *store, int val) {
-    DistributedIntColumn col(store, val);
+    DistributedIntColumn col(store, 1, val);
 
-    return fromDistributedColumn(key, store, col);
+    return fromDistributedColumn(key, store, &col);
 }
 
 DistributedDataFrame *DataFrame::fromScalar(Key *key, Store *store, String *val) {
-    DistributedStringColumn col(store, val);
+    DistributedStringColumn col(store, 1, val);
 
-    return fromDistributedColumn(key, store, col);
+    return fromDistributedColumn(key, store, &col);
 }

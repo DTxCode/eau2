@@ -49,6 +49,10 @@ test-store:
 	g++ -std=c++11 -Wall -pthread -g tests/store/store_test.cpp -o store_test
 	./store_test
 
+test-column:
+	g++ -std=c++11 -Wall -pthread -g tests/store/dist_column_test.cpp -o col_test
+	./col_test
+
 valgrind-store:
 	g++ -std=c++11 -Wall -pthread -g tests/store/store_test.cpp -o store_test
 	valgrind --leak-check=full --track-origins=yes ./store_test

@@ -7,6 +7,7 @@
 
 // Forward declarations to avoid includes
 class DataFrame;
+class DistributedDataFrame;
 class Column;
 class IntColumn;
 class BoolColumn;
@@ -48,6 +49,12 @@ class Serializer {
 
     // Deserialize a char* buffer into a DataFrame object
     virtual DataFrame* deserialize_dataframe(char* msg);
+    
+    // TODO impl thse
+    virtual char* serialize_distributed_dataframe(DistributedDataFrame* df);
+
+    // Deserialize a char* buffer into a DataFrame object
+    virtual DistributedDataFrame* deserialize_distributed_dataframe(char* msg);
 
     // Serialize a Message object
     virtual char* serialize_message(Message* msg);
