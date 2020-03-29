@@ -10,7 +10,7 @@
 #define BOOL_TYPE 'B'
 #define FLOAT_TYPE 'F'
 #define STRING_TYPE 'S'
-#define INTERNAL_CHUNK_SIZE 10000
+#define INTERNAL_CHUNK_SIZE (size_t)10000
 
 /*class Store {
     public:
@@ -765,13 +765,13 @@ class DistributedColumn : virtual public Column {
     }
 
     // Assumes Keys are initialized
-    // For each missing key, allocates an array of booleans all set to true initially.
+    // For each missing key, allocates an array of booleans all set to false initially.
     // Stores this array in the KVS under the pre-determined key for that
     // chunk of missings
     virtual void init_missings_dist() {
         bool missings_chunk[INTERNAL_CHUNK_SIZE];
         for (size_t j = 0; j < INTERNAL_CHUNK_SIZE; j++) {
-            missings_chunk[j] = true;
+            missings_chunk[j] = false;
         }
 
         for (size_t i = 0; i < num_chunks; i++) {
@@ -849,7 +849,7 @@ class DistributedColumn : virtual public Column {
     virtual void resize_missings_dist() {
         bool missings_chunk[INTERNAL_CHUNK_SIZE];
         for (size_t j = 0; j < INTERNAL_CHUNK_SIZE; j++) {
-            missings_chunk[j] = true;
+            missings_chunk[j] = false;
         }
 
         // Put default missings chunk under each new key
@@ -957,9 +957,10 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
         for (size_t row_idx = 0; row_idx < col->size(); row_idx++) {
             int row_val = col->as_int()->get(row_idx);
             push_back(row_val);
-            // Track other columns missings
+
             if (col->is_missing(row_idx)) {
-                set_missing_dist(row_idx);
+                // row_val we pushed above is fake, mark this cell as missing
+                set_missing_dist(row_idx, true);
             }
         }
     }
@@ -999,6 +1000,7 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
 
         delete[] cells;
 
+        // We may be overwriting a missing, so mark cell as not-missing
         set_missing_dist(idx, false);
     }
 
@@ -1026,6 +1028,7 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
         int* cells = store->get_int_array_(k);
         cells[local_idx] = val;
         store->put_(k, cells, INTERNAL_CHUNK_SIZE);
+        // No need to call set_missing_dist because default is false
         length++;
         delete[] cells;
     }
@@ -1035,6 +1038,8 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
         if (length == capacity) {
             resize();
         }
+        // Default value in store already exists,
+        // Mark value as missing and increment length
         set_missing_dist(length, true);
         length++;
     }
