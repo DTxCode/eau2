@@ -3,11 +3,11 @@
 #include "../../utils/object.h"
 #include "../../utils/string.h"
 #include "../key.h"
+#include "../store.h"
 #include "column.h"
 #include "row.h"
 #include "rower.h"
 #include "schema.h"
-#include "../store.h"
 
 #define INT_TYPE 'I'
 #define BOOL_TYPE 'B'
@@ -469,7 +469,7 @@ class DistributedDataFrame : public DataFrame {
     }
 
     // Creates and sets empty columns in this dataframe according to the given schema
-/*    void set_empty_cols_(Schema* schema) {
+    void set_empty_cols_(Schema* schema) {
         for (size_t col_idx = 0; col_idx < schema->width(); col_idx++) {
             char col_type = schema->col_type(col_idx);
 
@@ -483,10 +483,10 @@ class DistributedDataFrame : public DataFrame {
                 columns[col_idx] = new DistributedStringColumn(store);
             }
         }
-    } */
+    }
 
     // returns a copy of the given column
-    /*Column* get_col_copy_(Column* col) {
+    Column* get_col_copy_(Column* col) {
         char col_type = col->get_type();
 
         if (col_type == INT_TYPE) {
@@ -498,11 +498,11 @@ class DistributedDataFrame : public DataFrame {
         } else {
             return new DistributedStringColumn(store, col);
         }
-    }*/
+    }
 
     /** Create a new dataframe, constructed from rows for which the given Rower
     * returned true from its accept method. */
-    /*DataFrame* filter(Rower& r) {
+    DataFrame* filter(Rower& r) {
         DistributedDataFrame* new_df = new DistributedDataFrame(store, get_schema());
 
         // pass this row to the Rower and add to new_df is rower accepts it
@@ -517,5 +517,5 @@ class DistributedDataFrame : public DataFrame {
         }
 
         return new_df;
-    }*/
+    }
 };

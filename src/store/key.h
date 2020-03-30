@@ -39,16 +39,15 @@ class Key : public Object {
     }
 
     bool equals(Object* other) {
-	if (other == nullptr) return false;
-	if (other == this) return true;
+        if (other == nullptr) return false;
+        if (other == this) return true;
 
-	Key* other_key = dynamic_cast<Key*>(other);
+        Key* other_key = dynamic_cast<Key*>(other);
 
-	if (other_key == nullptr) return false;
+        if (other_key == nullptr) return false;
 
-	if (equal_strings(other_key->name, name) && other_key->home_node == home_node) return true;
+        if (equal_strings(other_key->name, name) && other_key->home_node == home_node) return true;
 
-
-	return false;
-	}
+        return false;
+    }
 };
