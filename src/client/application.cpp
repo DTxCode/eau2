@@ -18,8 +18,6 @@ class Application {
         }
 
         this->store = store;
-
-        run_();
     }
 
     ~Application() {
@@ -47,7 +45,7 @@ class Application {
 
     // OVERRIDE
     // Called on application start
-    virtual void run_() {}
+    virtual void run_() = 0;
 };
 
 // int main(int argc, char** argv) {

@@ -214,8 +214,8 @@ DistributedDataFrame* Serializer::deserialize_distributed_dataframe(char* msg, S
 // Serializes a Distributed Column
 // Treats a DistColumn as a set of chunk Keys and a set of Missing keys
 // As such, creates msg with format:
-// "[Serialized length]~[Serialized num_chunks]~[Serialized chunk Key 1];...; \
-//      [Serialized chunk key (num_chunks - 1)]~  \
+// "[Serialized length]~[Serialized num_chunks]~[Serialized chunk Key 1];...; 
+//      [Serialized chunk key (num_chunks - 1)]~  
 //      [Serialized missing Key 1];...;[Serialized missing key (num_chunks - 1)]"
 char* Serializer::serialize_dist_col(DistributedColumn* col) {
     size_t num_keys = col->num_chunks;
@@ -281,8 +281,8 @@ char* Serializer::serialize_dist_col(DistributedColumn* col) {
 
 // Deserialize a char* msg into a DistributedColumn 
 // Expects msg with format: 
-// "[Serialized length]~[Serialized num_chunks]~[Serialized chunk Key 1];...; \
-//      [Serialized chunk key (num_chunks - 1)]~  \
+// "[Serialized length]~[Serialized num_chunks]~[Serialized chunk Key 1];...; 
+//      [Serialized chunk key (num_chunks - 1)]~  
 //      [Serialized missing Key 1];...;[Serialized missing key (num_chunks - 1)]"
 DistributedColumn* Serializer::deserialize_dist_col(char* msg, Store* store) { 
     char* ser_length = strtok(msg, "~");

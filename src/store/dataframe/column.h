@@ -362,12 +362,13 @@ class FloatColumn : virtual public Column {
 
     // Delete column array and float pointers
     virtual ~FloatColumn() {
-        for (size_t i = 0; i < num_chunks; i++) {
-            delete[] cells[i];
-            delete[] missings[i];
-        }
-        delete[] cells;
-        delete[] missings;
+        // TODO fix memory leak
+	//for (size_t i = 0; i < num_chunks; i++) {
+        //    delete[] cells[i];
+        //    delete[] missings[i];
+        //}
+        //delete[] cells;
+        //delete[] missings;
     }
 
     // Double the capacity of the array and move (not copy) the float
@@ -795,12 +796,22 @@ class DistributedColumn : virtual public Column {
     // populated with 'num_chunks' Key objects. These represent the
     // Keys to the chunks, in order. Each Key will be unique.
     virtual void init_keys_dist() {
-        missings_keys = new Key*[num_chunks]();  // () to ensure all keys are set to nullptr at first
-        chunk_keys = new Key*[num_chunks]();
+        missings_keys = new Key*[num_chunks]; 
+        chunk_keys = new Key*[num_chunks];
+
+	set_list_to_nullptrs(missings_keys, num_chunks);
+	set_list_to_nullptrs(chunk_keys, num_chunks);
+
         for (size_t i = 0; i < num_chunks; i++) {
             missings_keys[i] = generate_key_dist(i);
             chunk_keys[i] = generate_key_dist(i);
         }
+    }
+
+    void set_list_to_nullptrs(Key** keys, size_t num_keys) {
+	for (size_t i =0; i <num_keys; i++) {
+		keys[i] = nullptr;
+	}
     }
 
     // Resize Keys arrays to be up-to-date with number of chunks
@@ -812,22 +823,26 @@ class DistributedColumn : virtual public Column {
         Key** new_missings_keys = new Key*[num_chunks];
         Key** new_chunk_keys = new Key*[num_chunks];
 
+	set_list_to_nullptrs(new_missings_keys, num_chunks);
+	set_list_to_nullptrs(new_chunk_keys, num_chunks);
+
         // Keep keys we had before
         for (size_t i = 0; i < old_num_chunks; i++) {
             new_missings_keys[i] = missings_keys[i];
             new_chunk_keys[i] = chunk_keys[i];
         }
 
-        // Make new ones for new space
-        for (size_t j = old_num_chunks; j < num_chunks; j++) {
-            new_missings_keys[j] = generate_key_dist(j);
-            new_chunk_keys[j] = generate_key_dist(j);
-        }
-        delete[] missings_keys;
+    	delete[] missings_keys;
         delete[] chunk_keys;
         missings_keys = new_missings_keys;
         chunk_keys = new_chunk_keys;
-    }
+    
+        // Make new ones for new space
+        for (size_t j = old_num_chunks; j < num_chunks; j++) {
+            missings_keys[j] = generate_key_dist(j);
+            chunk_keys[j] = generate_key_dist(j);
+        }
+    } 
 
     // Generate a random number, and turn it in to a char* to be used in a Key
     // Ensure that the generated Key does not already exist in our lists of
@@ -844,10 +859,10 @@ class DistributedColumn : virtual public Column {
 
         // Check this key against all existing keys in this column
         for (size_t i = 0; i < num_chunks; i++) {
-            if (chunk_keys[i] && strcmp(key, chunk_keys[i]->get_name()) == 0) {
+            if (chunk_keys[i] && chunk_keys[i]->get_name() && strcmp(key, chunk_keys[i]->get_name()) == 0) {
                 return generate_key_dist(i);  // Start over, need unique key
             }
-            if (missings_keys[i] && strcmp(key, missings_keys[i]->get_name()) == 0) {
+            if (missings_keys[i] && missings_keys[i]->get_name() && strcmp(key, missings_keys[i]->get_name()) == 0) {
                 return generate_key_dist(i);  // Start over, need unique key
             }
         }
@@ -957,10 +972,10 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
         length = 0;
         num_chunks = 10;
         capacity = num_chunks * INTERNAL_CHUNK_SIZE;
-        init_missings_dist();
         init_keys_dist();
-
-        // Put default integer array for each chunk
+	init_missings_dist();
+        
+	// Put default integer array for each chunk
         int ints[INTERNAL_CHUNK_SIZE];
         for (size_t i = 0; i < num_chunks; i++) {
             store->put_(chunk_keys[i], ints, INTERNAL_CHUNK_SIZE);
@@ -1123,10 +1138,10 @@ class DistributedBoolColumn : public DistributedColumn, public BoolColumn {
         length = 0;
         num_chunks = 10;
         capacity = num_chunks * INTERNAL_CHUNK_SIZE;
-        init_missings_dist();
         init_keys_dist();
-
-        // Put default bool array for each chunk
+	init_missings_dist();
+        
+	// Put default bool array for each chunk
         bool bools[INTERNAL_CHUNK_SIZE];
         for (size_t i = 0; i < num_chunks; i++) {
             store->put_(chunk_keys[i], bools, INTERNAL_CHUNK_SIZE);
@@ -1289,8 +1304,9 @@ class DistributedFloatColumn : public DistributedColumn, public FloatColumn {
         length = 0;
         num_chunks = 10;
         capacity = num_chunks * INTERNAL_CHUNK_SIZE;
-        init_missings_dist();
+
         init_keys_dist();
+	init_missings_dist();
 
         // Put default float array for each chunk
         float floats[INTERNAL_CHUNK_SIZE];
@@ -1454,10 +1470,10 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
         length = 0;
         num_chunks = 10;
         capacity = num_chunks * INTERNAL_CHUNK_SIZE;
-        init_missings_dist();
         init_keys_dist();
-
-        // Put default string array for each chunk
+	init_missings_dist();
+        
+	// Put default string array for each chunk
         String* strings[INTERNAL_CHUNK_SIZE] = {};
         for (size_t i = 0; i < num_chunks; i++) {
             store->put_(chunk_keys[i], strings, INTERNAL_CHUNK_SIZE);
