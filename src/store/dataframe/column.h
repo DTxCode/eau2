@@ -364,7 +364,7 @@ class FloatColumn : virtual public Column {
     virtual ~FloatColumn() {
         for (size_t i = 0; i < num_chunks; i++) {
             delete[] cells[i];
-            delete[] missings;
+            delete[] missings[i];
         }
         delete[] cells;
         delete[] missings;
@@ -783,8 +783,8 @@ class DistributedColumn : virtual public Column {
     // populated with 'num_chunks' Key objects. These represent the
     // Keys to the chunks, in order. Each Key will be unique.
     virtual void init_keys_dist() {
-        missings_keys = new Key*[num_chunks];
-        chunk_keys = new Key*[num_chunks];
+        missings_keys = new Key*[num_chunks](); // () to ensure all keys are set to nullptr at first
+        chunk_keys = new Key*[num_chunks]();
         for (size_t i = 0; i < num_chunks; i++) {
             missings_keys[i] = generate_key_dist(i);
             chunk_keys[i] = generate_key_dist(i);
@@ -1334,7 +1334,7 @@ class DistributedFloatColumn : public DistributedColumn, public FloatColumn {
 
         // Put default float array for each chunk
         float floats[INTERNAL_CHUNK_SIZE];
-        for (size_t i = 0; i < num_chunks; i++) {
+        for (size_t i = old_num_chunks; i < num_chunks; i++) {
             store->put_(chunk_keys[i], floats, INTERNAL_CHUNK_SIZE);
         }
     }
@@ -1383,7 +1383,7 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
         init_missings_dist();
 
         // Put default string array for each chunk
-        String* strings[INTERNAL_CHUNK_SIZE];
+        String* strings[INTERNAL_CHUNK_SIZE] = {}; // {} to ensure all String* are initialized to nullptr
         for (size_t i = 0; i < num_chunks; i++) {
             store->put_(chunk_keys[i], strings, INTERNAL_CHUNK_SIZE);
         }
@@ -1406,7 +1406,7 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
         init_missings_dist();
 
         // Put default string array for each chunk
-        String* strings[INTERNAL_CHUNK_SIZE];
+        String* strings[INTERNAL_CHUNK_SIZE] = {};
         for (size_t i = 0; i < num_chunks; i++) {
             store->put_(chunk_keys[i], strings, INTERNAL_CHUNK_SIZE);
         }
@@ -1431,7 +1431,7 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
         init_keys_dist();
 
         // Put default string array for each chunk
-        String* strings[INTERNAL_CHUNK_SIZE];
+        String* strings[INTERNAL_CHUNK_SIZE] = {};
         for (size_t i = 0; i < num_chunks; i++) {
             store->put_(chunk_keys[i], strings, INTERNAL_CHUNK_SIZE);
         }
@@ -1493,8 +1493,8 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
         resize_missings_dist();
 
         // Put default string array for each chunk
-        String* strings[INTERNAL_CHUNK_SIZE];
-        for (size_t i = 0; i < num_chunks; i++) {
+        String* strings[INTERNAL_CHUNK_SIZE] = {};
+        for (size_t i = old_num_chunks; i < num_chunks; i++) {
             store->put_(chunk_keys[i], strings, INTERNAL_CHUNK_SIZE);
         }
     }

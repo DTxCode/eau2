@@ -7,6 +7,7 @@
 #include <string.h>
 #include "serial.h"
 #include "../utils/array.h"
+#include "../utils/helper.h"
 #include "dataframe/dataframe.h"
 #include "dataframe/schema.h"
 #include "network/message.h"
@@ -244,7 +245,7 @@ float Serializer::deserialize_float(char* msg) {
 // De-serialize a character array to a string value
  String* Serializer::deserialize_string(char* msg) {
     // Handle case of empty String
-    if (strcmp(msg, "\0") == 0) {
+    if (msg == nullptr) {
         return nullptr;
     }
     return new String(static_cast<const char*>(msg));
@@ -718,24 +719,19 @@ float* Serializer::deserialize_floats(char* msg) {
 }
 
 String** Serializer::deserialize_strings(char* msg) { 
-    String* strings_temp[strlen(msg)]; // Temporarily oversize the storage
-    char* token;
-    // Tokenize message
-    token = strtok(msg, ",");
-    size_t idx = 0;
-    // For all tokens in the message, deserialize them based on type
-    // and add them to the column via push_back
-    while (token) {
-        strings_temp[idx] = deserialize_string(token);
-        token = strtok(nullptr, ",");
-        idx++; // After token is created 
-    }
-    
-    String** strings_final = new String*[idx];
-    for (size_t i = 0 ; i < idx; i++) {
-        strings_final[i] = strings_temp[i];
-    }
+	Sys s;
+	size_t num_strings = s.count_char(",", msg) + 1;
+
+	if (num_strings == 0) return nullptr;
+
+	String** strings = new String*[num_strings];
+
+	char* token = strtok(msg, ",");
+	for (size_t i = 0; i<num_strings; i++) {
+		strings[i] = deserialize_string(token);
+		token = strtok(nullptr, ",");
+	}
 
     delete msg;
-    return strings_final;
+    return strings;
 }

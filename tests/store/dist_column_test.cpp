@@ -46,7 +46,7 @@ bool test_distributed_bool_column() {
         dist_boolc.push_back(true);
     }
 
-    bool val = dist_intc.get(25);
+    bool val = dist_boolc.get(25);
 
     s.shutdown();
     while (!store1.is_shutdown()) {
@@ -100,10 +100,10 @@ bool test_distributed_string_column() {
 
     String str("hi");
     for (size_t i = 0; i < 100; i++) {
-        dist_intc.push_back(&str);
+        dist_stringc.push_back(&str);
     }
 
-    String* val = dist_intc.get(25);
+    String* val = dist_stringc.get(25);
 
     s.shutdown();
     while (!store1.is_shutdown()) {
