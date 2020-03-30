@@ -975,6 +975,11 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
         }
     }
 
+    // Generic constructor that specifies all values
+    DistributedIntColumn(Store* s, Key** chunk_keys, key** missings_keys, size_t length, size_t num_chunks)
+        : DistributedColumn(s, chunk_keys, missings_keys, length, num_chunks) {
+    }
+
     ~DistributedIntColumn() {
         // Memory associated with keys is deleted in DistributedColumn
         // Memory associated with values of keys in store are deleted in Store destructor
@@ -1134,6 +1139,11 @@ class DistributedBoolColumn : public DistributedColumn, public BoolColumn {
                 set_missing_dist(row_idx, true);
             }
         }
+    }
+
+    // Generic constructor that specifies all values
+    DistributedBoolColumn(Store* s, Key** chunk_keys, key** missings_keys, size_t length, size_t num_chunks)
+        : DistributedColumn(s, chunk_keys, missings_keys, length, num_chunks) {
     }
 
     ~DistributedBoolColumn() {
@@ -1297,6 +1307,11 @@ class DistributedFloatColumn : public DistributedColumn, public FloatColumn {
         }
     }
 
+    // Generic constructor that specifies all values
+    DistributedFloatColumn(Store* s, Key** chunk_keys, key** missings_keys, size_t length, size_t num_chunks)
+        : DistributedColumn(s, chunk_keys, missings_keys, length, num_chunks) {
+    }
+
     ~DistributedFloatColumn() {
         // Memory associated with keys is deleted in DistributedColumn
         // Memory associated with values of keys in store are deleted in Store destructor
@@ -1455,6 +1470,11 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
                 set_missing_dist(row_idx, true);
             }
         }
+    }
+
+    // Generic constructor that specifies all values
+    DistributedStringColumn(Store* s, Key** chunk_keys, key** missings_keys, size_t length, size_t num_chunks)
+        : DistributedColumn(s, chunk_keys, missings_keys, length, num_chunks) {
     }
 
     ~DistributedStringColumn() {
