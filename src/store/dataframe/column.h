@@ -752,6 +752,15 @@ class DistributedColumn : virtual public Column {
 	*  _dist vs normal Column methods. Normal Column methods in the 
 	*  distributed scenario have no real meaning. Use with caution */
 
+    DistributedColumn(Store* s, Key** chunk_keys, key** missings_keys, size_t length, size_t num_chunks) {
+        store = s;
+        this->length = length;
+        this->num_chunks = num_chunks;
+        capacity = num_chunks * INTERNAL_CHUNK_SIZE;
+        this->chunk_keys = chunk_keys;
+        this->missings_keys = missings_keys;
+    }
+
     virtual ~DistributedColumn() {
         // delete every key
         for (size_t i = 0; i < num_chunks; i++) {
