@@ -279,11 +279,63 @@ char* Serializer::serialize_dist_col(DistributedColumn* col) {
     return serial_buffer;
 }
 
-DistributedColumn* Serializer::deserialize_dist_col(char* msg, Store* store) { return nullptr; }
-DistributedIntColumn* Serializer::deserialize_dist_int_col(char* msg, Store* store) { return nullptr; }
-DistributedBoolColumn* Serializer::deserialize_dist_bool_col(char* msg, Store* store){ return nullptr; }
-DistributedFloatColumn* Serializer::deserialize_dist_float_col(char* msg, Store* store){ return nullptr; }
-DistributedStringColumn* Serializer::deserialize_dist_string_col(char* msg, Store* store){ return nullptr; }
+// Deserialize a char* msg into a DistributedColumn 
+// Expects msg with format: 
+// "[Serialized length]~[Serialized num_chunks]~[Serialized chunk Key 1];...; \
+//      [Serialized chunk key (num_chunks - 1)]~  \
+//      [Serialized missing Key 1];...;[Serialized missing key (num_chunks - 1)]"
+DistributedColumn* Serializer::deserialize_dist_col(char* msg, Store* store) { 
+    char* ser_length = strtok(msg, "~");
+    char* ser_num_chunks = strtok(nullptr, "~");
+    char* ser_chunk_keys = strtok(nullptr, "~");
+    char* ser_missings_keys = strtok(nullptr, "~");
+
+    size_t length = deserialize_size_t(ser_length);
+    size_t num_chunks = deserialize_size_t(ser_num_chunks);
+
+    Key** chunk_keys = new Key*[num_chunks];
+    Key** missings_keys = new Key*[num_chunks];
+
+    // num_chunks should never be 0... so we dont need to handle empty case
+
+    char* chunk_tokens[num_chunks];
+    // Get all tokens first, because calling deserialize does weird things to token (TODO find wkd)
+    chunk_tokens[0] = strtok(ser_chunk_keys, ";");
+    for (size_t i = 1; i < num_chunks; i++) {
+        chunk_tokens[i] = strtok(nullptr, ";");
+    }
+    // Deserialize into chunk keys
+    for (size_t i = 0; i < num_chunks; i++) {
+        chunk_keys[i] = deserialize_key(chunk_tokens[i]);
+    }
+
+    char* missings_tokens[num_chunks];
+    // Get all tokens first, because calling deserialize does weird things to token (TODO find wkd)
+    missings_tokens[0] = strtok(ser_missings_keys, ";");
+    for (size_t i = 1; i < num_chunks; i++) {
+        missings_tokens[i] = strtok(nullptr, ";");
+    }
+    // Deserialize into missings keys
+    for (size_t i = 0; i < num_chunks; i++) {
+        missings_keys[i] = deserialize_key(missings_tokens[i]);
+    }
+
+
+    return new DistributedColumn(store, chunk_keys, missings_keys, length, num_chunks);
+}
+
+DistributedIntColumn* Serializer::deserialize_dist_int_col(char* msg, Store* store) { 
+    return static_cast<DistributedIntColumn*>(deserialize_dist_col(msg, store));
+}
+DistributedBoolColumn* Serializer::deserialize_dist_bool_col(char* msg, Store* store){
+    return static_cast<DistributedBoolColumn*>(deserialize_dist_col(msg, store));
+}
+DistributedFloatColumn* Serializer::deserialize_dist_float_col(char* msg, Store* store){ 
+    return static_cast<DistributedFloatColumn*>(deserialize_dist_col(msg, store));
+}
+DistributedStringColumn* Serializer::deserialize_dist_string_col(char* msg, Store* store){ 
+    return static_cast<DistributedStringColumn*>(deserialize_dist_col(msg, store));
+}
     
 // Serialize a Message object
 char* Serializer::serialize_message(Message* msg) {

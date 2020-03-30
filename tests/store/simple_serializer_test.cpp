@@ -40,9 +40,9 @@ bool test_key_serialize() {
     char* serialized_k1 = serial.serialize_key(&k1);
     char* serialized_k2 = serial.serialize_key(&k2);
 
-    Sys s;
-    s.p(serialized_k1);
-    s.p(serialized_k2);
+    //Sys s;
+    //s.p(serialized_k1);
+    //s.p(serialized_k2);
     
     Key* new_k1 = serial.deserialize_key(serialized_k1);
     Key* new_k2 = serial.deserialize_key(serialized_k2);
@@ -85,7 +85,7 @@ bool test_bool_array_serialize() {
     Sys s;
     char* ser_bools1 = serial.serialize_bools(bools1, num_bools);
 
-    s.p(ser_bools1);
+    //s.p(ser_bools1);
 
     bool* new_bools1 = serial.deserialize_bools(ser_bools1);
     bool ret_value = true;
@@ -108,7 +108,7 @@ bool test_int_array_serialize() {
     Sys s;
     char* ser_ints1 = serial.serialize_ints(ints1, num_ints);
 
-    s.p(ser_ints1);
+    //s.p(ser_ints1);
 
     int* new_ints1 = serial.deserialize_ints(ser_ints1);
     bool ret_value = true;
@@ -142,6 +142,7 @@ bool test_string_array_serialize() {
     return ret_value;
 }
 
+// Simple test, for now just seeing that it compiles and doesnt break
 bool test_dist_col_serialize() {
     char* master_ip = "127.0.0.1";
     int master_port = 8888;
@@ -153,8 +154,11 @@ bool test_dist_col_serialize() {
     DistributedColumn* d_i = new DistributedIntColumn(&store);
 
     Serializer serial;
-    printf(serial.serialize_dist_col(d_i));
-    printf("\n");
+    char* ser_d_i = serial.serialize_dist_col(d_i);
+    //printf(ser_d_i);
+    //printf("\n");
+
+    DistributedIntColumn* d_i2 = serial.deserialize_dist_int_col(ser_d_i, &store);
     
     // shutdown system
     s.shutdown();
@@ -163,7 +167,7 @@ bool test_dist_col_serialize() {
     while (!store.is_shutdown()) {
     }
 
-    return true;
+    return d_i2->size() == 0;
 }
 
 int main() {
