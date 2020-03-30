@@ -128,7 +128,7 @@ class Column : public Object {
     virtual size_t size() { return length; }
 
     /** Return the type of this column as a char: 'S', 'B', 'I' and 'F'.**/
-    char get_type() {
+    virtual char get_type() {
         if (nullptr != this->as_int()) {
             return INT_TYPE;
         }
@@ -910,6 +910,9 @@ class DistributedColumn : virtual public Column {
         store->put_(k, missings, INTERNAL_CHUNK_SIZE);
         delete[] missings;
     }
+
+    virtual char get_type() {}
+    
 };
 
 /*************************************************************************
@@ -973,7 +976,7 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
         num_chunks = 10;
         capacity = num_chunks * INTERNAL_CHUNK_SIZE;
         init_keys_dist();
-	init_missings_dist();
+	    init_missings_dist();
         
 	// Put default integer array for each chunk
         int ints[INTERNAL_CHUNK_SIZE];
@@ -983,10 +986,10 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
 
         // Copy over data from other column
         for (size_t row_idx = 0; row_idx < col->size(); row_idx++) {
-            int row_val = col->as_int()->get(row_idx);
+            int row_val = dynamic_cast<DistributedIntColumn*>(col)->as_int()->get(row_idx);
             push_back(row_val);
 
-            if (col->is_missing(row_idx)) {
+            if (dynamic_cast<DistributedIntColumn*>(col)->is_missing_dist(row_idx)) {
                 // row_val we pushed above is fake, mark this cell as missing
                 set_missing_dist(row_idx, true);
             }
@@ -1003,6 +1006,14 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
         // Memory associated with values of keys in store are deleted in Store destructor
         // Memory associated with cells/missing is deleted in normal IntColumn
     }
+    
+    // Returns this column as an integer column
+    IntColumn* as_int() {
+        return this;
+    }
+
+    // TODO fix maybe 
+    char get_type() { return 'I'; }
 
     // Returns the integer at the given index.
     // Input index out of bounds will cause a runtime error
@@ -1139,7 +1150,7 @@ class DistributedBoolColumn : public DistributedColumn, public BoolColumn {
         num_chunks = 10;
         capacity = num_chunks * INTERNAL_CHUNK_SIZE;
         init_keys_dist();
-	init_missings_dist();
+	    init_missings_dist();
         
 	// Put default bool array for each chunk
         bool bools[INTERNAL_CHUNK_SIZE];
@@ -1149,10 +1160,10 @@ class DistributedBoolColumn : public DistributedColumn, public BoolColumn {
 
         // Copy over data from other column
         for (size_t row_idx = 0; row_idx < col->size(); row_idx++) {
-            bool row_val = col->as_bool()->get(row_idx);
+            bool row_val = dynamic_cast<DistributedBoolColumn*>(col)->as_bool()->get(row_idx);
             push_back(row_val);
 
-            if (col->is_missing(row_idx)) {
+            if (dynamic_cast<DistributedBoolColumn*>(col)->is_missing_dist(row_idx)) {
                 // row_val we pushed above is fake, mark this cell as missing
                 set_missing_dist(row_idx, true);
             }
@@ -1169,6 +1180,12 @@ class DistributedBoolColumn : public DistributedColumn, public BoolColumn {
         // Memory associated with values of keys in store are deleted in Store destructor
         // Memory associated with cells/missing is deleted in normal BoolColumn
     }
+    
+    // Return this column as a BoolColumn
+    BoolColumn* as_bool() { return this; }
+    
+    // TODO fix maybe 
+    char get_type() { return 'B'; }
 
     // Returns the booleger at the given index.
     // Input index out of bounds will cause a runtime error
@@ -1306,7 +1323,7 @@ class DistributedFloatColumn : public DistributedColumn, public FloatColumn {
         capacity = num_chunks * INTERNAL_CHUNK_SIZE;
 
         init_keys_dist();
-	init_missings_dist();
+	    init_missings_dist();
 
         // Put default float array for each chunk
         float floats[INTERNAL_CHUNK_SIZE];
@@ -1316,10 +1333,10 @@ class DistributedFloatColumn : public DistributedColumn, public FloatColumn {
 
         // Copy over data from other column
         for (size_t row_idx = 0; row_idx < col->size(); row_idx++) {
-            float row_val = col->as_float()->get(row_idx);
+            float row_val = dynamic_cast<DistributedFloatColumn*>(col)->as_float()->get(row_idx);
             push_back(row_val);
 
-            if (col->is_missing(row_idx)) {
+            if (dynamic_cast<DistributedFloatColumn*>(col)->is_missing_dist(row_idx)) {
                 // row_val we pushed above is fake, mark this cell as missing
                 set_missing_dist(row_idx, true);
             }
@@ -1336,6 +1353,12 @@ class DistributedFloatColumn : public DistributedColumn, public FloatColumn {
         // Memory associated with values of keys in store are deleted in Store destructor
         // Memory associated with cells/missing is deleted in normal IntColumn
     }
+    
+    // TODO fix maybe 
+    char get_type() { return 'F'; }
+    
+    // Return this column as a FloatColumn
+    FloatColumn* as_float() { return this; }
 
     // Returns the float at the given index.
     // Input index out of bounds will cause a runtime error
@@ -1481,10 +1504,10 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
 
         // Copy over data from other column
         for (size_t row_idx = 0; row_idx < col->size(); row_idx++) {
-            String* row_val = col->as_string()->get(row_idx);
+            String* row_val = dynamic_cast<DistributedStringColumn*>(col)->as_string()->get(row_idx);
             push_back(row_val);
 
-            if (col->is_missing(row_idx)) {
+            if (dynamic_cast<DistributedStringColumn*>(col)->is_missing_dist(row_idx)) {
                 // row_val we pushed above is fake, mark this cell as missing
                 set_missing_dist(row_idx, true);
             }
@@ -1501,8 +1524,14 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
         // Memory associated with values of keys in store are deleted in Store destructor
         // Memory associated with cells/missing is deleted in normal IntColumn
     }
+    
+    // TODO fix maybe 
+    char get_type() { return 'S'; }
 
-    // Returns the String*eger at the given index.
+    // Return this column as a StringColumn
+    StringColumn* as_string() { return this; }
+
+    // Returns the String* at the given index.
     // Input index out of bounds will cause a runtime error
     String* get(size_t idx) {
         size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)

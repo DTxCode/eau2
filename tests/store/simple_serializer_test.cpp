@@ -170,7 +170,41 @@ bool test_dist_col_serialize() {
     return d_i2->size() == 0;
 }
 
+bool test_ddf_serialize() {
+    char* master_ip = "127.0.0.1";
+    int master_port = 8888;
+    Server s(master_ip, master_port);
+    s.listen_for_clients();
+
+    Store store(5, "127.0.0.1", 7000, master_ip, master_port);
+
+    DistributedColumn* d_i = new DistributedIntColumn(&store);
+
+    for (int i = 0; i < 10000; i++) {
+        d_i->push_back(i);
+    }
+
+    Schema empty;
+    DistributedDataFrame* ddf = new DistributedDataFrame(&store, empty);
+    ddf->add_column(d_i, nullptr);
+
+    Serializer serial;
+    char* ser_ddf = serial.serialize_distributed_dataframe(ddf);
+    printf("%s\n", ser_ddf);
+
+    // shutdown system
+    s.shutdown();
+
+    // wait for nodes to finish
+    while (!store.is_shutdown()) {
+    }
+
+    return true;
+}
+
+
 int main() {
+    assert(test_ddf_serialize());
     assert(test_dist_col_serialize());
     assert(test_string_array_serialize());  
     assert(test_int_array_serialize());

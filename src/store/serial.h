@@ -76,7 +76,7 @@ class Serializer {
     virtual char* serialize_dist_float_col(DistributedFloatColumn* col);
     virtual char* serialize_dist_string_col(DistributedStringColumn* col);
     */
-    virtual DistributedColumn* deserialize_dist_col(char* msg, Store* store);
+    virtual DistributedColumn* deserialize_dist_col(char* msg, Store* store, char type);
     virtual DistributedIntColumn* deserialize_dist_int_col(char* msg, Store* store);
     virtual DistributedBoolColumn* deserialize_dist_bool_col(char* msg, Store* store);
     virtual DistributedFloatColumn* deserialize_dist_float_col(char* msg, Store* store);

@@ -128,8 +128,6 @@ char* Serializer::serialize_distributed_dataframe(DistributedDataFrame* df) {
     size_t cols = df->ncols();
     char** col_strs = new char*[cols];
     for (size_t i = 0; i < cols; i++) {
-        // Serialize column based on schema
-        Schema s = df->get_schema();
         col_strs[i] = serialize_dist_col(dynamic_cast<DistributedColumn*>(df->get_col_(i)));
         total_str_size += strlen(col_strs[i]) + 1;  // +1 for semicolons below
     }
@@ -155,15 +153,21 @@ char* Serializer::serialize_distributed_dataframe(DistributedDataFrame* df) {
 
 // Deserialize a char* buffer into a DistributedDataFrame object
 // Expects given msg to have the form:
-// "[Serialized Schema]~[Serialized Dist_Column 0]; ... ;[Serialized Dist_Column n-1]"
+// "[Serialized Schema]~[Serialized Dist_Column 0]~ ... ~[Serialized Dist_Column n-1]"
 DistributedDataFrame* Serializer::deserialize_distributed_dataframe(char* msg, Store* store) { 
     char* schema_token = strtok(msg, "~");
+    char* columns_token = strtok(nullptr, "\0");
     Schema* schema = deserialize_schema(schema_token);
 
     // Create array of serialized cols (distinct strings for each col)
-    char* serialized_cols[schema->width()];
-    for (size_t i = 0; i < schema->width(); i++) {
-        serialized_cols[i] = strtok(nullptr, ";");
+    char** serialized_cols = new char*[schema->width()];
+    if (!(schema->width() > 0)) {
+        return new DistributedDataFrame(store, *schema);
+    }
+    
+    serialized_cols[0] = strtok(columns_token, "~");
+    for (size_t i = 1; i < schema->width(); i++) {
+        serialized_cols[i] = strtok(nullptr, "~");
     }
 
     Schema empty_schema;
@@ -232,7 +236,7 @@ DistributedDataFrame* Serializer::deserialize_distributed_dataframe(char* msg, S
         } else {
             df->add_column(deserialize_dist_string_col(token, store), nullptr);
         }
-        //delete[] token_copies[i];
+    delete[] token_copies[i];
     }
 
     delete[] token_copies;
@@ -245,9 +249,7 @@ DistributedDataFrame* Serializer::deserialize_distributed_dataframe(char* msg, S
 // Serializes a Distributed Column
 // Treats a DistColumn as a set of chunk Keys and a set of Missing keys
 // As such, creates msg with format:
-// "[Serialized length]~[Serialized num_chunks]~[Serialized chunk Key 1];...; 
-//      [Serialized chunk key (num_chunks - 1)]~  
-//      [Serialized missing Key 1];...;[Serialized missing key (num_chunks - 1)]"
+// "[Serialized length];[Serialized num_chunks];[Serialized chunk Key 1];[Serialized missing Key 1];...;[Serialized chunk key (num_chunks - 1)];[Serialized missing key (num_chunks - 1)]
 char* Serializer::serialize_dist_col(DistributedColumn* col) {
     size_t num_keys = col->num_chunks;
 
@@ -283,25 +285,22 @@ char* Serializer::serialize_dist_col(DistributedColumn* col) {
         strcpy(serial_buffer, "\0");
     } else {
         strcpy(serial_buffer, ser_length);
-        strcat(serial_buffer, "~");
+        strcat(serial_buffer, ";");
         strcat(serial_buffer, ser_num_chunks);
-        strcat(serial_buffer, "~");
+        strcat(serial_buffer, ";");
 
         // Copy all key-strings in to one buffer
         strcat(serial_buffer, chunk_key_strings[0]);
+        strcat(serial_buffer, ";"); 
+        strcat(serial_buffer, missing_key_strings[0]);
+
         //delete[] chunk_key_strings[0];
         for (i = 1; i < num_keys; i++) {
             strcat(serial_buffer, ";"); 
             strcat(serial_buffer, chunk_key_strings[i]);
-            //delete[] chunk_key_strings[i];
-        }
-        strcat(serial_buffer, "~"); 
-        strcat(serial_buffer, missing_key_strings[0]);
-        //delete[] chunk_key_strings[0];
-        for (i = 1; i < num_keys; i++) {
             strcat(serial_buffer, ";");  
             strcat(serial_buffer, missing_key_strings[i]);
-            //delete[] chunk_key_strings[1];
+            //delete[] chunk_key_strings[i];
         }
     }
 
@@ -312,14 +311,11 @@ char* Serializer::serialize_dist_col(DistributedColumn* col) {
 
 // Deserialize a char* msg into a DistributedColumn 
 // Expects msg with format: 
-// "[Serialized length]~[Serialized num_chunks]~[Serialized chunk Key 1];...; 
-//      [Serialized chunk key (num_chunks - 1)]~  
-//      [Serialized missing Key 1];...;[Serialized missing key (num_chunks - 1)]"
-DistributedColumn* Serializer::deserialize_dist_col(char* msg, Store* store) { 
-    char* ser_length = strtok(msg, "~");
-    char* ser_num_chunks = strtok(nullptr, "~");
-    char* ser_chunk_keys = strtok(nullptr, "~");
-    char* ser_missings_keys = strtok(nullptr, "~");
+// "[Serialized length];[Serialized num_chunks];[Serialized chunk Key 1];[Serialized missing Key 1];...;[Serialized chunk key (num_chunks - 1)];[Serialized missing key (num_chunks - 1)]
+DistributedColumn* Serializer::deserialize_dist_col(char* msg, Store* store, char col_type) { 
+    char* ser_length = strtok(msg, ";");
+    char* ser_num_chunks = strtok(nullptr, ";");
+    char* ser_keys = strtok(nullptr, "\0");
 
     size_t length = deserialize_size_t(ser_length);
     size_t num_chunks = deserialize_size_t(ser_num_chunks);
@@ -330,42 +326,47 @@ DistributedColumn* Serializer::deserialize_dist_col(char* msg, Store* store) {
     // num_chunks should never be 0... so we dont need to handle empty case
 
     char* chunk_tokens[num_chunks];
-    // Get all tokens first, because calling deserialize does weird things to token (TODO find wkd)
-    chunk_tokens[0] = strtok(ser_chunk_keys, ";");
+    char* missings_tokens[num_chunks];
+    // Get all tokens first, because calling deserialize does weird things to token
+    chunk_tokens[0] = strtok(ser_keys, ";");
+    missings_tokens[0] = strtok(nullptr, ";");
     for (size_t i = 1; i < num_chunks; i++) {
         chunk_tokens[i] = strtok(nullptr, ";");
-    }
-    // Deserialize into chunk keys
-    for (size_t i = 0; i < num_chunks; i++) {
-        chunk_keys[i] = deserialize_key(chunk_tokens[i]);
-    }
-
-    char* missings_tokens[num_chunks];
-    // Get all tokens first, because calling deserialize does weird things to token (TODO find wkd)
-    missings_tokens[0] = strtok(ser_missings_keys, ";");
-    for (size_t i = 1; i < num_chunks; i++) {
         missings_tokens[i] = strtok(nullptr, ";");
     }
-    // Deserialize into missings keys
+    
+    // Deserialize into chunk and missing keys
     for (size_t i = 0; i < num_chunks; i++) {
+        chunk_keys[i] = deserialize_key(chunk_tokens[i]);
         missings_keys[i] = deserialize_key(missings_tokens[i]);
     }
 
+    DistributedColumn* dc;
 
-    return new DistributedColumn(store, chunk_keys, missings_keys, length, num_chunks);
+    if (col_type == INT_TYPE) {
+        dc = new DistributedIntColumn(store, chunk_keys, missings_keys, length, num_chunks);
+    } else if (col_type == BOOL_TYPE) {
+        dc = new DistributedBoolColumn(store, chunk_keys, missings_keys, length, num_chunks);
+    } else if (col_type == FLOAT_TYPE) {
+        dc = new DistributedFloatColumn(store, chunk_keys, missings_keys, length, num_chunks);
+    } else {
+        dc = new DistributedStringColumn(store, chunk_keys, missings_keys, length, num_chunks);
+    }
+
+    return dc;
 }
 
 DistributedIntColumn* Serializer::deserialize_dist_int_col(char* msg, Store* store) { 
-    return static_cast<DistributedIntColumn*>(deserialize_dist_col(msg, store));
+    return static_cast<DistributedIntColumn*>(deserialize_dist_col(msg, store, INT_TYPE));
 }
 DistributedBoolColumn* Serializer::deserialize_dist_bool_col(char* msg, Store* store){
-    return static_cast<DistributedBoolColumn*>(deserialize_dist_col(msg, store));
+    return static_cast<DistributedBoolColumn*>(deserialize_dist_col(msg, store, BOOL_TYPE));
 }
 DistributedFloatColumn* Serializer::deserialize_dist_float_col(char* msg, Store* store){ 
-    return static_cast<DistributedFloatColumn*>(deserialize_dist_col(msg, store));
+    return static_cast<DistributedFloatColumn*>(deserialize_dist_col(msg, store, FLOAT_TYPE));
 }
 DistributedStringColumn* Serializer::deserialize_dist_string_col(char* msg, Store* store){ 
-    return static_cast<DistributedStringColumn*>(deserialize_dist_col(msg, store));
+    return static_cast<DistributedStringColumn*>(deserialize_dist_col(msg, store, STRING_TYPE));
 }
     
 // Serialize a Message object
@@ -709,16 +710,30 @@ char* Serializer::serialize_schema(Schema* schema) {
     size_t total_size = 3 + strlen(col_types) + strlen(col_names) + strlen(row_names);
     char* serial_buffer = new char[total_size];
     strcpy(serial_buffer, col_types);
-    strcat(serial_buffer, ";");
-    strcat(serial_buffer, col_names);
-    strcat(serial_buffer, ";");
-    strcat(serial_buffer, row_names);
+    strcat(serial_buffer, "\0");
+    //strcat(serial_buffer, ";");
+    //strcat(serial_buffer, col_names);
+    //strcat(serial_buffer, ";");
+    //strcat(serial_buffer, row_names);
     return serial_buffer;
 }
 
 // Deserialize a char* msg into a Schema objects
 // Expects char* msg format as given by serialize_schema
 Schema* Serializer::deserialize_schema(char* msg) {
+    
+    StringArray* col_types = deserialize_string_array(msg);
+    size_t col_count = col_types->size();
+    Schema* fill_schema = new Schema();
+    char* col_type_str;
+    for (size_t i = 0; i < col_count; i++) {
+        col_type_str = col_types->get(i)->c_str();
+        fill_schema->add_column(col_type_str[0], nullptr);
+    }
+    return fill_schema;
+    
+    /*
+    
     char* token;
     Schema* fill_schema = new Schema();
     // Need 3 total copies of the original msg
@@ -751,7 +766,7 @@ Schema* Serializer::deserialize_schema(char* msg) {
         fill_schema->add_row(row_names->get(j));
     }
 
-    return fill_schema;
+    return fill_schema;*/
 }
 
 // Serialize a bool to a char* message
