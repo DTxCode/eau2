@@ -14,25 +14,7 @@
 #define FLOAT_TYPE 'F'
 #define STRING_TYPE 'S'
 
-//class Store;
 class DistributedDataFrame;
-
-/****************************************************************************
- * DistributedDataFrame::
- *
- * A DistributedDataFrame outwardly looks the same as a normal DataFrame. 
- * It supports normal query operations. Internally however, it represents
- * a list of Keys which point to serialized DataFrames. To support
- * normal operations, a DDF communicates with a KVS to retrieve the DataFrames
- * and calls on them to fulfill queries and requests. This list of DataFrames
- * together represents the overall dataframe. That means that list of keys is
- * ordered such that the 'chunks' represented by the DFs line up. This also 
- * means the DDF still follows a single Schema. It cannot represent DataFrames
- * with different Schemas. 
- * - Still maintains its own Schema (matching with all DFs in it)
- *
-    LIKELY NOT NEEDED. Columns distributed instead
- */
 
 /****************************************************************************
  * DataFrame::

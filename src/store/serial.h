@@ -8,6 +8,11 @@
 // Forward declarations to avoid includes
 class DataFrame;
 class DistributedDataFrame;
+class DistributedColumn;
+class DistributedIntColumn;
+class DistributedBoolColumn;
+class DistributedFloatColumn;
+class DistributedStringColumn;
 class Column;
 class IntColumn;
 class BoolColumn;
@@ -18,6 +23,7 @@ class Key;
 class Message;
 class Schema;
 class String;
+class Store;
 
 // Utility class which understands how to transform Classes and
 // data structures used in our DataFrame API to and from a serialized
@@ -53,8 +59,8 @@ class Serializer {
     // TODO impl thse
     virtual char* serialize_distributed_dataframe(DistributedDataFrame* df);
 
-    // Deserialize a char* buffer into a DataFrame object
-    virtual DistributedDataFrame* deserialize_distributed_dataframe(char* msg);
+    // Deserialize a char* buffer into a DataFrame object given a Store
+    virtual DistributedDataFrame* deserialize_distributed_dataframe(char* msg, Store* store);
 
     // Serialize a Message object
     virtual char* serialize_message(Message* msg);
@@ -63,6 +69,18 @@ class Serializer {
     // Leverage built-in Message constructor which works
     // from its to_string() representation (used for serialization)
     virtual Message* deserialize_message(char* msg);
+
+    virtual char* serialize_dist_col(DistributedColumn* col);
+    /*virtual char* serialize_dist_int_col(DistributedIntColumn* col);
+    virtual char* serialize_dist_bool_col(DistributedBoolColumn* col);
+    virtual char* serialize_dist_float_col(DistributedFloatColumn* col);
+    virtual char* serialize_dist_string_col(DistributedStringColumn* col);
+    */
+    virtual DistributedColumn* deserialize_dist_col(char* msg, Store* store);
+    virtual DistributedIntColumn* deserialize_dist_int_col(char* msg, Store* store);
+    virtual DistributedBoolColumn* deserialize_dist_bool_col(char* msg, Store* store);
+    virtual DistributedFloatColumn* deserialize_dist_float_col(char* msg, Store* store);
+    virtual DistributedStringColumn* deserialize_dist_string_col(char* msg, Store* store);
 
     // Serialize an IntColumn
     virtual char* serialize_int_col(IntColumn* col);

@@ -1,6 +1,7 @@
 #pragma once
 #include "../../src/store/dataframe/dataframe.h"
 #include "../../src/store/serial.cpp"
+#include "../../src/store/network/master.h"
 
 // Test that dataframe serialization works as intended
 /*bool test_df_serialize() {
@@ -141,7 +142,32 @@ bool test_string_array_serialize() {
     return ret_value;
 }
 
+bool test_dist_col_serialize() {
+    char* master_ip = "127.0.0.1";
+    int master_port = 8888;
+    Server s(master_ip, master_port);
+    s.listen_for_clients();
+
+    Store store(5, "127.0.0.1", 7000, master_ip, master_port);
+
+    DistributedColumn* d_i = new DistributedIntColumn(&store);
+
+    Serializer serial;
+    printf(serial.serialize_dist_col(d_i));
+    printf("\n");
+    
+    // shutdown system
+    s.shutdown();
+
+    // wait for nodes to finish
+    while (!store.is_shutdown()) {
+    }
+
+    return true;
+}
+
 int main() {
+    assert(test_dist_col_serialize());
     assert(test_string_array_serialize());  
     assert(test_int_array_serialize());
     printf("========= serialize_int_array PASSED =============\n");

@@ -150,7 +150,7 @@ DistributedDataFrame *Store::get(Key *k) {
         return nullptr;
     }
 
-    DistributedDataFrame *df = serializer->deserialize_distributed_dataframe(serialized_df);
+    DistributedDataFrame *df = serializer->deserialize_distributed_dataframe(serialized_df, this);
 
     delete[] serialized_df;
 
