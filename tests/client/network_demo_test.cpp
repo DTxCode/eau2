@@ -82,6 +82,6 @@ int test_demo() {
 
 int main() {
     assert(test_demo());
-    printf("=================test_demo PASSED==================\n");
+    printf("=================test_demo PASSED if SUCCESS printed above==================\n");
     return 0;
 }

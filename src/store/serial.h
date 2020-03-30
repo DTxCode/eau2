@@ -38,7 +38,7 @@ class String;
 // design philosophy found here for any additional types not supported here.
 class Serializer {
    public:
-    Serializer() {} 
+    Serializer() {}
 
     virtual ~Serializer() {}
 
@@ -49,7 +49,7 @@ class Serializer {
 
     // Deserialize a char* buffer into a DataFrame object
     virtual DataFrame* deserialize_dataframe(char* msg);
-    
+
     // TODO impl thse
     virtual char* serialize_distributed_dataframe(DistributedDataFrame* df);
 
@@ -65,13 +65,13 @@ class Serializer {
     virtual Message* deserialize_message(char* msg);
 
     // Serialize an IntColumn
-    virtual char* serialize_int_col(IntColumn* col); 
+    virtual char* serialize_int_col(IntColumn* col);
 
     // Deserialize IntColumn serialized message
     virtual IntColumn* deserialize_int_col(char* msg);
 
     // Serialize a FloatColumn to a character array
-    virtual char* serialize_float_col(FloatColumn* col); 
+    virtual char* serialize_float_col(FloatColumn* col);
 
     // Deserialize FloatColumn serialized message
     virtual FloatColumn* deserialize_float_col(char* msg);
@@ -85,14 +85,14 @@ class Serializer {
     // Serialize an int to a character array
     // Methodology attributed to Stack Overflow post:
     // stackoverflow.com/questions/7140943
-    virtual char* serialize_int(int value); 
+    virtual char* serialize_int(int value);
 
     // De-serialize a character array in to an integer value
     virtual int deserialize_int(char* msg);
 
     // Serialize an size_t (unsigned long) to a character array
-    virtual char* serialize_size_t(size_t value); 
-    
+    virtual char* serialize_size_t(size_t value);
+
     // De-serialize a character array in to an size_t value
     virtual size_t deserialize_size_t(char* msg);
 
@@ -151,7 +151,7 @@ class Serializer {
 
     // Deserialize a char* msg into a Schema objects
     // Expects char* msg format as given by serialize_schema
-    virtual Schema* deserialize_schema(char* msg); 
+    virtual Schema* deserialize_schema(char* msg);
 
     // Serialize a bool to a char* message
     // true gets serialized to "1"
@@ -161,13 +161,13 @@ class Serializer {
     // Deserialize a boolean serialized message
     // Expects a message in the form "1" or "0"
     virtual bool deserialize_bool(char* msg);
-    
+
     // Serialize boolean column
     // Uses same format as other columns, see serialize_col
     virtual char* serialize_bool_col(BoolColumn* col);
 
     // Deserialize boolean column from char*
-    virtual BoolColumn* deserialize_bool_col(char* msg); 
+    virtual BoolColumn* deserialize_bool_col(char* msg);
 
     virtual char* serialize_bools(bool* bools, size_t num_values);
     virtual char* serialize_ints(int* ints, size_t num_values);
