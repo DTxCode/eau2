@@ -1,3 +1,5 @@
+#pragma once
+#include "../../src/store/store.cpp"
 #include "../../src/client/application.cpp"
 #include "../../src/store/network/master.h"
 
@@ -39,7 +41,7 @@ class Demo : public Application {
         DataFrame* v = store->waitAndGet(main);
         size_t sum = 0;
         for (size_t i = 0; i < 100 * 1000; ++i) {
-            sum += v->get_double(0, i);
+            sum += v->get_float(0, i);
         }
         p("The sum is  ").pln(sum);
         DataFrame::fromScalar(&verify, store, sum);
@@ -48,7 +50,7 @@ class Demo : public Application {
     void summarizer() {
         DataFrame* result = store->waitAndGet(verify);
         DataFrame* expected = store->waitAndGet(check);
-        pln(expected->get_double(0, 0) == result->get_double(0, 0) ? "SUCCESS" : "FAILURE");
+        pln(expected->get_float(0, 0) == result->get_float(0, 0) ? "SUCCESS" : "FAILURE");
     }
 };
 

@@ -6,6 +6,11 @@ run:
 
 ### Client
 
+# Network Demo Application test
+test-client-with-network:
+	g++ -std=c++11 -Wall -pthread -g tests/client/network_demo_test.cpp -o network_demo
+	./network_demo
+
 # Trivial Application Test
 test-client-trivial:
 	g++ -std=c++11 -Wall -pthread -g tests/client/trivial_application_test.cpp -o trivial_app_test

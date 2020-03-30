@@ -103,7 +103,7 @@ class Sorer {
                 reading_val = false;
                 buffer[read_idx] = '\0';
 
-                if (buffer == "") {
+                if (strcmp(buffer, "") == 0) {
                     row->set_missing(col_idx);
                 }
 
@@ -118,7 +118,7 @@ class Sorer {
                     String* val = new String(trim_whitespace(buffer));
                     row->set(col_idx, val);
                 } else {  // BOOL_TYPE
-                    if (trim_whitespace(buffer) == "1") {
+                    if (strcmp(trim_whitespace(buffer), "1") == 0) {
                         row->set(col_idx, true);
                     } else {
                         row->set(col_idx, false);
