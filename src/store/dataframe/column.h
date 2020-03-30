@@ -752,6 +752,9 @@ class DistributedColumn : virtual public Column {
 	*  _dist vs normal Column methods. Normal Column methods in the 
 	*  distributed scenario have no real meaning. Use with caution */
 
+    // Empty default that will be called automatically by child classes
+    DistributedColumn(){}
+
     DistributedColumn(Store* s, Key** chunk_keys, Key** missings_keys, size_t length, size_t num_chunks) {
         store = s;
         this->length = length;
