@@ -214,7 +214,8 @@ DistributedDataFrame* Serializer::deserialize_distributed_dataframe(char* msg, S
 // Serializes a Distributed Column
 // Treats a DistColumn as a set of chunk Keys and a set of Missing keys
 // As such, creates msg with format:
-// "[Serialized length]~[Serialized chunk Key 1];...;[Serialized chunk key (num_chunks - 1)]~  \
+// "[Serialized length]~[Serialized num_chunks]~[Serialized chunk Key 1];...; \
+//      [Serialized chunk key (num_chunks - 1)]~  \
 //      [Serialized missing Key 1];...;[Serialized missing key (num_chunks - 1)]"
 char* Serializer::serialize_dist_col(DistributedColumn* col) {
     size_t num_keys = col->num_chunks;
@@ -226,6 +227,13 @@ char* Serializer::serialize_dist_col(DistributedColumn* col) {
 
     size_t i;
     size_t total_size = 0;
+
+    char* ser_length = serialize_size_t(col->size());
+    char* ser_num_chunks = serialize_size_t(col->num_chunks);
+
+    total_size += strlen(ser_length);
+    total_size += strlen(ser_num_chunks);
+
     // For all key-values, serialize and add to cell_strings 
     for (i = 0; i < num_keys; i++) {
         chunk_key_strings[i] = serialize_key(col->chunk_keys[i]);
@@ -237,14 +245,19 @@ char* Serializer::serialize_dist_col(DistributedColumn* col) {
         total_size += strlen(missing_key_strings[i]);
     }
 
-    // size of key char*s + (length - 1) ; + 1 for null terminator
-    total_size += 2*num_keys + 1;
+    // need space for null terminator and all semicolons and ~'s
+    total_size += 2*num_keys + 3;
     char* serial_buffer = new char[total_size];
     if (total_size == 1) {  // Empty case
         strcpy(serial_buffer, "\0");
     } else {
+        strcpy(serial_buffer, ser_length);
+        strcat(serial_buffer, "~");
+        strcat(serial_buffer, ser_num_chunks);
+        strcat(serial_buffer, "~");
+
         // Copy all key-strings in to one buffer
-        strcpy(serial_buffer, chunk_key_strings[0]);
+        strcat(serial_buffer, chunk_key_strings[0]);
         //delete[] chunk_key_strings[0];
         for (i = 1; i < num_keys; i++) {
             strcat(serial_buffer, ";"); 

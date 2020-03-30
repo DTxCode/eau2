@@ -752,11 +752,11 @@ class DistributedColumn : virtual public Column {
 	*  _dist vs normal Column methods. Normal Column methods in the 
 	*  distributed scenario have no real meaning. Use with caution */
 
-    DistributedColumn(Store* s, Key** chunk_keys, key** missings_keys, size_t length, size_t num_chunks) {
+    DistributedColumn(Store* s, Key** chunk_keys, Key** missings_keys, size_t length, size_t num_chunks) {
         store = s;
         this->length = length;
         this->num_chunks = num_chunks;
-        capacity = num_chunks * INTERNAL_CHUNK_SIZE;
+        this->capacity = num_chunks * INTERNAL_CHUNK_SIZE;
         this->chunk_keys = chunk_keys;
         this->missings_keys = missings_keys;
     }
@@ -976,7 +976,7 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
     }
 
     // Generic constructor that specifies all values
-    DistributedIntColumn(Store* s, Key** chunk_keys, key** missings_keys, size_t length, size_t num_chunks)
+    DistributedIntColumn(Store* s, Key** chunk_keys, Key** missings_keys, size_t length, size_t num_chunks)
         : DistributedColumn(s, chunk_keys, missings_keys, length, num_chunks) {
     }
 
@@ -1142,7 +1142,7 @@ class DistributedBoolColumn : public DistributedColumn, public BoolColumn {
     }
 
     // Generic constructor that specifies all values
-    DistributedBoolColumn(Store* s, Key** chunk_keys, key** missings_keys, size_t length, size_t num_chunks)
+    DistributedBoolColumn(Store* s, Key** chunk_keys, Key** missings_keys, size_t length, size_t num_chunks)
         : DistributedColumn(s, chunk_keys, missings_keys, length, num_chunks) {
     }
 
@@ -1308,7 +1308,7 @@ class DistributedFloatColumn : public DistributedColumn, public FloatColumn {
     }
 
     // Generic constructor that specifies all values
-    DistributedFloatColumn(Store* s, Key** chunk_keys, key** missings_keys, size_t length, size_t num_chunks)
+    DistributedFloatColumn(Store* s, Key** chunk_keys, Key** missings_keys, size_t length, size_t num_chunks)
         : DistributedColumn(s, chunk_keys, missings_keys, length, num_chunks) {
     }
 
@@ -1473,7 +1473,7 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
     }
 
     // Generic constructor that specifies all values
-    DistributedStringColumn(Store* s, Key** chunk_keys, key** missings_keys, size_t length, size_t num_chunks)
+    DistributedStringColumn(Store* s, Key** chunk_keys, Key** missings_keys, size_t length, size_t num_chunks)
         : DistributedColumn(s, chunk_keys, missings_keys, length, num_chunks) {
     }
 
