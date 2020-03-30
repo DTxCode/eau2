@@ -157,6 +157,37 @@ char* Serializer::serialize_distributed_dataframe(DistributedDataFrame* df) {
 // Expects given msg to have the form:
 // "[Serialized Schema]~[Serialized Dist_Column 0]; ... ;[Serialized Dist_Column n-1]"
 DistributedDataFrame* Serializer::deserialize_distributed_dataframe(char* msg, Store* store) { 
+    char* schema_token = strtok(msg, "~");
+    Schema* schema = deserialize_schema(schema_token);
+
+    // Create array of serialized cols (distinct strings for each col)
+    char* serialized_cols[schema->width()];
+    for (size_t i = 0; i < schema->width(); i++) {
+        serialized_cols[i] = strtok(nullptr, ";");
+    }
+
+    Schema empty_schema;
+    // Initialize empty dataframe
+    DistributedDataFrame* df = new DistributedDataFrame(store, empty_schema);
+
+    // Deserialize all serialized cols into real columns
+    for (size_t i = 0; i < schema->width(); i++) {
+        char type = schema->col_type(i);
+        if (type == INT_TYPE) {
+            df->add_column(deserialize_dist_int_col(serialized_cols[i], store), nullptr);
+        } else if (type == BOOL_TYPE) {
+            df->add_column(deserialize_dist_bool_col(serialized_cols[i], store), nullptr);
+        } else if (type == FLOAT_TYPE) {
+            df->add_column(deserialize_dist_float_col(serialized_cols[i], store), nullptr);
+        } else {
+            df->add_column(deserialize_dist_string_col(serialized_cols[i], store), nullptr);
+        }
+    }
+
+    delete schema;
+    return df;
+    
+    /*
     // Keep around a copy of the original message
     char* msg_copy = new char[strlen(msg)];
     strcpy(msg_copy, msg);
@@ -208,7 +239,7 @@ DistributedDataFrame* Serializer::deserialize_distributed_dataframe(char* msg, S
     delete[] msg_copy;
     //        delete[] msg;
     delete schema;
-    return df;
+    return df;*/
 }
 
 // Serializes a Distributed Column
