@@ -70,7 +70,7 @@ bool test_distributed_float_column() {
 
     DistributedFloatColumn dist_floatc(&store1);
 
-    for (size_t i = 0; i < 100; i++) {
+    for (size_t i = 0; i < 10000; i++) {
         dist_floatc.push_back((float)i);
     }
 

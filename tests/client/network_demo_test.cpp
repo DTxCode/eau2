@@ -1,17 +1,27 @@
-#pragma once
 #include "../../src/store/store.cpp"
 #include "../../src/client/application.cpp"
 #include "../../src/store/network/master.h"
+#include "../../src/store/key.h"
 
 class Demo : public Application {
    public:
-    Key main("main", 0);
-    Key verify("verif", 0);
-    Key check("ck", 0);
+    Key* main;
+    Key* verify;
+    Key* check;
 
-    Demo(Store* store) : Application(nullptr, 0, 0, store) {}
+    Demo(Store* store) : Application(nullptr, 0, 0, store) {
+        main = new Key((char*)"main" ,0);
+	verify = new Key((char*)"verif", 0);
+	check = new Key((char*)"check", 0);
+    }
 
-    void run_() override {
+    ~Demo() {
+	delete main;
+	delete verify;
+	delete check;
+    }
+
+    void run_() {
         switch (this_node()) {
             case 0:
                 producer();
@@ -25,7 +35,7 @@ class Demo : public Application {
     }
 
     void producer() {
-        size_t SZ = 100 * 1000;
+        size_t SZ = 1 * 1000;
         float* vals = new float[SZ];
         float sum = 0;
         for (size_t i = 0; i < SZ; ++i) {
@@ -33,40 +43,47 @@ class Demo : public Application {
             sum += vals[i];
         }
 
-        DataFrame::fromArray(&main, store, SZ, vals);
-        DataFrame::fromScalar(&check, store, sum);
+        delete DataFrame::fromArray(main, store, SZ, vals);
+        delete DataFrame::fromScalar(check, store, sum);
     }
 
     void counter() {
         DataFrame* v = store->waitAndGet(main);
-        size_t sum = 0;
-        for (size_t i = 0; i < 100 * 1000; ++i) {
+        float sum = 0;
+        for (size_t i = 0; i < 1 * 1000; ++i) {
             sum += v->get_float(0, i);
         }
-        p("The sum is  ").pln(sum);
-        DataFrame::fromScalar(&verify, store, sum);
+	printf("The sum is %f\n", sum);
+        delete DataFrame::fromScalar(verify, store, sum);
     }
 
     void summarizer() {
         DataFrame* result = store->waitAndGet(verify);
         DataFrame* expected = store->waitAndGet(check);
-        pln(expected->get_float(0, 0) == result->get_float(0, 0) ? "SUCCESS" : "FAILURE");
+        if(expected->get_float(0, 0) == result->get_float(0, 0)){
+		printf("SUCCESS\n");
+	} else {
+		printf("FAILURE\n");
+	}
     }
 };
 
 int test_demo() {
-    char* master_ip = "127.0.0.1";
+    char* master_ip = (char*)"127.0.0.1";
     int master_port = 8888;
     Server s(master_ip, master_port);
     s.listen_for_clients();
 
-    Store store1(0, "127.0.0.1", 8000, master_ip, master_port);
-    Store store2(1, "127.0.0.1", 8001, master_ip, master_port);
-    Store store3(2, "127.0.0.1", 8002, master_ip, master_port);
+    Store store1(0, (char*)"127.0.0.1", 8000, master_ip, master_port);
+    Store store2(1, (char*)"127.0.0.1", 8001, master_ip, master_port);
+    Store store3(2, (char*)"127.0.0.1", 8002, master_ip, master_port);
 
     Demo producer(&store1);
+    producer.run_();
     Demo counter(&store2);
+    counter.run_();
     Demo summarizer(&store3);
+    summarizer.run_();
 
     // shutdown system
     s.shutdown();
