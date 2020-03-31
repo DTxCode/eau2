@@ -35,11 +35,11 @@ class Demo : public Application {
     }
 
     void producer() {
-        size_t SZ = 1 * 1000;
+        size_t SZ = 100 * 1000;
         float* vals = new float[SZ];
         float sum = 0;
         for (size_t i = 0; i < SZ; ++i) {
-            vals[i] = i;
+            vals[i] = (float)i;
             sum += vals[i];
         }
 
@@ -50,10 +50,10 @@ class Demo : public Application {
     void counter() {
         DataFrame* v = store->waitAndGet(main);
         float sum = 0;
-        for (size_t i = 0; i < 1 * 1000; ++i) {
+        for (size_t i = 0; i < 100 * 1000; ++i) {
             sum += v->get_float(0, i);
         }
-	printf("The sum is %f\n", sum);
+	    printf("The sum is %f\n", sum);
         delete DataFrame::fromScalar(verify, store, sum);
     }
 

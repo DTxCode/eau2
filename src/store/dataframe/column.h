@@ -12,18 +12,6 @@
 #define STRING_TYPE 'S'
 #define INTERNAL_CHUNK_SIZE (size_t)100
 
-/*class Store {
-    public:
-    
-    
-void put_(Key* k, bool* bs);
-void put_(Key* k, int* is);
-size_t this_node();
-bool* get_bool_array_(Key* k);
-int* get_int_array_(Key* k);
-    
-    };*/
-
 class IntColumn;
 class BoolColumn;
 class FloatColumn;
@@ -373,7 +361,7 @@ class FloatColumn : virtual public Column {
 
     // Double the capacity of the array and move (not copy) the float
     // pointers in to new array
-    void resize() {
+    virtual void resize() {
         num_chunks = 2 * num_chunks;
         capacity = INTERNAL_CHUNK_SIZE * num_chunks;
         float** new_cells = new float*[num_chunks];
@@ -391,14 +379,14 @@ class FloatColumn : virtual public Column {
     }
 
     // Get float at index idx. Runtime error if idx is out of bounds
-    float get(size_t idx) {
+    virtual float get(size_t idx) {
         size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
         return cells[array_idx][local_idx];
     }
 
     // Add given float to "bottom" of the column.
-    void push_back(float val) {
+    virtual void push_back(float val) {
         if (length == capacity) {
             resize();
         }
@@ -409,10 +397,10 @@ class FloatColumn : virtual public Column {
     }
 
     // Return this column as a FloatColumn
-    FloatColumn* as_float() { return this; }
+    virtual FloatColumn* as_float() { return this; }
 
     /** Set value at idx. An out of bound idx is undefined.  */
-    void set(size_t idx, float val) {
+    virtual void set(size_t idx, float val) {
         if (idx >= size()) {
             return;
         }
@@ -426,7 +414,7 @@ class FloatColumn : virtual public Column {
     }
 
     // Add "missing" (0.0) to bottom of column
-    void push_back_missing() {
+    virtual void push_back_missing() {
         if (length == capacity) {
             resize();
         }
@@ -518,7 +506,7 @@ class BoolColumn : virtual public Column {
 
     // Double the capacity of the array and move (not copy) the bool
     // pointers in to new array
-    void resize() {
+    virtual void resize() {
         num_chunks = 2 * num_chunks;
         capacity = INTERNAL_CHUNK_SIZE * num_chunks;
         bool** new_cells = new bool*[num_chunks];
@@ -537,17 +525,17 @@ class BoolColumn : virtual public Column {
 
     // Get bool at index idx.
     // Runtime error if idx is out of bounds
-    bool get(size_t idx) {
+    virtual bool get(size_t idx) {
         size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
         return cells[array_idx][local_idx];
     }
 
     // Return this column as a BoolColumn
-    BoolColumn* as_bool() { return this; }
+    virtual BoolColumn* as_bool() { return this; }
 
     /** Set value at idx. An out of bound idx is undefined.  */
-    void set(size_t idx, bool val) {
+    virtual void set(size_t idx, bool val) {
         if (idx >= length) {
             return;
         }
@@ -561,7 +549,7 @@ class BoolColumn : virtual public Column {
     }
 
     // push the given bool on to the 'bottom' of this column
-    void push_back(bool val) {
+    virtual void push_back(bool val) {
         if (length == capacity) {
             resize();
         }
@@ -572,7 +560,7 @@ class BoolColumn : virtual public Column {
     }
 
     // Add "missing" (true) to bottom of column
-    void push_back_missing() {
+    virtual void push_back_missing() {
         if (length == capacity) {
             resize();
         }
@@ -665,7 +653,7 @@ class StringColumn : virtual public Column {
 
     // Double the capacity of the array and move (not copy) the String
     // pointers in to new array
-    void resize() {
+    virtual void resize() {
         num_chunks = 2 * num_chunks;
         capacity = INTERNAL_CHUNK_SIZE * num_chunks;
         String*** new_cells = new String**[num_chunks];
@@ -684,14 +672,14 @@ class StringColumn : virtual public Column {
 
     // Get String* at index idx.
     // Runtime error if idx is out of bounds
-    String* get(size_t idx) {
+    virtual String* get(size_t idx) {
         size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
         return cells[array_idx][local_idx];
     }
 
     // Add given String* on to 'bottom' of this column
-    void push_back(String* val) {
+    virtual void push_back(String* val) {
         if (length == capacity) {
             resize();
         }
@@ -702,10 +690,10 @@ class StringColumn : virtual public Column {
     }
 
     // Return this column as a StringColumn
-    StringColumn* as_string() { return this; }
+    virtual StringColumn* as_string() { return this; }
 
     /** Out of bound idx is undefined. */
-    void set(size_t idx, String* val) {
+    virtual void set(size_t idx, String* val) {
         if (idx >= length) {
             return;
         }
@@ -719,7 +707,7 @@ class StringColumn : virtual public Column {
     }
 
     // Add "missing" ("") to bottom of column
-    void push_back_missing() {
+    virtual void push_back_missing() {
         if (length == capacity) {
             resize();
         }
@@ -754,7 +742,8 @@ class DistributedColumn : virtual public Column {
 	*  distributed scenario have no real meaning. Use with caution */
 
     // Empty default that will be called automatically by child classes
-    DistributedColumn(){}
+    DistributedColumn(){
+    }
 
     DistributedColumn(Store* s, Key** chunk_keys, Key** missings_keys, size_t length, size_t num_chunks) {
         store = s;
@@ -1494,9 +1483,9 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
         num_chunks = 10;
         capacity = num_chunks * INTERNAL_CHUNK_SIZE;
         init_keys_dist();
-	init_missings_dist();
+	    init_missings_dist();
         
-	// Put default string array for each chunk
+	    // Put default string array for each chunk
         String* strings[INTERNAL_CHUNK_SIZE] = {};
         for (size_t i = 0; i < num_chunks; i++) {
             store->put_(chunk_keys[i], strings, INTERNAL_CHUNK_SIZE);
@@ -1576,7 +1565,7 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
         }
     }
 
-    // Add String*eger to "bottom" of column
+    // Add String* to "bottom" of column
     void push_back(String* val) {
         if (length == capacity) {
             resize();

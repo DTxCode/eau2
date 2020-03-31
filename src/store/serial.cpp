@@ -13,105 +13,6 @@
 #include "dataframe/schema.h"
 #include "network/message.h"
 
-//Serializer::Serializer() {}
-
-//Serializer::~Serializer() {}
-
-// Serialize a given DataFrame object
-// Serialized message will take the form:
-// "[Serialized Schema]~[Serialized Column 0]; ... ;[Serialized Column n-1]"
-char* Serializer::serialize_dataframe(DataFrame* df) {
-    // Track total buffer size we need
-    size_t total_str_size = 0;
-
-    // Serialize schema
-    char* schema_str = serialize_schema(&df->get_schema());
-    total_str_size += strlen(schema_str);
-
-    // Serialize all columns
-    size_t cols = df->ncols();
-    char** col_strs = new char*[cols];
-    for (size_t i = 0; i < cols; i++) {
-        // Serialize column based on schema
-        Schema s = df->get_schema();
-        col_strs[i] = serialize_col(df->get_col_(i), df->get_schema().col_type(i));
-        total_str_size += strlen(col_strs[i]) + 1;  // +1 for semicolons below
-    }
-
-    char* serial_buffer = new char[total_str_size];
-
-    // Copy schema and column strings into buffer
-    strcpy(serial_buffer, schema_str);  //, strlen(schema_str));
-    strcat(serial_buffer, "~");
-
-    // Add serialized column messages to buffer, delimeted by ";"
-    for (size_t j = 0; j < cols; j++) {
-        strcat(serial_buffer, col_strs[j]);
-        // Do not append ";" after last column string
-        if (j != cols - 1) {
-            strcat(serial_buffer, ";");
-        }
-        delete[] col_strs[j];
-    }
-    delete[] col_strs;
-    return serial_buffer;
-}
-
-// Deserialize a char* buffer into a DataFrame object
-DataFrame* Serializer::deserialize_dataframe(char* msg) {
-    // Keep around a copy of the original message
-    char* msg_copy = new char[strlen(msg)];
-    strcpy(msg_copy, msg);
-
-    // Tokenize message to get schema section
-    char* token = strtok(msg, "~");
-
-    // Deserialize calls strtok, which breaks any subsequent calls using this msg
-    // Need to use copies of msg for further tokenizing
-    Schema* schema = deserialize_schema(token);
-    char** token_copies = new char*[schema->width()];
-
-    Schema empty_schema;
-
-    // Initialize empty dataframe
-    DataFrame* df = new DataFrame(empty_schema);
-
-    // Deserialize each column and add it to the dataframe
-    for (size_t i = 0; i < schema->width(); i++) {
-        // Create a new message copy for this tokenizing
-        token_copies[i] = new char[strlen(msg_copy)];
-        strcpy(token_copies[i], msg_copy);
-
-        // Move token to be the column strings
-        token = strtok(token_copies[i], "~");
-        token = strtok(nullptr, "~");
-
-        token = strtok(token, ";");
-        // Move token to the correct column string
-        for (size_t j = 0; j < i; j++) {
-            token = strtok(nullptr, ";");
-        }
-
-        char type = schema->col_type(i);
-        if (type == INT_TYPE) {
-            df->add_column(deserialize_int_col(token), nullptr);
-        } else if (type == BOOL_TYPE) {
-            df->add_column(deserialize_bool_col(token), nullptr);
-        } else if (type == FLOAT_TYPE) {
-            df->add_column(deserialize_float_col(token), nullptr);
-        } else {
-            df->add_column(deserialize_string_col(token), nullptr);
-        }
-        //delete[] token_copies[i];
-    }
-
-    delete[] token_copies;
-    delete[] msg_copy;
-    //        delete[] msg;
-    delete schema;
-    return df;
-}
-
 // Serialize a DistributedDataFrame into char*
 // Will create same format and contents as Serializing a normal DF, with a pre-pended
 // string representing the serialized Store
@@ -135,7 +36,7 @@ char* Serializer::serialize_distributed_dataframe(DistributedDataFrame* df) {
     char* serial_buffer = new char[total_str_size];
 
     // Copy schema and column strings into buffer
-    strcpy(serial_buffer, schema_str);  //, strlen(schema_str));
+    strcpy(serial_buffer, schema_str);  
     strcat(serial_buffer, "~");
 
     // Add serialized column messages to buffer, delimeted by ";"
@@ -153,7 +54,7 @@ char* Serializer::serialize_distributed_dataframe(DistributedDataFrame* df) {
 
 // Deserialize a char* buffer into a DistributedDataFrame object
 // Expects given msg to have the form:
-// "[Serialized Schema]~[Serialized Dist_Column 0]~ ... ~[Serialized Dist_Column n-1]"
+// "[Serialized Schema]~[Serialized Dist_Column 0]~[...]~[Serialized Dist_Column n-1]"
 DistributedDataFrame* Serializer::deserialize_distributed_dataframe(char* msg, Store* store) { 
     char* schema_token = strtok(msg, "~");
     char* columns_token = strtok(nullptr, "\0");
@@ -190,60 +91,6 @@ DistributedDataFrame* Serializer::deserialize_distributed_dataframe(char* msg, S
 
     delete schema;
     return df;
-    
-    /*
-    // Keep around a copy of the original message
-    char* msg_copy = new char[strlen(msg)];
-    strcpy(msg_copy, msg);
-    
-    // Tokenize message to get schema section
-    char* token = strtok(msg, "~");
-
-    // Deserialize calls strtok, which breaks any subsequent calls using this msg
-    // Need to use copies of msg for further tokenizing
-    Schema* schema = deserialize_schema(token);
-
-    char** token_copies = new char*[schema->width()];
-
-    Schema empty_schema;
-
-    // Initialize empty dataframe
-    DistributedDataFrame* df = new DistributedDataFrame(store, empty_schema);
-
-    // Deserialize each column and add it to the dataframe
-    for (size_t i = 0; i < schema->width(); i++) {
-        // Create a new message copy for this tokenizing
-        token_copies[i] = new char[strlen(msg_copy)];
-        strcpy(token_copies[i], msg_copy);
-
-        // Move token to be the column strings
-        token = strtok(token_copies[i], "~");
-        token = strtok(nullptr, "~");
-
-        token = strtok(token, ";");
-        // Move token to the correct column string
-        for (size_t j = 0; j < i; j++) {
-            token = strtok(nullptr, ";");
-        }
-
-        char type = schema->col_type(i);
-        if (type == INT_TYPE) {
-            df->add_column(deserialize_dist_int_col(token, store), nullptr);
-        } else if (type == BOOL_TYPE) {
-            df->add_column(deserialize_dist_bool_col(token, store), nullptr);
-        } else if (type == FLOAT_TYPE) {
-            df->add_column(deserialize_dist_float_col(token, store), nullptr);
-        } else {
-            df->add_column(deserialize_dist_string_col(token, store), nullptr);
-        }
-    delete[] token_copies[i];
-    }
-
-    delete[] token_copies;
-    delete[] msg_copy;
-    //        delete[] msg;
-    delete schema;
-    return df;*/
 }
 
 // Serializes a Distributed Column
@@ -267,7 +114,7 @@ char* Serializer::serialize_dist_col(DistributedColumn* col) {
     total_size += strlen(ser_length);
     total_size += strlen(ser_num_chunks);
 
-    // For all key-values, serialize and add to cell_strings 
+    // For all key-values, serialize and add to key string tracker arrays
     for (i = 0; i < num_keys; i++) {
         chunk_key_strings[i] = serialize_key(col->chunk_keys[i]);
         missing_key_strings[i] = serialize_key(col->missings_keys[i]);
@@ -278,7 +125,7 @@ char* Serializer::serialize_dist_col(DistributedColumn* col) {
         total_size += strlen(missing_key_strings[i]);
     }
 
-    // need space for null terminator and all semicolons and ~'s
+    // need space for null terminator and all semicolons
     total_size += 2*num_keys + 3;
     char* serial_buffer = new char[total_size];
     if (total_size == 1) {  // Empty case
@@ -356,6 +203,8 @@ DistributedColumn* Serializer::deserialize_dist_col(char* msg, Store* store, cha
     return dc;
 }
 
+// Class specific deserialization methods for dist_ columns. 
+// Uses generic deserialization for dist_ col.
 DistributedIntColumn* Serializer::deserialize_dist_int_col(char* msg, Store* store) { 
     return static_cast<DistributedIntColumn*>(deserialize_dist_col(msg, store, INT_TYPE));
 }
@@ -382,42 +231,6 @@ Message* Serializer::deserialize_message(char* msg) {
     Message* m = new Message(msg);  // Copies msg
     //delete[] msg;
     return m;
-}
-
-// Serialize an IntColumn
-char* Serializer::serialize_int_col(IntColumn* col) {
-    return serialize_col(col, INT_TYPE);
-}
-
-// Deserialize IntColumn serialized message
-IntColumn* Serializer::deserialize_int_col(char* msg) {
-    IntColumn* i_c = new IntColumn();
-    deserialize_col(msg, INT_TYPE, i_c);
-    return i_c;
-}
-
-// Serialize a FloatColumn to a character array
-char* Serializer::serialize_float_col(FloatColumn* col) {
-    return serialize_col(col, FLOAT_TYPE);
-}
-
-// Deserialize FloatColumn serialized message
-FloatColumn* Serializer::deserialize_float_col(char* msg) {
-    FloatColumn* f_c = new FloatColumn();
-    deserialize_col(msg, FLOAT_TYPE, f_c);
-    return f_c;
-}
-
-// Serialize a StringColumn to a character array
-char* Serializer::serialize_string_col(StringColumn* col) {
-    return serialize_col(col, STRING_TYPE);
-}
-
-// Deserialize StringColumn serialized message
-StringColumn* Serializer::deserialize_string_col(char* msg) {
-    StringColumn* s_c = new StringColumn();
-    deserialize_col(msg, STRING_TYPE, s_c);
-    return s_c;
 }
 
 // Serialize an int to a character array
@@ -534,90 +347,6 @@ Key* Serializer::deserialize_key(char* msg) {
     return new Key(name_token, node_id);
 }
 
-// Generic serialization method for Column type
-// Process is same for every column, but serialization method used for
-// cell-type is dependent on the given 'type' parameter.
-// Providing the wrong type parameter for the given Column results in
-// undefined behavior.
-// Serialized string format is "[value],[value], ... ,[value],[value]"
-// All values, in serialized char* form, are separated by commas
-char* Serializer::serialize_col(Column* col, char type) {
-    size_t length = col->size();
-    // Will have a char* for each value. Track them separately
-    //  because we do not know their size
-    char** cell_strings = new char*[length];
-    size_t i;
-    size_t total_size = 0;
-    // For all cell-values, serialize and add to cell_strings based on
-    // given type of col
-    for (i = 0; i < length; i++) {
-        // Using static_casts to avoid performance hits from casting
-        // This relies on well-formed user input
-        if (type == INT_TYPE) {
-            IntColumn* typed_col = dynamic_cast<IntColumn*>(col);
-            cell_strings[i] = serialize_int(typed_col->get(i));
-        } else if (type == FLOAT_TYPE) {
-            FloatColumn* typed_col = dynamic_cast<FloatColumn*>(col);
-            cell_strings[i] = serialize_float(typed_col->get(i));
-        } else if (type == STRING_TYPE) {
-            StringColumn* typed_col = dynamic_cast<StringColumn*>(col);
-            cell_strings[i] = serialize_string(typed_col->get(i));
-        } else if (type == BOOL_TYPE) {
-            BoolColumn* typed_col = dynamic_cast<BoolColumn*>(col);
-            cell_strings[i] = serialize_bool(typed_col->get(i));
-        }
-
-        // Track (a slight over-estimate due to null terminators) total
-        // size required for message
-        total_size += strlen(cell_strings[i]);
-    }
-    // size of cell char*s + (length - 1) commas + 1 for null terminator
-    total_size += length + 1;
-    char* serial_buffer = new char[total_size];
-    if (total_size == 1) {  // Empty case
-        strcpy(serial_buffer, "\0");
-    } else {
-        // Copy all value-strings in to one buffer
-        strcpy(serial_buffer, cell_strings[0]);
-    }
-    for (i = 1; i < length; i++) {
-        strcat(serial_buffer, ",");  // CSV
-        strcat(serial_buffer, cell_strings[i]);
-        delete[] cell_strings[i];
-    }
-    delete[] cell_strings;
-    return serial_buffer;
-}
-
-// Deserialize a Column serialized message
-// Message expected to have form "[value],[value], ... ,[value],[value]"
-// Use push_back method to add values to a new column, with the intention
-//  of abstracting over implementation details of a column
-// Params:
-//  msg: char-array message to be deserialized
-//  type: char representing type of Column to assume
-//  fill_col: pointer to column to fill with values
-void Serializer::deserialize_col(char* msg, char type, Column* fill_col) {
-    char* token;
-    // Tokenize message
-    token = strtok(msg, ",");
-    // For all tokens in the message, deserialize them based on type
-    // and add them to the column via push_back
-    while (token) {
-        if (type == INT_TYPE) {
-            fill_col->push_back(deserialize_int(token));
-        } else if (type == FLOAT_TYPE) {
-            fill_col->push_back(deserialize_float(token));
-        } else if (type == STRING_TYPE) {
-            fill_col->push_back(deserialize_string(token));
-        } else if (type == BOOL_TYPE) {
-            fill_col->push_back(deserialize_bool(token));
-        }
-        token = strtok(nullptr, ",");
-    }
-    delete msg;
-}
-
 // Serialize StringArray object
 // Basically exact same as StringColumn, but some method names prevent
 // abstracting over both
@@ -679,11 +408,9 @@ StringArray* Serializer::deserialize_string_array(char* msg) {
 
 // Serialize a Schema object pointer to a char*
 // returned message will have form
-// [Serialized Column Types Array];[Serialized Column Names Array];[Serialized Row Names array]
+// [Serialized Column Types Array]
 char* Serializer::serialize_schema(Schema* schema) {
     StringArray col_type_strs;
-    StringArray col_name_strs;
-    StringArray row_name_strs;
 
     // Convert char to string with null-terminator
     char* char_str = new char[2];
@@ -693,35 +420,16 @@ char* Serializer::serialize_schema(Schema* schema) {
     for (size_t i = 0; i < schema->width(); i++) {
         char_str[0] = schema->col_type(i);
         col_type_strs.push_back(new String(char_str));
-        col_name_strs.push_back(schema->col_name(i));
-    }
-
-    // Track all row name Strings
-    for (size_t j = 0; j < schema->length(); j++) {
-        row_name_strs.push_back(schema->row_name(j));
     }
 
     // Leverage existing S/D methods for StringArray
     char* col_types = serialize_string_array(&col_type_strs);
-    char* col_names = serialize_string_array(&col_name_strs);
-    char* row_names = serialize_string_array(&row_name_strs);
-
-    // Size of sub-strings + 3 for 2 ";"s and a nullterminator
-    size_t total_size = 3 + strlen(col_types) + strlen(col_names) + strlen(row_names);
-    char* serial_buffer = new char[total_size];
-    strcpy(serial_buffer, col_types);
-    strcat(serial_buffer, "\0");
-    //strcat(serial_buffer, ";");
-    //strcat(serial_buffer, col_names);
-    //strcat(serial_buffer, ";");
-    //strcat(serial_buffer, row_names);
-    return serial_buffer;
+    return col_types;
 }
 
 // Deserialize a char* msg into a Schema objects
 // Expects char* msg format as given by serialize_schema
 Schema* Serializer::deserialize_schema(char* msg) {
-    
     StringArray* col_types = deserialize_string_array(msg);
     size_t col_count = col_types->size();
     Schema* fill_schema = new Schema();
@@ -731,42 +439,6 @@ Schema* Serializer::deserialize_schema(char* msg) {
         fill_schema->add_column(col_type_str[0], nullptr);
     }
     return fill_schema;
-    
-    /*
-    
-    char* token;
-    Schema* fill_schema = new Schema();
-    // Need 3 total copies of the original msg
-    // strtok breaks when you call a function that subsequently
-    //  calls strtok. As a result, cannot reuse original string
-    char* temp_msg1 = new char[strlen(msg)];
-    strcpy(temp_msg1, msg);
-    char* temp_msg2 = new char[strlen(msg)];
-    strcpy(temp_msg2, msg);
-    // Tokenize message into ColTypes, ColNames, RowNames arrays
-    token = strtok(msg, ";");
-    StringArray* col_types = deserialize_string_array(token);
-    token = strtok(temp_msg1, ";");
-    token = strtok(nullptr, ";");
-    StringArray* col_names = deserialize_string_array(token);
-    token = strtok(temp_msg2, ";");
-    token = strtok(nullptr, ";");
-    token = strtok(nullptr, ";");
-    StringArray* row_names = deserialize_string_array(token);
-    size_t col_count = col_types->size();
-    size_t row_count = row_names->size();
-    char* col_type_str;
-    // Add each column with a type and a name
-    for (size_t i = 0; i < col_count; i++) {
-        col_type_str = col_types->get(i)->c_str();
-        fill_schema->add_column(col_type_str[0], col_names->get(i));
-    }
-    // Add each row by name
-    for (size_t j = 0; j < row_count; j++) {
-        fill_schema->add_row(row_names->get(j));
-    }
-
-    return fill_schema;*/
 }
 
 // Serialize a bool to a char* message
@@ -790,19 +462,6 @@ bool Serializer::deserialize_bool(char* msg) {
         return true;
     }
     return false;
-}
-
-// Serialize boolean column
-// Uses same format as other columns, see serialize_col
-char* Serializer::serialize_bool_col(BoolColumn* col) {
-    return serialize_col(col, BOOL_TYPE);
-}
-
-// Deserialize boolean column from char*
-BoolColumn* Serializer::deserialize_bool_col(char* msg) {
-    BoolColumn* b_c = new BoolColumn();
-    deserialize_col(msg, BOOL_TYPE, b_c);
-    return b_c;
 }
 
 // Serializer a c-array of bools into a char* formed
@@ -1002,4 +661,234 @@ String** Serializer::deserialize_strings(char* msg) {
     return strings;
 }
 
+/* DEPRECRATED WITH ADDITION OF DISTRIBUTED_[DataFrame and Column] */
+
+// Serialize a given DataFrame object
+// Serialized message will take the form:
+// "[Serialized Schema]~[Serialized Column 0]; ... ;[Serialized Column n-1]"
+char* Serializer::serialize_dataframe(DataFrame* df) {
+    // Track total buffer size we need
+    size_t total_str_size = 0;
+
+    // Serialize schema
+    char* schema_str = serialize_schema(&df->get_schema());
+    total_str_size += strlen(schema_str);
+
+    // Serialize all columns
+    size_t cols = df->ncols();
+    char** col_strs = new char*[cols];
+    for (size_t i = 0; i < cols; i++) {
+        // Serialize column based on schema
+        Schema s = df->get_schema();
+        col_strs[i] = serialize_col(df->get_col_(i), df->get_schema().col_type(i));
+        total_str_size += strlen(col_strs[i]) + 1;  // +1 for semicolons below
+    }
+
+    char* serial_buffer = new char[total_str_size];
+
+    // Copy schema and column strings into buffer
+    strcpy(serial_buffer, schema_str);  //, strlen(schema_str));
+    strcat(serial_buffer, "~");
+
+    // Add serialized column messages to buffer, delimeted by ";"
+    for (size_t j = 0; j < cols; j++) {
+        strcat(serial_buffer, col_strs[j]);
+        // Do not append ";" after last column string
+        if (j != cols - 1) {
+            strcat(serial_buffer, ";");
+        }
+        delete[] col_strs[j];
+    }
+    delete[] col_strs;
+    return serial_buffer;
+}
+
+// Deserialize a char* buffer into a DataFrame object
+DataFrame* Serializer::deserialize_dataframe(char* msg) {
+    // Keep around a copy of the original message
+    char* msg_copy = new char[strlen(msg)];
+    strcpy(msg_copy, msg);
+
+    // Tokenize message to get schema section
+    char* token = strtok(msg, "~");
+
+    // Deserialize calls strtok, which breaks any subsequent calls using this msg
+    // Need to use copies of msg for further tokenizing
+    Schema* schema = deserialize_schema(token);
+    char** token_copies = new char*[schema->width()];
+
+    Schema empty_schema;
+
+    // Initialize empty dataframe
+    DataFrame* df = new DataFrame(empty_schema);
+
+    // Deserialize each column and add it to the dataframe
+    for (size_t i = 0; i < schema->width(); i++) {
+        // Create a new message copy for this tokenizing
+        token_copies[i] = new char[strlen(msg_copy)];
+        strcpy(token_copies[i], msg_copy);
+
+        // Move token to be the column strings
+        token = strtok(token_copies[i], "~");
+        token = strtok(nullptr, "~");
+
+        token = strtok(token, ";");
+        // Move token to the correct column string
+        for (size_t j = 0; j < i; j++) {
+            token = strtok(nullptr, ";");
+        }
+
+        char type = schema->col_type(i);
+        if (type == INT_TYPE) {
+            df->add_column(deserialize_int_col(token), nullptr);
+        } else if (type == BOOL_TYPE) {
+            df->add_column(deserialize_bool_col(token), nullptr);
+        } else if (type == FLOAT_TYPE) {
+            df->add_column(deserialize_float_col(token), nullptr);
+        } else {
+            df->add_column(deserialize_string_col(token), nullptr);
+        }
+        //delete[] token_copies[i];
+    }
+
+    delete[] token_copies;
+    delete[] msg_copy;
+    //        delete[] msg;
+    delete schema;
+    return df;
+}
+
+
+// Generic serialization method for Column type
+// Process is same for every column, but serialization method used for
+// cell-type is dependent on the given 'type' parameter.
+// Providing the wrong type parameter for the given Column results in
+// undefined behavior.
+// Serialized string format is "[value],[value], ... ,[value],[value]"
+// All values, in serialized char* form, are separated by commas
+char* Serializer::serialize_col(Column* col, char type) {
+    size_t length = col->size();
+    // Will have a char* for each value. Track them separately
+    //  because we do not know their size
+    char** cell_strings = new char*[length];
+    size_t i;
+    size_t total_size = 0;
+    // For all cell-values, serialize and add to cell_strings based on
+    // given type of col
+    for (i = 0; i < length; i++) {
+        // Using static_casts to avoid performance hits from casting
+        // This relies on well-formed user input
+        if (type == INT_TYPE) {
+            IntColumn* typed_col = dynamic_cast<IntColumn*>(col);
+            cell_strings[i] = serialize_int(typed_col->get(i));
+        } else if (type == FLOAT_TYPE) {
+            FloatColumn* typed_col = dynamic_cast<FloatColumn*>(col);
+            cell_strings[i] = serialize_float(typed_col->get(i));
+        } else if (type == STRING_TYPE) {
+            StringColumn* typed_col = dynamic_cast<StringColumn*>(col);
+            cell_strings[i] = serialize_string(typed_col->get(i));
+        } else if (type == BOOL_TYPE) {
+            BoolColumn* typed_col = dynamic_cast<BoolColumn*>(col);
+            cell_strings[i] = serialize_bool(typed_col->get(i));
+        }
+
+        // Track (a slight over-estimate due to null terminators) total
+        // size required for message
+        total_size += strlen(cell_strings[i]);
+    }
+    // size of cell char*s + (length - 1) commas + 1 for null terminator
+    total_size += length + 1;
+    char* serial_buffer = new char[total_size];
+    if (total_size == 1) {  // Empty case
+        strcpy(serial_buffer, "\0");
+    } else {
+        // Copy all value-strings in to one buffer
+        strcpy(serial_buffer, cell_strings[0]);
+    }
+    for (i = 1; i < length; i++) {
+        strcat(serial_buffer, ",");  // CSV
+        strcat(serial_buffer, cell_strings[i]);
+        delete[] cell_strings[i];
+    }
+    delete[] cell_strings;
+    return serial_buffer;
+}
+
+// Deserialize a Column serialized message
+// Message expected to have form "[value],[value], ... ,[value],[value]"
+// Use push_back method to add values to a new column, with the intention
+//  of abstracting over implementation details of a column
+// Params:
+//  msg: char-array message to be deserialized
+//  type: char representing type of Column to assume
+//  fill_col: pointer to column to fill with values
+void Serializer::deserialize_col(char* msg, char type, Column* fill_col) {
+    char* token;
+    // Tokenize message
+    token = strtok(msg, ",");
+    // For all tokens in the message, deserialize them based on type
+    // and add them to the column via push_back
+    while (token) {
+        if (type == INT_TYPE) {
+            fill_col->push_back(deserialize_int(token));
+        } else if (type == FLOAT_TYPE) {
+            fill_col->push_back(deserialize_float(token));
+        } else if (type == STRING_TYPE) {
+            fill_col->push_back(deserialize_string(token));
+        } else if (type == BOOL_TYPE) {
+            fill_col->push_back(deserialize_bool(token));
+        }
+        token = strtok(nullptr, ",");
+    }
+    delete msg;
+}
+
+// Serialize an IntColumn
+char* Serializer::serialize_int_col(IntColumn* col) {
+    return serialize_col(col, INT_TYPE);
+}
+
+// Deserialize IntColumn serialized message
+IntColumn* Serializer::deserialize_int_col(char* msg) {
+    IntColumn* i_c = new IntColumn();
+    deserialize_col(msg, INT_TYPE, i_c);
+    return i_c;
+}
+
+// Serialize a FloatColumn to a character array
+char* Serializer::serialize_float_col(FloatColumn* col) {
+    return serialize_col(col, FLOAT_TYPE);
+}
+
+// Deserialize FloatColumn serialized message
+FloatColumn* Serializer::deserialize_float_col(char* msg) {
+    FloatColumn* f_c = new FloatColumn();
+    deserialize_col(msg, FLOAT_TYPE, f_c);
+    return f_c;
+}
+
+// Serialize a StringColumn to a character array
+char* Serializer::serialize_string_col(StringColumn* col) {
+    return serialize_col(col, STRING_TYPE);
+}
+
+// Deserialize StringColumn serialized message
+StringColumn* Serializer::deserialize_string_col(char* msg) {
+    StringColumn* s_c = new StringColumn();
+    deserialize_col(msg, STRING_TYPE, s_c);
+    return s_c;
+}
+
+// Serialize boolean column
+// Uses same format as other columns, see serialize_col
+char* Serializer::serialize_bool_col(BoolColumn* col) {
+    return serialize_col(col, BOOL_TYPE);
+}
+
+// Deserialize boolean column from char*
+BoolColumn* Serializer::deserialize_bool_col(char* msg) {
+    BoolColumn* b_c = new BoolColumn();
+    deserialize_col(msg, BOOL_TYPE, b_c);
+    return b_c;
+}
 
