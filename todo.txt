@@ -12,9 +12,5 @@ Store:
 
 Find all TODOs....
 
-m3:
-    1) Update column/rows serialization to include missings
-    2) Update DistributedDataFrame serialization methods
-    3) Need to change Bool,Float,String column methods to be virtual for Dist columns
-        - which?
-    4) Run network_demo_test
+M4:
+    1) fix network_demo

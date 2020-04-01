@@ -14,7 +14,7 @@ bool test_distributed_int_column() {
 
     DistributedIntColumn dist_intc(&store1);
 
-    for (size_t i = 0; i < 100; i++) {
+    for (int i = 0; i < 10000; i++) {
         dist_intc.push_back(i);
     }
 
