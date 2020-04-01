@@ -186,7 +186,7 @@ bool test_ddf_serialize() {
 
     Schema empty;
     DistributedDataFrame* ddf = new DistributedDataFrame(&store, empty);
-    ddf->add_column(d_i, nullptr);
+    ddf->add_column(d_i);
 
     Serializer serial;
     char* ser_ddf = serial.serialize_distributed_dataframe(ddf);

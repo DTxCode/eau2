@@ -294,13 +294,13 @@ class Sorer {
         for (size_t i = 0; i < num_columns; i++) {
             FIELD_TYPE type = column_types[i];
             if (type == STRING) {
-                schema->add_column(STRING_TYPE, nullptr);
+                schema->add_column(STRING_TYPE);
             } else if (type == FLOAT) {
-                schema->add_column(FLOAT_TYPE, nullptr);
+                schema->add_column(FLOAT_TYPE);
             } else if (type == INT) {
-                schema->add_column(INT_TYPE, nullptr);
+                schema->add_column(INT_TYPE);
             } else {
-                schema->add_column(BOOL_TYPE, nullptr);
+                schema->add_column(BOOL_TYPE);
             }
         }
     }

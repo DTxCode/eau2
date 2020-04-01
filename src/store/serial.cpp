@@ -79,13 +79,13 @@ DistributedDataFrame* Serializer::deserialize_distributed_dataframe(char* msg, S
     for (size_t i = 0; i < schema->width(); i++) {
         char type = schema->col_type(i);
         if (type == INT_TYPE) {
-            df->add_column(deserialize_dist_int_col(serialized_cols[i], store), nullptr);
+            df->add_column(deserialize_dist_int_col(serialized_cols[i], store));
         } else if (type == BOOL_TYPE) {
-            df->add_column(deserialize_dist_bool_col(serialized_cols[i], store), nullptr);
+            df->add_column(deserialize_dist_bool_col(serialized_cols[i], store));
         } else if (type == FLOAT_TYPE) {
-            df->add_column(deserialize_dist_float_col(serialized_cols[i], store), nullptr);
+            df->add_column(deserialize_dist_float_col(serialized_cols[i], store));
         } else {
-            df->add_column(deserialize_dist_string_col(serialized_cols[i], store), nullptr);
+            df->add_column(deserialize_dist_string_col(serialized_cols[i], store));
         }
     }
 
@@ -436,7 +436,7 @@ Schema* Serializer::deserialize_schema(char* msg) {
     char* col_type_str;
     for (size_t i = 0; i < col_count; i++) {
         col_type_str = col_types->get(i)->c_str();
-        fill_schema->add_column(col_type_str[0], nullptr);
+        fill_schema->add_column(col_type_str[0]);
     }
     return fill_schema;
 }
@@ -740,13 +740,13 @@ DataFrame* Serializer::deserialize_dataframe(char* msg) {
 
         char type = schema->col_type(i);
         if (type == INT_TYPE) {
-            df->add_column(deserialize_int_col(token), nullptr);
+            df->add_column(deserialize_int_col(token));
         } else if (type == BOOL_TYPE) {
-            df->add_column(deserialize_bool_col(token), nullptr);
+            df->add_column(deserialize_bool_col(token));
         } else if (type == FLOAT_TYPE) {
-            df->add_column(deserialize_float_col(token), nullptr);
+            df->add_column(deserialize_float_col(token));
         } else {
-            df->add_column(deserialize_string_col(token), nullptr);
+            df->add_column(deserialize_string_col(token));
         }
         //delete[] token_copies[i];
     }

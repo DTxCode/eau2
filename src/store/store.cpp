@@ -396,7 +396,7 @@ DistributedDataFrame *DataFrame::fromDistributedColumn(Key *key, Store *store, D
     DistributedDataFrame *df = new DistributedDataFrame(store, *empty_schema);
 
     // add column to DF
-    df->add_column(col, nullptr);
+    df->add_column(col);
 
     // add DF to store under key
     store->put(key, df);
