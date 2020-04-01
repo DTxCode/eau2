@@ -1,3 +1,4 @@
+#pragma once
 #include "../../src/store/store.cpp"
 #include <assert.h>
 #include "../../src/store/network/master.h"
@@ -25,10 +26,10 @@ bool test_simple_put_get() {
     String* strings[2] = {&s1, &s2};
 
     // put in store and then get it out
-    store.put_(&k1, bools);
-    store.put_(&k2, ints);
-    store.put_(&k3, floats);
-    store.put_(&k4, strings);
+    store.put_(&k1, bools, 2);
+    store.put_(&k2, ints, 2);
+    store.put_(&k3, floats, 2);
+    store.put_(&k4, strings, 2);
 
     bool* bools2 = store.get_bool_array_(&k1);
     int* ints2 = store.get_int_array_(&k2);
@@ -38,10 +39,10 @@ bool test_simple_put_get() {
     assert(bools[1] == bools2[1]);
     assert(ints[1] == ints2[1]);
     assert(floats[1] == floats2[1]);
-    assert(strings[1]->equals(&strings2[1]));
+    assert(strings[1].equals(&strings2[1]));
 
-    delete strings2[0];
-    delete strings2[1];
+    //delete strings2[0];
+    //delete strings2[1];
 
     // shutdown system
     s.shutdown();
@@ -78,10 +79,10 @@ bool test_network_put_get() {
     String* strings[2] = {&s1, &s2};
 
     // put in other store and then get it out
-    store1.put_(&k1, bools);
-    store1.put_(&k2, ints);
-    store1.put_(&k3, floats);
-    store1.put_(&k4, strings);
+    store1.put_(&k1, bools, 2);
+    store1.put_(&k2, ints, 2);
+    store1.put_(&k3, floats, 2);
+    store1.put_(&k4, strings, 2);
 
     bool* bools2 = store1.get_bool_array_(&k1);
     int* ints2 = store1.get_int_array_(&k2);

@@ -1,5 +1,6 @@
 #pragma once
 #include <assert.h>
+#include "../../src/store/store.cpp"
 #include "../../src/store/network/master.h"
 #include "../../src/store/network/message.h"
 #include "../../src/store/network/node.h"

@@ -131,7 +131,7 @@ bool test_string_array_serialize() {
     Sys s;
     char* ser_strings1 = serial.serialize_strings(strings1, num_strings);
 
-    s.p(ser_strings1);
+    //s.p(ser_strings1);
 
     String** new_strings1 = serial.deserialize_strings(ser_strings1);
     bool ret_value = true;
@@ -145,11 +145,11 @@ bool test_string_array_serialize() {
 // Simple test, for now just seeing that it compiles and doesnt break
 bool test_dist_col_serialize() {
     char* master_ip = "127.0.0.1";
-    int master_port = 8888;
+    int master_port = 8080;
     Server s(master_ip, master_port);
     s.listen_for_clients();
 
-    Store store(5, "127.0.0.1", 7000, master_ip, master_port);
+    Store store(5, "127.0.0.1", 7070, master_ip, master_port);
 
     DistributedColumn* d_i = new DistributedIntColumn(&store);
 
@@ -176,7 +176,7 @@ bool test_ddf_serialize() {
     Server s(master_ip, master_port);
     s.listen_for_clients();
 
-    Store store(5, "127.0.0.1", 7000, master_ip, master_port);
+    Store store(4, "127.0.0.1", 7000, master_ip, master_port);
 
     DistributedColumn* d_i = new DistributedIntColumn(&store);
 
@@ -190,7 +190,7 @@ bool test_ddf_serialize() {
 
     Serializer serial;
     char* ser_ddf = serial.serialize_distributed_dataframe(ddf);
-    printf("%s\n", ser_ddf);
+    //printf("%s\n", ser_ddf);
 
     // shutdown system
     s.shutdown();
@@ -204,8 +204,6 @@ bool test_ddf_serialize() {
 
 
 int main() {
-    assert(test_ddf_serialize());
-    assert(test_dist_col_serialize());
     assert(test_string_array_serialize());  
     assert(test_int_array_serialize());
     printf("========= serialize_int_array PASSED =============\n");
@@ -215,6 +213,10 @@ int main() {
     printf("========= serialize_key PASSED =============\n");
     assert(test_bool_serialize());
     printf("========= serialize_bool PASSED =============\n");
+    assert(test_dist_col_serialize());
+    printf("========= serialize_dist_col PASSED =============\n");
+    assert(test_ddf_serialize());
+    printf("========= serialize_ddf PASSED =============\n");
     /*assert(test_df_serialize());
     printf("========== test_serialize_df PASSED =============\n");*/
 }
