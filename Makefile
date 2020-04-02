@@ -62,3 +62,7 @@ valgrind-store:
 test-column:
 	g++ -std=c++11 -Wall -pthread -g tests/store/dist_column_test.cpp -o col_test
 	./col_test
+
+test-ddf:
+	g++ -std=c++11 -Wall -pthread -g tests/store/test_ddf.cpp -o ddf_test
+	./ddf_test

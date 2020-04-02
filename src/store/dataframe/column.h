@@ -327,11 +327,12 @@ class StringColumn : virtual public Column {
  * communicates with. */
 class DistributedColumn : virtual public Column {
    public:
-    size_t num_chunks;
+    size_t num_chunks = 10;
     // Gets length, capacity, num_chunks, missings from Column
     Key** missings_keys;  // Keys to bool chunks that make up missing bitmap
     Key** chunk_keys;     // Keys to each chunk of values in this column
     Store* store;         // KVS
+    size_t cached_chunk_idx = num_chunks;
 
     /* All method names appended with '_dist' are purely distributed.
 	*  DistributedColumn successors must be very careful in calling
@@ -349,6 +350,7 @@ class DistributedColumn : virtual public Column {
         this->capacity = num_chunks * INTERNAL_CHUNK_SIZE;
         this->chunk_keys = chunk_keys;
         this->missings_keys = missings_keys;
+        cached_chunk_idx = num_chunks;
     }
 
     virtual ~DistributedColumn() {
@@ -489,7 +491,6 @@ class DistributedColumn : virtual public Column {
     virtual void set_missing_dist(size_t idx, bool is_missing) {
         size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
-        //missings[array_idx][local_idx] = true;
         Key* k = missings_keys[array_idx];
         bool* missings = store->get_bool_array_(k);
         missings[local_idx] = is_missing;
@@ -508,7 +509,6 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
     DistributedIntColumn(Store* s) : IntColumn() {
         store = s;
         length = 0;
-        num_chunks = 10;
         capacity = num_chunks * INTERNAL_CHUNK_SIZE;
         init_keys_dist();
         init_missings_dist();
@@ -525,7 +525,6 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
     DistributedIntColumn(Store* s, int n, ...) : IntColumn() {
         store = s;
         length = 0;
-        num_chunks = 10;
         capacity = num_chunks * INTERNAL_CHUNK_SIZE;
         // Always make enough space
         if ((size_t)n > capacity) {
@@ -556,7 +555,6 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
     DistributedIntColumn(Store* s, Column* col) : IntColumn() {
         store = s;
         length = 0;
-        num_chunks = 10;
         capacity = num_chunks * INTERNAL_CHUNK_SIZE;
         init_keys_dist();
 	    init_missings_dist();
@@ -600,12 +598,21 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
     int get(size_t idx) {
         size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
-        Key* k = chunk_keys[array_idx];
-        int* cells = store->get_int_array_(k);
-        int val = cells[local_idx];
-        delete[] cells;
+        // Load chunk into cache if its not 
+        if (array_idx != cached_chunk_idx) {
+            Key* k = chunk_keys[array_idx];
+            cells_ = store->get_int_array_(k);
+            cached_chunk_idx = array_idx;
+        }
+        // Get value from cache
+        return get_local(local_idx);
+    }
 
-        return val;
+    // Returns the int at the given index (IN THE LOCAL CACHE)
+    // Assumes the local cache is populated
+    // Input index out of bounds will cause out of bounds error
+    int get_local(size_t idx) {
+        return cells_[idx];
     }
 
     /** Set value at idx. An out of bound idx is undefined.  */
@@ -613,7 +620,6 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
         if (idx >= length) {
             return;
         }
-
         size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
         Key* k = chunk_keys[array_idx];
@@ -626,6 +632,9 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
 
         // We may be overwriting a missing, so mark cell as not-missing
         set_missing_dist(idx, false);
+        // To avoid read/write conflicts with local cache:
+        //  Force cache to be re-loaded after a set call
+        cached_chunk_idx = num_chunks; // Unusable chunk idx
     }
 
     // Add more keys to our lists of keys to accomodate for more items
@@ -639,6 +648,8 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
         for (size_t i = old_num_chunks; i < num_chunks; i++) {
             store->put_(chunk_keys[i], ints, INTERNAL_CHUNK_SIZE);
         }
+        // Force cache to be re-loaded after a resize
+        cached_chunk_idx = num_chunks; // Unusable chunk idx
     }
 
     // Add integer to "bottom" of column
@@ -679,7 +690,6 @@ class DistributedBoolColumn : public DistributedColumn, public BoolColumn {
     DistributedBoolColumn(Store* s) : BoolColumn() {
         store = s;
         length = 0;
-        num_chunks = 10;
         capacity = num_chunks * INTERNAL_CHUNK_SIZE;
         init_keys_dist();
         init_missings_dist();
@@ -696,7 +706,6 @@ class DistributedBoolColumn : public DistributedColumn, public BoolColumn {
     DistributedBoolColumn(Store* s, int n, ...) : BoolColumn() {
         store = s;
         length = 0;
-        num_chunks = 10;
         capacity = num_chunks * INTERNAL_CHUNK_SIZE;
         // Always make enough space
         if ((size_t)n > capacity) {
@@ -727,7 +736,6 @@ class DistributedBoolColumn : public DistributedColumn, public BoolColumn {
     DistributedBoolColumn(Store* s, Column* col) : BoolColumn() {
         store = s;
         length = 0;
-        num_chunks = 10;
         capacity = num_chunks * INTERNAL_CHUNK_SIZE;
         init_keys_dist();
 	    init_missings_dist();
@@ -764,17 +772,26 @@ class DistributedBoolColumn : public DistributedColumn, public BoolColumn {
     // Return this column as a BoolColumn
     BoolColumn* as_bool() { return this; }
     
-    // Returns the booleger at the given index.
+    // Returns the bool at the given index.
     // Input index out of bounds will cause a runtime error
     bool get(size_t idx) {
         size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
-        Key* k = chunk_keys[array_idx];
-        bool* cells = store->get_bool_array_(k);
-        bool val = cells[local_idx];
-        delete[] cells;
+        // Load chunk into cache if its not 
+        if (array_idx != cached_chunk_idx) {
+            Key* k = chunk_keys[array_idx];
+            cells_ = store->get_bool_array_(k);
+            cached_chunk_idx = array_idx;
+        }
+        // Get value from cache
+        return get_local(local_idx);
+    }
 
-        return val;
+    // Returns the bool at the given index (IN THE LOCAL CACHE)
+    // Assumes the local cache is populated
+    // Input index out of bounds will cause out of bounds error
+    bool get_local(size_t idx) {
+        return cells_[idx];
     }
 
     /** Set value at idx. An out of bound idx is undefined.  */
@@ -795,6 +812,9 @@ class DistributedBoolColumn : public DistributedColumn, public BoolColumn {
 
         // We may be overwriting a missing, so mark cell as not-missing
         set_missing_dist(idx, false);
+        // To avoid read/write conflicts with local cache:
+        //  Force cache to be re-loaded after a set call
+        cached_chunk_idx = num_chunks; // Unusable chunk idx
     }
 
     // Add more keys to our lists of keys to accomodate for more items
@@ -808,9 +828,11 @@ class DistributedBoolColumn : public DistributedColumn, public BoolColumn {
         for (size_t i = old_num_chunks; i < num_chunks; i++) {
             store->put_(chunk_keys[i], bools, INTERNAL_CHUNK_SIZE);
         }
+        // Force cache to be re-loaded after a resize
+        cached_chunk_idx = num_chunks; // Unusable chunk idx
     }
 
-    // Add booleger to "bottom" of column
+    // Add bool to "bottom" of column
     void push_back(bool val) {
         if (length == capacity) {
             resize();
@@ -848,7 +870,6 @@ class DistributedFloatColumn : public DistributedColumn, public FloatColumn {
     DistributedFloatColumn(Store* s) : FloatColumn() {
         store = s;
         length = 0;
-        num_chunks = 10;
         capacity = num_chunks * INTERNAL_CHUNK_SIZE;
         init_keys_dist();
         init_missings_dist();
@@ -865,7 +886,6 @@ class DistributedFloatColumn : public DistributedColumn, public FloatColumn {
     DistributedFloatColumn(Store* s, int n, ...) : FloatColumn() {
         store = s;
         length = 0;
-        num_chunks = 10;
         capacity = num_chunks * INTERNAL_CHUNK_SIZE;
         // Always make enough space
         if ((size_t)n > capacity) {
@@ -896,7 +916,6 @@ class DistributedFloatColumn : public DistributedColumn, public FloatColumn {
     DistributedFloatColumn(Store* s, Column* col) : FloatColumn() {
         store = s;
         length = 0;
-        num_chunks = 10;
         capacity = num_chunks * INTERNAL_CHUNK_SIZE;
 
         init_keys_dist();
@@ -939,12 +958,21 @@ class DistributedFloatColumn : public DistributedColumn, public FloatColumn {
     float get(size_t idx) {
         size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
-        Key* k = chunk_keys[array_idx];
-        float* cells = store->get_float_array_(k);
-        float val = cells[local_idx];
-        delete[] cells;
+        // Load chunk into cache if its not 
+        if (array_idx != cached_chunk_idx) {
+            Key* k = chunk_keys[array_idx];
+            cells_ = store->get_float_array_(k);
+            cached_chunk_idx = array_idx;
+        }
+        // Get value from cache
+        return get_local(local_idx);
+    }
 
-        return val;
+    // Returns the float at the given index (IN THE LOCAL CACHE)
+    // Assumes the local cache is populated
+    // Input index out of bounds will cause out of bounds error
+    float get_local(size_t idx) {
+        return cells_[idx];
     }
 
     /** Set value at idx. An out of bound idx is undefined.  */
@@ -964,6 +992,9 @@ class DistributedFloatColumn : public DistributedColumn, public FloatColumn {
 
         // We may be overwriting a missing, so mark cell as not-missing
         set_missing_dist(idx, false);
+        // To avoid read/write conflicts with local cache:
+        //  Force cache to be re-loaded after a set call
+        cached_chunk_idx = num_chunks; // Unusable chunk idx
     }
 
     // Add more keys to our lists of keys to accomodate for more items
@@ -977,6 +1008,8 @@ class DistributedFloatColumn : public DistributedColumn, public FloatColumn {
         for (size_t i = old_num_chunks; i < num_chunks; i++) {
             store->put_(chunk_keys[i], floats, INTERNAL_CHUNK_SIZE);
         }
+        // Force cache to be re-loaded after a resize
+        cached_chunk_idx = num_chunks; // Unusable chunk idx
     }
 
     // Add floateger to "bottom" of column
@@ -1017,7 +1050,6 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
     DistributedStringColumn(Store* s) : StringColumn() {
         store = s;
         length = 0;
-        num_chunks = 10;
         capacity = num_chunks * INTERNAL_CHUNK_SIZE;
         init_keys_dist();
         init_missings_dist();
@@ -1034,7 +1066,6 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
     DistributedStringColumn(Store* s, int n, ...) : StringColumn() {
         store = s;
         length = 0;
-        num_chunks = 10;
         capacity = num_chunks * INTERNAL_CHUNK_SIZE;
         // Always make enough space
         if ((size_t)n > capacity) {
@@ -1065,7 +1096,6 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
     DistributedStringColumn(Store* s, Column* col) : StringColumn() {
         store = s;
         length = 0;
-        num_chunks = 10;
         capacity = num_chunks * INTERNAL_CHUNK_SIZE;
         init_keys_dist();
 	    init_missings_dist();
@@ -1107,12 +1137,21 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
     String* get(size_t idx) {
         size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
-        Key* k = chunk_keys[array_idx];
-        String** cells = store->get_string_array_(k);
-        String* val = cells[local_idx];
-        delete[] cells;
+        // Load chunk into cache if its not 
+        if (array_idx != cached_chunk_idx) {
+            Key* k = chunk_keys[array_idx];
+            cells_ = store->get_string_array_(k);
+            cached_chunk_idx = array_idx;
+        }
+        // Get value from cache
+        return get_local(local_idx);
+    }
 
-        return val;
+    // Returns the String* at the given index (IN THE LOCAL CACHE)
+    // Assumes the local cache is populated
+    // Input index out of bounds will cause out of bounds error
+    String* get_local(size_t idx) {
+        return cells_[idx];
     }
 
     /** Set value at idx. An out of bound idx is undefined.  */
@@ -1132,6 +1171,9 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
 
         // We may be overwriting a missing, so mark cell as not-missing
         set_missing_dist(idx, false);
+        // To avoid read/write conflicts with local cache:
+        //  Force cache to be re-loaded after a set call
+        cached_chunk_idx = num_chunks; // Unusable chunk idx
     }
 
     // Add more keys to our lists of keys to accomodate for more items
@@ -1145,6 +1187,8 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
         for (size_t i = old_num_chunks; i < num_chunks; i++) {
             store->put_(chunk_keys[i], strings, INTERNAL_CHUNK_SIZE);
         }
+        // Force cache to be re-loaded after a resize
+        cached_chunk_idx = num_chunks; // Unusable chunk idx
     }
 
     // Add String* to "bottom" of column

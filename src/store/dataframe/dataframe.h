@@ -491,4 +491,18 @@ class DistributedDataFrame : public DataFrame {
 
         return new_df;
     }
+    
+    // Indicates whether the cell at col,row is a missing value
+    virtual bool is_missing(size_t col, size_t row) {
+        Sys s;
+        s.p("Yuh\n");
+        return dynamic_cast<DistributedColumn*>(columns[col])->is_missing_dist(row);
+    }
+    
+    // Declares the given row,col cell as missing
+    virtual void set_missing(size_t col, size_t row) {
+        DistributedColumn* c = dynamic_cast<DistributedColumn*>(columns[col]);
+
+        c->set_missing_dist(row, true);
+    }
 };
