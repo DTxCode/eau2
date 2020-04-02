@@ -1,3 +1,4 @@
+#pragma once
 #include <assert.h>
 #include "../../src/store/dataframe/column.h"
 #include "../../src/store/network/master.h"

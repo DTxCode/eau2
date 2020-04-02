@@ -33,7 +33,7 @@ class DistributedStringColumn;
  * * Represents one column of a data frame which holds values of a single type.
  * This abstract class defines methods overriden in subclasses. There is
  * one subclass per element type. 
- * * Columns are mutable, equality is pointr equality. 
+ * * Columns are mutable, equality is pointer equality. 
  * * Columns may have missing values, but the missing counts as a value. 
  * Missings have default values for each type, but their value
  * has no meaning other than to maintain the type of the element. Users are expected
@@ -47,53 +47,20 @@ class DistributedStringColumn;
  * into a new outer array. Missings are stored in the same way. */
 class Column : public Object {
    public:
-    size_t length;      // Count of values(including missings)
-    size_t capacity;    // Count of cells available
-    size_t num_chunks;  // Count of how many internal 'chunk' arrays were using
-    bool** missings;    // Bitmap tracker for missing values
+    size_t length = 0;      // Count of values(including missings)
+    size_t capacity = INTERNAL_CHUNK_SIZE;    // Count of cells available
     bool* missings_;
-
-    // Initialize missings array of arrays
-    // Allocate memory and fill with all 'false'
-    void init_missings() {
-        missings = new bool*[num_chunks];
-        for (size_t i = 0; i < num_chunks; i++) {
-            missings[i] = new bool[INTERNAL_CHUNK_SIZE];
-            for (size_t j = 0; j < INTERNAL_CHUNK_SIZE; j++) {
-                missings[i][j] = false;
-            }
-        }
-    }
 
     // Return whether the element at the given value is a missing value
     // Undefined behavior if the idx is out of bounds
-    bool is_missing(size_t idx) {
-        size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
-        size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
-        return missings[array_idx][local_idx];
-    }
-
-    // Assumes capacity has changed. Reallocate missings array and copy
-    // missings values
-    void resize_missings() {
-        bool** new_missings = new bool*[num_chunks];
-        // Can we avoid initializing first N chunks that were copying?
-        for (size_t i = 0; i < num_chunks; i++) {
-            new_missings[i] = new bool[INTERNAL_CHUNK_SIZE];
-        }
-        for (size_t i = 0; i < (length / INTERNAL_CHUNK_SIZE); i++) {
-            new_missings[i] = missings[i];
-        }
-        delete[] missings;
-        missings = new_missings;
+    virtual bool is_missing(size_t idx) {
+        return missings_[idx];
     }
 
     // Declare the value at idx as missing, does not change or set a value
     // Out of bounds idx is undefined behavior
-    void set_missing(size_t idx) {
-        size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
-        size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
-        missings[array_idx][local_idx] = true;
+    virtual void set_missing(size_t idx) {
+        missings_[idx] = true;
     }
 
     /** Type converters: Return same column under its actual type, or
@@ -139,62 +106,15 @@ class Column : public Object {
 class IntColumn : virtual public Column {
    public:
     int* cells_;
-    int** cells;
 
     // Create empty int column
     IntColumn() {
-        /*
-        num_chunks = 10;
-        capacity = num_chunks * INTERNAL_CHUNK_SIZE;
-        cells = new int*[num_chunks];
-        // Array of integer arrays
-        for (size_t i = 0; i < num_chunks; i++) {
-            cells[i] = new int[INTERNAL_CHUNK_SIZE];
-        }
-        length = 0;
-        init_missings();*/
         cells_ = new int[INTERNAL_CHUNK_SIZE];
         missings_ = new bool[INTERNAL_CHUNK_SIZE];
     }
-
-    // Create int column with n entries, listed in order in
-    // the succeeding parameters
-    IntColumn(int n, ...) {
-        num_chunks = 10;
-        capacity = num_chunks * INTERNAL_CHUNK_SIZE;
-        // Always make enough space
-        if ((size_t)n > capacity) {
-            capacity = n;
-            num_chunks = (n / INTERNAL_CHUNK_SIZE) + 1;
-        }
-        cells = new int*[num_chunks];
-        // Array of integer arrays
-        for (size_t i = 0; i < num_chunks; i++) {
-            cells[i] = new int[INTERNAL_CHUNK_SIZE];
-        }
-        length = 0;
-        va_list vl;
-        va_start(vl, n);
-        int val;
-        for (int i = 0; i < n; i++) {
-            val = va_arg(vl, int);
-            push_back(val);
-        }
-        va_end(vl);
-        init_missings();
-    }
-
-    // Copy constructor. Assumes other column is the same type as this one
-    IntColumn(Column* col) {
-        num_chunks = 10;
-        capacity = num_chunks * INTERNAL_CHUNK_SIZE;
-        cells = new int*[num_chunks];
-        // Array of integer arrays
-        for (size_t i = 0; i < num_chunks; i++) {
-            cells[i] = new int[INTERNAL_CHUNK_SIZE];
-        }
-        length = 0;
-        init_missings();
+	
+	// Copy constructor. Assumes other column is the same type as this one
+    IntColumn(Column* col) : IntColumn() {
         for (size_t row_idx = 0; row_idx < col->size(); row_idx++) {
             int row_val = col->as_int()->get(row_idx);
             push_back(row_val);
@@ -205,29 +125,10 @@ class IntColumn : virtual public Column {
         }
     }
 
-    // Delete column array and int pointers
-    virtual ~IntColumn() {
-        /*for (size_t i = 0; i < num_chunks; i++) {
-            delete[] cells[i];
-            delete[] missings[i];
-        }
-        delete[] missings;
-        delete[] cells;*/
-        delete[] cells_;
-        delete[] missings_;
-    }
-
-    // Returns the integer at the given index.
+ 	// Returns the integer at the given index.
     // Input index out of bounds will cause a runtime error
     virtual int get(size_t idx) {
-        size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
-        size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
-        return cells[array_idx][local_idx];
-    }
-
-    // Returns this column as an integer column
-    virtual IntColumn* as_int() {
-        return this;
+		return cells_[idx];
     }
 
     /** Set value at idx. An out of bound idx is undefined.  */
@@ -235,55 +136,22 @@ class IntColumn : virtual public Column {
         if (idx >= length) {
             return;
         }
-        size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
-        size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
         // Update missing bitmap
         if (is_missing(idx)) {
-            missings[array_idx][local_idx] = false;
+			missings_[idx] = false;
         }
-        cells[array_idx][local_idx] = val;
+        cells_[idx] = val;
     }
 
-    // Double the capacity of the array and move (not copy) the integer
-    // pointers in to new array
-    virtual void resize() {
-        num_chunks = 2 * num_chunks;
-        capacity = INTERNAL_CHUNK_SIZE * num_chunks;
-        int** new_cells = new int*[num_chunks];
-        // Array of integer arrays
-        for (size_t i = 0; i < num_chunks; i++) {
-            new_cells[i] = new int[INTERNAL_CHUNK_SIZE];
-        }
-        for (size_t i = 0; i < (length / INTERNAL_CHUNK_SIZE); i++) {
-            // Move array pointers (internal arrays not being delete)
-            new_cells[i] = cells[i];
-        }
-        delete[] cells;
-        cells = new_cells;
-        resize_missings();
+    // Delete column array and int pointers
+    virtual ~IntColumn() {
+        delete[] cells_;
+        delete[] missings_;
     }
 
-    // Add integer to "bottom" of column
-    virtual void push_back(int val) {
-        if (length == capacity) {
-            resize();
-        }
-        size_t array_idx = length / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
-        size_t local_idx = length % INTERNAL_CHUNK_SIZE;
-        cells[array_idx][local_idx] = val;
-        length++;
-    }
-
-    // Add "missing" (0) to bottom of column
-    virtual void push_back_missing() {
-        if (length == capacity) {
-            resize();
-        }
-        size_t array_idx = length / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
-        size_t local_idx = length % INTERNAL_CHUNK_SIZE;
-        cells[array_idx][local_idx] = 0;
-        missings[array_idx][local_idx] = true;
-        length++;
+    // Returns this column as an integer column
+    virtual IntColumn* as_int() {
+        return this;
     }
 };
 
@@ -294,60 +162,15 @@ class IntColumn : virtual public Column {
 class FloatColumn : virtual public Column {
    public:
     float* cells_;
-    float** cells;
 
     // Create empty column with default capacity 10
     FloatColumn() {
-        /*num_chunks = 10;
-        capacity = num_chunks * INTERNAL_CHUNK_SIZE;
-        cells = new float*[num_chunks];
-        // Array of float arrays
-        for (size_t i = 0; i < num_chunks; i++) {
-            cells[i] = new float[INTERNAL_CHUNK_SIZE];
-        }
-        length = 0;
-        init_missings();*/
         cells_ = new float[INTERNAL_CHUNK_SIZE];
         missings_ = new bool[INTERNAL_CHUNK_SIZE];
     }
 
-    // Create column with n floats as starting values, in order given
-    FloatColumn(int n, ...) {
-        /*num_chunks = 10;
-        capacity = num_chunks * INTERNAL_CHUNK_SIZE;
-        // Always make enough space
-        if ((size_t)n > capacity) {
-            capacity = n;
-            num_chunks = (n / INTERNAL_CHUNK_SIZE) + 1;
-        }
-        cells = new float*[num_chunks];
-        // Array of float arrays
-        for (size_t i = 0; i < num_chunks; i++) {
-            cells[i] = new float[INTERNAL_CHUNK_SIZE];
-        }
-        length = 0;
-        va_list vl;
-        va_start(vl, n);
-        float val;
-        for (int i = 0; i < n; i++) {
-            val = va_arg(vl, double);
-            push_back(val);
-        }
-        va_end(vl);
-        init_missings();*/
-    }
-
-    // Copy constructor. Assumes other column is the same type as this one
-    FloatColumn(Column* col) {
-        /*num_chunks = 10;
-        capacity = num_chunks * INTERNAL_CHUNK_SIZE;
-        cells = new float*[num_chunks];
-        // Array of float arrays
-        for (size_t i = 0; i < num_chunks; i++) {
-            cells[i] = new float[INTERNAL_CHUNK_SIZE];
-        }
-        length = 0;
-        init_missings();
+	// Copy constructor. Assumes other column is the same type as this one
+    FloatColumn(Column* col) : FloatColumn() {
         for (size_t row_idx = 0; row_idx < col->size(); row_idx++) {
             float row_val = col->as_float()->get(row_idx);
             push_back(row_val);
@@ -355,7 +178,25 @@ class FloatColumn : virtual public Column {
             if (col->is_missing(row_idx)) {
                 set_missing(row_idx);
             }
-        }*/
+        }
+    }
+ 	
+	// Returns the float at the given index.
+    // Input index out of bounds will cause a runtime error
+    virtual float get(size_t idx) {
+		return cells_[idx];
+    }
+
+    /** Set value at idx. An out of bound idx is undefined.  */
+    virtual void set(size_t idx, float val) {
+        if (idx >= length) {
+            return;
+        }
+        // Update missing bitmap
+        if (is_missing(idx)) {
+			missings_[idx] = false;
+        }
+        cells_[idx] = val;
     }
 
     // Delete column array and float pointers
@@ -364,46 +205,8 @@ class FloatColumn : virtual public Column {
         delete[] cells_;
     }
 
-    // Get float at index idx. Runtime error if idx is out of bounds
-    virtual float get(size_t idx) {
-        return cells_[idx];
-    }
-
-    // Add given float to "bottom" of the column.
-    // If column is full, it replaces the current last element
-    virtual void push_back(float val) {
-        if (length == capacity) {
-            cells_[length - 1] = val; // Replace current last
-        } else {
-            cells_[length] = val;
-            length++;
-        }
-    }
-
     // Return this column as a FloatColumn
     virtual FloatColumn* as_float() { return this; }
-
-    /** Set value at idx. An out of bound idx is undefined.  */
-    virtual void set(size_t idx, float val) {
-        if (idx >= size()) {
-            return;
-        }
-        // Update missing bitmap
-        if (is_missing(idx)) {
-            missings_[idx] = false;
-        }
-        cells_[idx] = val;
-    }
-
-    // Add "missing" (0.0) to bottom of column
-    virtual void push_back_missing() {
-        if (length == capacity) {
-            missings_[length - 1] = true;
-        } else {
-            missings_[length] = true;
-            length++;
-        }
-    }
 };
 
 /*************************************************************************
@@ -412,58 +215,16 @@ class FloatColumn : virtual public Column {
  */
 class BoolColumn : virtual public Column {
    public:
-    bool** cells;
+    bool* cells_;
 
     // Create empty column with default capacity 10
     BoolColumn() {
-        num_chunks = 10;
-        capacity = num_chunks * INTERNAL_CHUNK_SIZE;
-        cells = new bool*[num_chunks];
-        // Array of bool arrays
-        for (size_t i = 0; i < num_chunks; i++) {
-            cells[i] = new bool[INTERNAL_CHUNK_SIZE];
-        }
-        length = 0;
-        init_missings();
+        cells_ = new bool[INTERNAL_CHUNK_SIZE];
+        missings_ = new bool[INTERNAL_CHUNK_SIZE];
     }
 
-    // Create column with n bools as starting values, in order given
-    BoolColumn(int n, ...) {
-        num_chunks = 10;
-        capacity = num_chunks * INTERNAL_CHUNK_SIZE;
-        // Always make enough space
-        if ((size_t)n > capacity) {
-            capacity = n;
-            num_chunks = (n / INTERNAL_CHUNK_SIZE) + 1;
-        }
-        cells = new bool*[num_chunks];
-        // Array of integer arrays
-        for (size_t i = 0; i < num_chunks; i++) {
-            cells[i] = new bool[INTERNAL_CHUNK_SIZE];
-        }
-        length = 0;
-        va_list vl;
-        va_start(vl, n);
-        bool val;
-        for (int i = 0; i < n; i++) {
-            val = va_arg(vl, int);
-            push_back(val);
-        }
-        va_end(vl);
-        init_missings();
-    }
-
-    // Copy constructor. Assumes other column is the same type as this one
-    BoolColumn(Column* col) {
-        num_chunks = 10;
-        capacity = num_chunks * INTERNAL_CHUNK_SIZE;
-        cells = new bool*[num_chunks];
-        // Array of bool arrays
-        for (size_t i = 0; i < num_chunks; i++) {
-            cells[i] = new bool[INTERNAL_CHUNK_SIZE];
-        }
-        length = 0;
-        init_missings();
+   	// Copy constructor. Assumes other column is the same type as this one
+    BoolColumn(Column* col) : BoolColumn() {
         for (size_t row_idx = 0; row_idx < col->size(); row_idx++) {
             bool row_val = col->as_bool()->get(row_idx);
             push_back(row_val);
@@ -473,83 +234,33 @@ class BoolColumn : virtual public Column {
             }
         }
     }
-
-    // Delete column array and bool pointers
-    virtual ~BoolColumn() {
-        for (size_t i = 0; i < num_chunks; i++) {
-            delete[] cells[i];
-            delete[] missings[i];
-        }
-        delete[] cells;
-        delete[] missings;
-    }
-
-    // Double the capacity of the array and move (not copy) the bool
-    // pointers in to new array
-    virtual void resize() {
-        num_chunks = 2 * num_chunks;
-        capacity = INTERNAL_CHUNK_SIZE * num_chunks;
-        bool** new_cells = new bool*[num_chunks];
-        // Array of integer arrays
-        for (size_t i = 0; i < num_chunks; i++) {
-            new_cells[i] = new bool[INTERNAL_CHUNK_SIZE];
-        }
-        for (size_t i = 0; i < (length / INTERNAL_CHUNK_SIZE); i++) {
-            // Move array pointers (internal arrays not being delete)
-            new_cells[i] = cells[i];
-        }
-        delete[] cells;
-        cells = new_cells;
-        resize_missings();
-    }
-
-    // Get bool at index idx.
-    // Runtime error if idx is out of bounds
+	
+    // Returns the bool at the given index.
+    // Input index out of bounds will cause a runtime error
     virtual bool get(size_t idx) {
-        size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
-        size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
-        return cells[array_idx][local_idx];
+		return cells_[idx];
     }
-
-    // Return this column as a BoolColumn
-    virtual BoolColumn* as_bool() { return this; }
 
     /** Set value at idx. An out of bound idx is undefined.  */
     virtual void set(size_t idx, bool val) {
         if (idx >= length) {
             return;
         }
-        size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
-        size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
         // Update missing bitmap
         if (is_missing(idx)) {
-            missings[array_idx][local_idx] = false;
+			missings_[idx] = false;
         }
-        cells[array_idx][local_idx] = val;
+        cells_[idx] = val;
     }
 
-    // push the given bool on to the 'bottom' of this column
-    virtual void push_back(bool val) {
-        if (length == capacity) {
-            resize();
-        }
-        size_t array_idx = length / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
-        size_t local_idx = length % INTERNAL_CHUNK_SIZE;
-        cells[array_idx][local_idx] = val;
-        length++;
+    // Delete column array and bool pointers
+    virtual ~BoolColumn() {
+        delete[] cells_;
+        delete[] missings_;
     }
 
-    // Add "missing" (true) to bottom of column
-    virtual void push_back_missing() {
-        if (length == capacity) {
-            resize();
-        }
-        size_t array_idx = length / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
-        size_t local_idx = length % INTERNAL_CHUNK_SIZE;
-        cells[array_idx][local_idx] = true;
-        missings[array_idx][local_idx] = true;
-        length++;
-    }
+    // Return this column as a BoolColumn
+    virtual BoolColumn* as_bool() { return this; }
 };
 
 /*************************************************************************
@@ -559,58 +270,16 @@ class BoolColumn : virtual public Column {
  */
 class StringColumn : virtual public Column {
    public:
-    String*** cells;
+    String** cells_;
 
     // Create empty column with default capacity 10
     StringColumn() {
-        num_chunks = 10;
-        capacity = num_chunks * INTERNAL_CHUNK_SIZE;
-        cells = new String**[num_chunks];
-        // Array of String pointer arrays
-        for (size_t i = 0; i < num_chunks; i++) {
-            cells[i] = new String*[INTERNAL_CHUNK_SIZE];
-        }
-        length = 0;
-        init_missings();
+        cells_ = new String*[INTERNAL_CHUNK_SIZE];
+        missings_ = new bool[INTERNAL_CHUNK_SIZE];
     }
-
-    // Create column with n String*s as starting values, in order given
-    StringColumn(int n, ...) {
-        num_chunks = 10;
-        capacity = num_chunks * INTERNAL_CHUNK_SIZE;
-        // Always make enough space
-        if ((size_t)n > capacity) {
-            capacity = n;
-            num_chunks = (n / INTERNAL_CHUNK_SIZE) + 1;
-        }
-        cells = new String**[num_chunks];
-        // Array of String* arrays
-        for (size_t i = 0; i < num_chunks; i++) {
-            cells[i] = new String*[INTERNAL_CHUNK_SIZE];
-        }
-        length = 0;
-        va_list vl;
-        va_start(vl, n);
-        String* val;
-        for (int i = 0; i < n; i++) {
-            val = va_arg(vl, String*);
-            push_back(val);
-        }
-        va_end(vl);
-        init_missings();
-    }
-
-    // Copy constructor. Assumes other column is the same type as this one
-    StringColumn(Column* col) {
-        num_chunks = 10;
-        capacity = num_chunks * INTERNAL_CHUNK_SIZE;
-        cells = new String**[num_chunks];
-        // Array of String* arrays
-        for (size_t i = 0; i < num_chunks; i++) {
-            cells[i] = new String*[INTERNAL_CHUNK_SIZE];
-        }
-        length = 0;
-        init_missings();
+   	
+	// Copy constructor. Assumes other column is the same type as this one
+    StringColumn(Column* col) : StringColumn() {
         for (size_t row_idx = 0; row_idx < col->size(); row_idx++) {
             String* row_val = col->as_string()->get(row_idx);
             push_back(row_val);
@@ -620,83 +289,32 @@ class StringColumn : virtual public Column {
             }
         }
     }
-
-    virtual ~StringColumn() {
-        // don't delete actual string* because they're not ours
-        for (size_t i = 0; i < num_chunks; i++) {
-            delete[] cells[i];
-            delete[] missings[i];
-        }
-        delete[] missings;
-        delete[] cells;
-    }
-
-    // Double the capacity of the array and move (not copy) the String
-    // pointers in to new array
-    virtual void resize() {
-        num_chunks = 2 * num_chunks;
-        capacity = INTERNAL_CHUNK_SIZE * num_chunks;
-        String*** new_cells = new String**[num_chunks];
-        // Array of String* arrays
-        for (size_t i = 0; i < num_chunks; i++) {
-            new_cells[i] = new String*[INTERNAL_CHUNK_SIZE];
-        }
-        for (size_t i = 0; i < (length / INTERNAL_CHUNK_SIZE); i++) {
-            // Move array pointers (internal arrays not being delete)
-            new_cells[i] = cells[i];
-        }
-        delete[] cells;
-        cells = new_cells;
-        resize_missings();
-    }
-
-    // Get String* at index idx.
-    // Runtime error if idx is out of bounds
+	
+    // Returns the string at the given index.
+    // Input index out of bounds will cause a runtime error
     virtual String* get(size_t idx) {
-        size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
-        size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
-        return cells[array_idx][local_idx];
+		return cells_[idx];
     }
 
-    // Add given String* on to 'bottom' of this column
-    virtual void push_back(String* val) {
-        if (length == capacity) {
-            resize();
-        }
-        size_t array_idx = length / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
-        size_t local_idx = length % INTERNAL_CHUNK_SIZE;
-        cells[array_idx][local_idx] = val;
-        length++;
-    }
-
-    // Return this column as a StringColumn
-    virtual StringColumn* as_string() { return this; }
-
-    /** Out of bound idx is undefined. */
+    /** Set value at idx. An out of bound idx is undefined.  */
     virtual void set(size_t idx, String* val) {
         if (idx >= length) {
             return;
         }
-        size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
-        size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
         // Update missing bitmap
         if (is_missing(idx)) {
-            missings[array_idx][local_idx] = false;
+			missings_[idx] = false;
         }
-        cells[array_idx][local_idx] = val;
+        cells_[idx] = val;
     }
 
-    // Add "missing" ("") to bottom of column
-    virtual void push_back_missing() {
-        if (length == capacity) {
-            resize();
-        }
-        size_t array_idx = length / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
-        size_t local_idx = length % INTERNAL_CHUNK_SIZE;
-        cells[array_idx][local_idx] = new String("");
-        missings[array_idx][local_idx] = true;
-        length++;
+    virtual ~StringColumn() {
+        delete[] missings_;
+        delete[] cells_;
     }
+
+    // Return this column as a StringColumn
+    virtual StringColumn* as_string() { return this; }
 };
 
 /* DistributedColumn:
@@ -709,12 +327,11 @@ class StringColumn : virtual public Column {
  * communicates with. */
 class DistributedColumn : virtual public Column {
    public:
+    size_t num_chunks;
     // Gets length, capacity, num_chunks, missings from Column
     Key** missings_keys;  // Keys to bool chunks that make up missing bitmap
     Key** chunk_keys;     // Keys to each chunk of values in this column
     Store* store;         // KVS
-    // local missings array (cache) TODO
-    // bool** missings; // Leaving this is so it compiles
 
     /* All method names appended with '_dist' are purely distributed.
 	*  DistributedColumn successors must be very careful in calling
@@ -879,9 +496,6 @@ class DistributedColumn : virtual public Column {
         store->put_(k, missings, INTERNAL_CHUNK_SIZE);
         delete[] missings;
     }
-
-    virtual char get_type() {}
-    
 };
 
 /*************************************************************************
@@ -980,9 +594,6 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
     IntColumn* as_int() {
         return this;
     }
-
-    // TODO fix maybe 
-    char get_type() { return 'I'; }
 
     // Returns the integer at the given index.
     // Input index out of bounds will cause a runtime error
@@ -1153,9 +764,6 @@ class DistributedBoolColumn : public DistributedColumn, public BoolColumn {
     // Return this column as a BoolColumn
     BoolColumn* as_bool() { return this; }
     
-    // TODO fix maybe 
-    char get_type() { return 'B'; }
-
     // Returns the booleger at the given index.
     // Input index out of bounds will cause a runtime error
     bool get(size_t idx) {
@@ -1322,9 +930,6 @@ class DistributedFloatColumn : public DistributedColumn, public FloatColumn {
         // Memory associated with values of keys in store are deleted in Store destructor
         // Memory associated with cells/missing is deleted in normal IntColumn
     }
-    
-    // TODO fix maybe 
-    char get_type() { return 'F'; }
     
     // Return this column as a FloatColumn
     FloatColumn* as_float() { return this; }
@@ -1494,9 +1099,6 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
         // Memory associated with cells/missing is deleted in normal IntColumn
     }
     
-    // TODO fix maybe 
-    char get_type() { return 'S'; }
-
     // Return this column as a StringColumn
     StringColumn* as_string() { return this; }
 

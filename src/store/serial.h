@@ -48,15 +48,7 @@ class Serializer {
 
     virtual ~Serializer() {}
 
-    // Serialize a given DataFrame object
-    // Serialized message will take the form:
-    // "[Serialized Schema]~[Serialized Column 0]; ... ;[Serialized Column n-1]"
-    virtual char* serialize_dataframe(DataFrame* df);
-
-    // Deserialize a char* buffer into a DataFrame object
-    virtual DataFrame* deserialize_dataframe(char* msg);
-
-    // TODO impl thse
+    // Serialize a distributed dataframe
     virtual char* serialize_distributed_dataframe(DistributedDataFrame* df);
 
     // Deserialize a char* buffer into a DataFrame object given a Store
@@ -71,34 +63,12 @@ class Serializer {
     virtual Message* deserialize_message(char* msg);
 
     virtual char* serialize_dist_col(DistributedColumn* col);
-    /*virtual char* serialize_dist_int_col(DistributedIntColumn* col);
-    virtual char* serialize_dist_bool_col(DistributedBoolColumn* col);
-    virtual char* serialize_dist_float_col(DistributedFloatColumn* col);
-    virtual char* serialize_dist_string_col(DistributedStringColumn* col);
-    */
+    
     virtual DistributedColumn* deserialize_dist_col(char* msg, Store* store, char type);
     virtual DistributedIntColumn* deserialize_dist_int_col(char* msg, Store* store);
     virtual DistributedBoolColumn* deserialize_dist_bool_col(char* msg, Store* store);
     virtual DistributedFloatColumn* deserialize_dist_float_col(char* msg, Store* store);
     virtual DistributedStringColumn* deserialize_dist_string_col(char* msg, Store* store);
-
-    // Serialize an IntColumn
-    virtual char* serialize_int_col(IntColumn* col);
-
-    // Deserialize IntColumn serialized message
-    virtual IntColumn* deserialize_int_col(char* msg);
-
-    // Serialize a FloatColumn to a character array
-    virtual char* serialize_float_col(FloatColumn* col);
-
-    // Deserialize FloatColumn serialized message
-    virtual FloatColumn* deserialize_float_col(char* msg);
-
-    // Serialize a StringColumn to a character array
-    virtual char* serialize_string_col(StringColumn* col);
-
-    // Deserialize StringColumn serialized message
-    virtual StringColumn* deserialize_string_col(char* msg);
 
     // Serialize an int to a character array
     // Methodology attributed to Stack Overflow post:
@@ -135,25 +105,6 @@ class Serializer {
     // Expects char* form of "[serialized Key name],[serialized Key home_node]"
     virtual Key* deserialize_key(char* msg);
 
-    // Generic serialization method for Column type
-    // Process is same for every column, but serialization method used for
-    // cell-type is dependent on the given 'type' parameter.
-    // Providing the wrong type parameter for the given Column results in
-    // undefined behavior.
-    // Serialized string format is "[value],[value], ... ,[value],[value]"
-    // All values, in serialized char* form, are separated by commas
-    virtual char* serialize_col(Column* col, char type);
-
-    // Deserialize a Column serialized message
-    // Message expected to have form "[value],[value], ... ,[value],[value]"
-    // Use push_back method to add values to a new column, with the intention
-    //  of abstracting over implementation details of a column
-    // Params:
-    //  msg: char-array message to be deserialized
-    //  type: char representing type of Column to assume
-    //  fill_col: pointer to column to fill with values
-    virtual void deserialize_col(char* msg, char type, Column* fill_col);
-
     // Serialize StringArray object
     // Basically exact same as StringColumn, but some method names prevent
     // abstracting over both
@@ -179,13 +130,6 @@ class Serializer {
     // Deserialize a boolean serialized message
     // Expects a message in the form "1" or "0"
     virtual bool deserialize_bool(char* msg);
-
-    // Serialize boolean column
-    // Uses same format as other columns, see serialize_col
-    virtual char* serialize_bool_col(BoolColumn* col);
-
-    // Deserialize boolean column from char*
-    virtual BoolColumn* deserialize_bool_col(char* msg);
 
     virtual char* serialize_bools(bool* bools, size_t num_values);
     virtual char* serialize_ints(int* ints, size_t num_values);

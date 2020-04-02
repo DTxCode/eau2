@@ -663,6 +663,8 @@ String** Serializer::deserialize_strings(char* msg) {
 
 /* DEPRECRATED WITH ADDITION OF DISTRIBUTED_[DataFrame and Column] */
 
+/*
+
 // Serialize a given DataFrame object
 // Serialized message will take the form:
 // "[Serialized Schema]~[Serialized Column 0]; ... ;[Serialized Column n-1]"
@@ -891,4 +893,4 @@ BoolColumn* Serializer::deserialize_bool_col(char* msg) {
     deserialize_col(msg, BOOL_TYPE, b_c);
     return b_c;
 }
-
+*/
