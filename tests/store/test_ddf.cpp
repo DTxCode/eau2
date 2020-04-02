@@ -29,9 +29,10 @@ bool test_ddf_multi_column() {
     assert(dist_intc.get(250) == 250);
     assert(dist_floatc.get(250) == (float)250);
     assert(dist_boolc.get(1250));
+    assert(!dist_intc.is_missing_dist(100));
 
-    dist_intc.set_missing(1500);
-    assert(dist_intc.is_missing(1500));
+    dist_intc.set_missing_dist(1500, true);
+    assert(dist_intc.is_missing_dist(1500));
 
     Schema empty_schema;
     DistributedDataFrame df(&store1, empty_schema);
@@ -45,7 +46,7 @@ bool test_ddf_multi_column() {
     assert(5 == df.get_int(0, 1001));
 
     assert(!(df.is_missing(0, 100)));
-    //assert(df.is_missing(0, 1500));
+    assert(df.is_missing(0, 1500));
     assert(df.get_bool(1, 1000));
     printf("%s\n", df.get_string(3, 1200)->c_str());
     

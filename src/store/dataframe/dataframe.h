@@ -149,7 +149,6 @@ class DataFrame : public Object {
     }
 
     // Indicates whether the cell at col,row is a missing value
-    // TODO NEED DISTRIBUTED VERSION OF THIS FOR IS_MISSING IN DIST COL
     virtual bool is_missing(size_t col, size_t row) {
         return columns[col]->is_missing(row);
     }
@@ -494,8 +493,6 @@ class DistributedDataFrame : public DataFrame {
     
     // Indicates whether the cell at col,row is a missing value
     virtual bool is_missing(size_t col, size_t row) {
-        Sys s;
-        s.p("Yuh\n");
         return dynamic_cast<DistributedColumn*>(columns[col])->is_missing_dist(row);
     }
     
