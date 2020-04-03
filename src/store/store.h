@@ -1,3 +1,5 @@
+/* Authors: Ryan Heminway (heminway.r@husky.neu.edu)
+*           David Tandetnik (tandetnik.da@husky.neu.edu) */
 #pragma once
 #include <stdlib.h>
 #include <mutex>
