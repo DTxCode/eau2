@@ -1,5 +1,6 @@
 #pragma once
 #include <assert.h>
+
 #include "../../src/store/dataframe/dataframe.h"
 #include "../../src/store/network/master.h"
 #include "../../src/store/store.cpp"
@@ -48,8 +49,7 @@ bool test_ddf_multi_column() {
     assert(!(df.is_missing(0, 100)));
     assert(df.is_missing(0, 1500));
     assert(df.get_bool(1, 1000));
-    printf("%s\n", df.get_string(3, 1200)->c_str());
-    
+
     s.shutdown();
     while (!store1.is_shutdown()) {
     }
