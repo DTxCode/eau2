@@ -1,3 +1,5 @@
+/* Authors: Ryan Heminway (heminway.r@husky.neu.edu)
+*           David Tandetnik (tandetnik.da@husky.neu.edu) */
 #include "../../src/store/store.cpp"
 #include "../../src/client/application.cpp"
 #include "../../src/store/network/master.h"

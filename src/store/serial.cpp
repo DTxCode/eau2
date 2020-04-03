@@ -1,6 +1,6 @@
 // lang::CwC
-// Authors: heminway.r@husky.neu.edu
-//          tandetnik.da@husky.neu.edu
+/* Authors: Ryan Heminway (heminway.r@husky.neu.edu)
+*           David Tandetnik (tandetnik.da@husky.neu.edu) */
 #pragma once
 #include "serial.h"
 #include <stdio.h>

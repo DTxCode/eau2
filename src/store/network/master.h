@@ -1,3 +1,5 @@
+/* Authors: Ryan Heminway (heminway.r@husky.neu.edu)
+*           David Tandetnik (tandetnik.da@husky.neu.edu) */
 #include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
