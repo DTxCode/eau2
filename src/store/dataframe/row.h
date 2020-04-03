@@ -223,6 +223,10 @@ class Row : public Object {
 
         // pass each field of this row to the fielder
         for (size_t i = 0; i < num_columns; i++) {
+            if (is_missing(i)) {
+                continue;  // Do not pass missings to fielder
+            }
+
             char type = field_types[i];
 
             if (type == INT_TYPE) {
