@@ -34,12 +34,12 @@ bool test_simple_put_get() {
     bool* bools2 = store.get_bool_array_(&k1);
     int* ints2 = store.get_int_array_(&k2);
     float* floats2 = store.get_float_array_(&k3);
-    String* strings2 = store.get_string_array_(&k4);
+    String** strings2 = store.get_string_array_(&k4);
 
     assert(bools[1] == bools2[1]);
     assert(ints[1] == ints2[1]);
     assert(floats[1] == floats2[1]);
-    assert(strings[1].equals(&strings2[1]));
+    assert(strings[1]->equals(strings2[1]));
 
     //delete strings2[0];
     //delete strings2[1];
@@ -87,7 +87,7 @@ bool test_network_put_get() {
     bool* bools2 = store1.get_bool_array_(&k1);
     int* ints2 = store1.get_int_array_(&k2);
     float* floats2 = store1.get_float_array_(&k3);
-    String* strings2 = store1.get_string_array_(&k4);
+    String** strings2 = store1.get_string_array_(&k4);
 
     assert(bools[1] == bools2[1]);
     assert(ints[1] == ints2[1]);
@@ -123,10 +123,10 @@ bool test_network_distributed_df() {
     // key to store on another node
     Key k((char*)"key", 1);
 
-    DistributedIntColumn* i_c = new DistributedIntColumn(4, 1, 2, 3, 5);
+    DistributedIntColumn* i_c = new DistributedIntColumn(&store1, 4, 1, 2, 3, 5);
     Schema empty_schema;
-    DistributedDataFrame df(empty_schema);
-    df.add_column(i_c, nullptr);
+    DistributedDataFrame df(&store1, empty_schema);
+    df.add_column(i_c);
 
     // Put and get the DDF to/from the other node
     store1.put(&k, &df);
@@ -136,7 +136,6 @@ bool test_network_distributed_df() {
     assert(df.get_int(0, 1) == df2->get_int(0, 1));
     assert(df.get_int(0, 2) == df2->get_int(0, 2));
     assert(df.get_int(0, 3) == df2->get_int(0, 3));
-    assert(df.get_int(0, 4) == df2->get_int(0, 4));
 
     // shutdown system
     s.shutdown();
@@ -164,10 +163,10 @@ bool test_network_distributed_df_waitAndGet() {
     // key to store on another node
     Key k((char*)"key", 1);
 
-    DistributedIntColumn* i_c = new DistributedIntColumn(4, 1, 2, 3, 5);
+    DistributedIntColumn* i_c = new DistributedIntColumn(&store1, 4, 1, 2, 3, 5);
     Schema empty_schema;
-    DistributedDataFrame df(empty_schema);
-    df.add_column(i_c, nullptr);
+    DistributedDataFrame df(&store1, empty_schema);
+    df.add_column(i_c);
 
     // Put and get the DDF to/from the other node
     store1.put(&k, &df);
@@ -177,7 +176,6 @@ bool test_network_distributed_df_waitAndGet() {
     assert(df.get_int(0, 1) == df2->get_int(0, 1));
     assert(df.get_int(0, 2) == df2->get_int(0, 2));
     assert(df.get_int(0, 3) == df2->get_int(0, 3));
-    assert(df.get_int(0, 4) == df2->get_int(0, 4));
 
     // shutdown system
     s.shutdown();
