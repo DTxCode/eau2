@@ -3,7 +3,7 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <poll.h>
-#include <stropts.h>
+//#include <stropts.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include "../../utils/helper.h"
