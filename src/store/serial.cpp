@@ -2,6 +2,7 @@
 /* Authors: Ryan Heminway (heminway.r@husky.neu.edu)
 *           David Tandetnik (tandetnik.da@husky.neu.edu) */
 #pragma once
+#include <iostream>
 #include "serial.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -302,8 +303,8 @@ char* Serializer::serialize_string(String* value) {
     // Do a fake write to check how much space we need
     size_t buf_size = snprintf(nullptr, 0, "%s", value->c_str()) + 1;
     data = new char[buf_size];
-    // Do a real write with proper amount of space
-    snprintf(data, buf_size, "%s", value->c_str());
+    strcpy(data, value->c_str());
+    data[buf_size - 1] = '\0';
     return data;
 }
 
@@ -311,7 +312,7 @@ char* Serializer::serialize_string(String* value) {
 String* Serializer::deserialize_string(char* msg) {
     // Handle case of empty String
     if (msg == nullptr) {
-        return nullptr;
+        return new String("");
     }
     return new String(static_cast<const char*>(msg));
 }
@@ -651,10 +652,10 @@ String** Serializer::deserialize_strings(char* msg) {
 
     String** strings = new String*[num_strings];
 
-    char* token = strtok(msg, ",");
+    char* token = strsep(&msg, ",");
     for (size_t i = 0; i < num_strings; i++) {
         strings[i] = deserialize_string(token);
-        token = strtok(nullptr, ",");
+        token = strsep(&msg, ",");
     }
 
     delete msg;

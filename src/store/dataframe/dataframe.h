@@ -225,7 +225,6 @@ class DataFrame : public Object {
             return;
         }
 
-        // rows can't be named at the moment
         schema.add_row();
 
         // loop over all of the columns
@@ -423,6 +422,7 @@ class DataFrame : public Object {
     static DistributedDataFrame* fromArray(Key* key, Store* store, size_t count, int* vals);
     static DistributedDataFrame* fromArray(Key* key, Store* store, size_t count, String** vals);
     static DistributedDataFrame* fromDistributedColumn(Key* key, Store* store, DistributedColumn* col);
+    static DistributedDataFrame* fromSorFile(Key* key, Store* store, FILE* fp); 
 
     static DistributedDataFrame* fromScalar(Key* key, Store* store, float val);
     static DistributedDataFrame* fromScalar(Key* key, Store* store, bool val);
@@ -437,10 +437,12 @@ class DistributedDataFrame : public DataFrame {
 
     DistributedDataFrame(Store* store, DataFrame& df) : DataFrame(df) {
         this->store = store;
+        set_empty_cols_(schema);
     }
 
     DistributedDataFrame(Store* store, Schema& scm) : DataFrame(scm) {
         this->store = store;
+        set_empty_cols_(schema);
     }
 
     // Creates and sets empty columns in this dataframe according to the given schema

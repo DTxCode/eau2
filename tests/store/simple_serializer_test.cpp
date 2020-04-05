@@ -3,33 +3,6 @@
 #include "../../src/store/serial.cpp"
 #include "../../src/store/network/master.h"
 
-// Test that dataframe serialization works as intended
-/*bool test_df_serialize() {
-    IntColumn* i_c = new IntColumn(4, 1, 2, 3, 5);
-    BoolColumn* b_c = new BoolColumn(4, true, true, false, true);
-    StringColumn* s_c = new StringColumn(4, new String("This"), new String("Is"),
-        new String("My"), new String("Test"));
-
-    Schema empty_schema;
-    DataFrame df(empty_schema);
-    df.add_column(i_c, nullptr);
-    df.add_column(b_c, nullptr); 
-    df.add_column(s_c, nullptr);
-
-    Serializer serial;
-
-    char* serialized_df = serial.serialize_dataframe(&df);
-    Sys s;
-    //s.p(serialized_df);
-    //s.p("\n");
-
-    DataFrame* new_df = serial.deserialize_dataframe(serialized_df);
-    
-    //return (new_df->get_int(0, 2) == df.get_int(0,2));
-    //return (new_df->get_string(1, 2)->equals(df.get_string(1,2)));
-    return new_df->get_bool(1, 3);
-}*/
-
 // Test Key serialization (newly added in Milestone 3)
 bool test_key_serialize() {
     Key k1((char*)"tester", 2);
@@ -123,21 +96,34 @@ bool test_string_array_serialize() {
     size_t num_strings = 5;
     String* strings1[num_strings];
     for (size_t i = 0; i < num_strings; i++) {
-        strings1[i] = new String("testing");;
+        strings1[i] = new String("");;
     }
+    strings1[num_strings - 1] = new String("testing");
+    strings1[2] = new String("yes");
 
     Serializer serial;
 
     Sys s;
     char* ser_strings1 = serial.serialize_strings(strings1, num_strings);
 
-    //s.p(ser_strings1);
+    s.p(ser_strings1);
+    s.p("\n");
 
     String** new_strings1 = serial.deserialize_strings(ser_strings1);
+
+    s.p(new_strings1[0]->c_str());
+    s.p("\n");
+    s.p(new_strings1[1]->c_str());
+    s.p("\n");
+    s.p(new_strings1[2]->c_str());
+    s.p("\n");
+    s.p(new_strings1[3]->c_str());
+    s.p("\n");
+    s.p(new_strings1[4]->c_str());
+    s.p("\n");
+
     bool ret_value = true;
-    for (size_t i = 0; i < num_strings; i++) {
-        ret_value = ret_value && (strcmp(new_strings1[i]->c_str(), "testing") == 0);
-    }
+    assert(new_strings1[2]->equals(strings1[2]));
 
     return ret_value;
 }
@@ -205,6 +191,7 @@ bool test_ddf_serialize() {
 
 int main() {
     assert(test_string_array_serialize());  
+    printf("========= serialize_string_array PASSED =============\n");
     assert(test_int_array_serialize());
     printf("========= serialize_int_array PASSED =============\n");
     assert(test_bool_array_serialize());

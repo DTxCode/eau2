@@ -140,9 +140,7 @@ class IntColumn : virtual public Column {
             return;
         }
         // Update missing bitmap
-        if (is_missing(idx)) {
-            missings_[idx] = false;
-        }
+        missings_[idx] = false;
         cells_[idx] = val;
     }
 
@@ -196,9 +194,7 @@ class FloatColumn : virtual public Column {
             return;
         }
         // Update missing bitmap
-        if (is_missing(idx)) {
-            missings_[idx] = false;
-        }
+        missings_[idx] = false;
         cells_[idx] = val;
     }
 
@@ -250,9 +246,7 @@ class BoolColumn : virtual public Column {
             return;
         }
         // Update missing bitmap
-        if (is_missing(idx)) {
-            missings_[idx] = false;
-        }
+        missings_[idx] = false;
         cells_[idx] = val;
     }
 
@@ -305,9 +299,7 @@ class StringColumn : virtual public Column {
             return;
         }
         // Update missing bitmap
-        if (is_missing(idx)) {
-            missings_[idx] = false;
-        }
+        missings_[idx] = false;
         cells_[idx] = val;
     }
 
@@ -705,14 +697,14 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
         if (length == capacity) {
             resize();
         }
+        length++;
         // Default value in store already exists,
         // Mark value as missing and increment length
-        set_missing_dist(length, true);
+        set(length - 1, 0);
+        set_missing_dist(length - 1, true);
 
         // force cache refresh
         cached_missings_idx = num_chunks;
-
-        length++;
     }
 };
 
@@ -890,19 +882,19 @@ class DistributedBoolColumn : public DistributedColumn, public BoolColumn {
         cached_chunk_idx = num_chunks;
     }
 
-    // Add "missing" (0) to bottom of column
+    // Add "missing" (true) to bottom of column
     void push_back_missing() {
         if (length == capacity) {
             resize();
         }
+        length++;
         // Default value in store already exists,
         // Mark value as missing and increment length
-        set_missing_dist(length, true);
+        set(length - 1, true);
+        set_missing_dist(length - 1, true);
 
         // force cache refresh
         cached_missings_idx = num_chunks;
-
-        length++;
     }
 };
 
@@ -1059,7 +1051,7 @@ class DistributedFloatColumn : public DistributedColumn, public FloatColumn {
         }
     }
 
-    // Add floateger to "bottom" of column
+    // Add float to "bottom" of column
     void push_back(float val) {
         if (length == capacity) {
             resize();
@@ -1080,17 +1072,19 @@ class DistributedFloatColumn : public DistributedColumn, public FloatColumn {
         cached_chunk_idx = num_chunks;
     }
 
-    // Add "missing" (0) to bottom of column
+    // Add "missing" (0.0) to bottom of column
     void push_back_missing() {
         if (length == capacity) {
             resize();
         }
+        length++;
         // Default value in store already exists,
         // Mark value as missing and increment length
-        set_missing_dist(length, true);
+        set(length - 1, (float)0.0);
+        set_missing_dist(length - 1, true);
+
         // force cache refresh
         cached_chunk_idx = num_chunks;
-        length++;
     }
 };
 
@@ -1269,12 +1263,13 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
         if (length == capacity) {
             resize();
         }
+        length++;
         // Default value in store already exists,
         // Mark value as missing and increment length
-        set_missing_dist(length, true);
+        set(length - 1, new String(""));
+        set_missing_dist(length - 1, true);
 
         // force cache refresh
         cached_chunk_idx = num_chunks;
-        length++;
     }
 };
