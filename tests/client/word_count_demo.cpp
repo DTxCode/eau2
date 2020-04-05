@@ -1,5 +1,7 @@
+#pragma once
 #include <map>
 
+#include "../../src/store/store.cpp"
 #include "../../src/client/application.cpp"
 #include "../../src/store/dataframe/fielder.h"
 #include "../../src/store/dataframe/rower.h"
@@ -81,19 +83,31 @@ class WordCounter : public Rower {
  *   1) read the data (on to a single node)
  *   2) produce word counts per homed chunks, in parallel
  *   3) combine the results
+ *
+ * Assumes given file will be a SoR file of only strings. Malformed 
+ * files or non-existent filenames result in undefined behavior. 
  *******************************************************************/
 class WordCount : public Application {
    public:
     Key* data_key;
-    const char* file_name;
+    FILE* file;
 
-    WordCount(size_t idx, const char* file_name, Store* store) : Application(idx, store) {
+    WordCount(char* file_path, Store* store) : Application(store) {
         data_key = new Key("wc-data", 0);
-        this->file_name = file_name;
+        // Open file if its provided
+        if (file_path != nullptr) {
+            file = fopen(file_path, "r");
+            if (file == nullptr) {
+                exit_with_msg("WORDCOUNT: Failed to open provided file");
+            }
+        }
+        run_();
     }
 
     ~WordCount() {
         delete data_key;
+        //fclose(file);
+        delete file;
     }
 
     /** The master nodes reads the input, then all of the nodes count. */
@@ -101,7 +115,7 @@ class WordCount : public Application {
         // Node 0 distibutes the data, waits for everyone (including itself) to do their local_maps,
         // and then combines the results with reduce()
         if (this_node() == 0) {
-            delete DataFrame::fromSorFile(data_key, &store, file_name);
+            delete DataFrame::fromSorFile(data_key, store, file);
             local_count();
             reduce();
         } else {
@@ -111,9 +125,9 @@ class WordCount : public Application {
 
     // Returns a key for storing a node's partial WordCounts results
     Key* mk_key(size_t idx) {
-        size_t needed_buf_size = snprintf(nullptr, 0, "%s%d", "wc-result-", idx) + 1;
+        size_t needed_buf_size = snprintf(nullptr, 0, "%s%zu", "wc-result-", idx) + 1;
         char key_name[needed_buf_size];
-        snprintf(key_name, needed_buf_size, "%s%d", "wc-result-", idx);
+        snprintf(key_name, needed_buf_size, "%s%zu", "wc-result-", idx);
 
         return new Key(key_name, idx);
     }
@@ -133,7 +147,7 @@ class WordCount : public Application {
         Row word_count_pair(string_int_schema);
 
         // loop through map and add entries to 2 column DDF
-        for (std::map<String*, int>::iterator it = word_counts->begin(); it != word_counts.end(); it++) {
+        for (std::map<String*, int>::iterator it = word_counts->begin(); it != word_counts->end(); it++) {
             String* word = it->first;
             int count = it->second;
 
@@ -145,7 +159,7 @@ class WordCount : public Application {
 
         // Save DDF with partial results
         Key* partial_results_key = mk_key(this_node());
-        store->put(partial_results_key, partial_results);
+        store->put(partial_results_key, &partial_results);
 
         delete partial_results_key;
         delete words;
@@ -169,13 +183,15 @@ class WordCount : public Application {
 
         // Loop through final map and print counts
         Sys s;
-        for (std::map<String*, int>::iterator it = word_counts->begin(); it != word_counts.end(); it++) {
+        for (std::map<String*, int>::iterator it = final_word_counts->begin(); it != final_word_counts->end(); it++) {
             String* word = it->first;
             int count = it->second;
 
             s.p(word->c_str());
             s.p(": ");
-            s.pln(count);
+            s.p(count);
+            s.p("\n");
+            s.p("testig\n");
         }
     }
 
@@ -184,7 +200,6 @@ class WordCount : public Application {
         // Loop through DF and updates mappings in map
         for (size_t row_idx = 0; row_idx < df->nrows(); row_idx++) {
             String* word = df->get_string(0, row_idx);
-            int count = df->get_int(1, row_idx);
 
             if (map->count(word)) {
                 // count already exists
@@ -208,9 +223,11 @@ int test_word_count() {
     Store store2(1, (char*)"127.0.0.1", 8001, master_ip, master_port);
     Store store3(2, (char*)"127.0.0.1", 8002, master_ip, master_port);
 
-    WordCount wc1(0, "FILENAME HERE", store1);
-    WordCount wc2(1, nullptr, store2);
-    WordCount wc3(2, nullptr, store3);
+    WordCount wc1("data/wc_data.sor", &store1);
+    WordCount wc2(nullptr, &store2);
+    WordCount wc3(nullptr, &store3);
+
+
 
     // shutdown system
     s.shutdown();
