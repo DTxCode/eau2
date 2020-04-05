@@ -1,4 +1,3 @@
-#pragma once
 #include <map>
 
 
@@ -107,6 +106,7 @@ class WordCount : public Application {
 
     /** The master nodes reads the input, then all of the nodes count. */
     void run_() override {
+	printf("WC %zu is running\n", this_node());
         // Node 0 distibutes the data, waits for everyone (including itself) to do their local_maps,
         // and then combines the results with reduce()
         if (this_node() == 0) {
@@ -135,6 +135,7 @@ class WordCount : public Application {
 
     /** Compute word counts on the local node and build a data frame. */
     void local_count() {
+	printf("local count on %zu starting\n", this_node());
         DistributedDataFrame* words = store->waitAndGet(data_key);
 
         // Create rower, apply it with local_map, and get the results in a map
@@ -192,7 +193,6 @@ class WordCount : public Application {
             s.p(": ");
             s.p(count);
             s.p("\n");
-            s.p("testig\n");
         }
     }
 
@@ -215,6 +215,7 @@ class WordCount : public Application {
     }
 };
 
+
 int test_word_count() {
     char* master_ip = (char*)"127.0.0.1";
     int master_port = 8888;
@@ -226,9 +227,22 @@ int test_word_count() {
     Store store3(2, (char*)"127.0.0.1", 8002, master_ip, master_port);
 
     //data/wc_data.sor
-    WordCount wc1("tests/test_data/words.sor", &store1);
-    WordCount wc2(nullptr, &store2);
-    WordCount wc3(nullptr, &store3);
+    std::thread t1([](Store& store1) {
+	WordCount wc("tests/test_data/words.sor", &store1);
+    }, std::ref(store1));
+
+    std::thread t2([](Store& store2) {
+	WordCount wc(nullptr, &store2);
+    }, std::ref(store2));
+
+    std::thread t3([](Store& store3) {
+	WordCount wc(nullptr, &store3);
+    }, std::ref(store3));
+
+
+    t1.join();
+    t2.join();
+    t3.join();
 
     // shutdown system
     s.shutdown();

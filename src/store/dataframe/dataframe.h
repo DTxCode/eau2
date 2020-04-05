@@ -29,31 +29,31 @@ class DistributedDataFrame;
  */
 class DataFrame : public Object {
    public:
-    Schema& schema;
+    Schema* schema;
     Column** columns;
 
     /** Create a data frame from a schema and columns. All columns are created
     * empty. */
-    // TAKES OWNERSHIP OF GIVEN SCHEMA
-    DataFrame(Schema& scm) : schema(scm) {
+    DataFrame(Schema& scm) {
+	schema = new Schema(scm);
         columns = new Column*[scm.width()];
 
         set_empty_cols_(schema);
     }
 
     virtual ~DataFrame() {
-        for (size_t col_idx = 0; col_idx < schema.width(); col_idx++) {
+        for (size_t col_idx = 0; col_idx < schema->width(); col_idx++) {
             delete columns[col_idx];
         }
 
         delete[] columns;
-	delete &schema;
+	delete schema;
     }
 
     // Creates and sets empty columns in this dataframe according to the given schema
-    virtual void set_empty_cols_(Schema& schema) {
-        for (size_t col_idx = 0; col_idx < schema.width(); col_idx++) {
-            char col_type = schema.col_type(col_idx);
+    virtual void set_empty_cols_(Schema* schema) {
+        for (size_t col_idx = 0; col_idx < schema->width(); col_idx++) {
+            char col_type = schema->col_type(col_idx);
 
             if (col_type == INT_TYPE) {
                 columns[col_idx] = new IntColumn();
@@ -70,7 +70,7 @@ class DataFrame : public Object {
     /** Returns the dataframe's schema. Modifying the schema after a dataframe
     * has been created is undefined. */
     Schema& get_schema() {
-        return schema;
+        return *schema;
     }
 
     /** Adds a column this dataframe, updates the schema, the new column
@@ -79,7 +79,7 @@ class DataFrame : public Object {
     virtual void add_column(Column* col) {
         // If this is not the first column being added, only accept it if
         // it has the same number of rows as what's already in the dataframe
-        if (schema.width() != 0 && col->size() != schema.length()) {
+        if (schema->width() != 0 && col->size() != schema->length()) {
             return;
         }
 
@@ -88,14 +88,14 @@ class DataFrame : public Object {
         Column* col_copy = get_col_copy_(col);
 
         // add new column information to schema
-        size_t old_schema_width = schema.width();
-        schema.add_column(col_type);
-        size_t new_schema_width = schema.width();
+        size_t old_schema_width = schema->width();
+        schema->add_column(col_type);
+        size_t new_schema_width = schema->width();
 
         // If this is the first column being added, record new row info
-        if (schema.length() == 0) {
+        if (schema->length() == 0) {
             for (size_t row_idx = 0; row_idx < col_copy->size(); row_idx++) {
-                schema.add_row();
+                schema->add_row();
             }
         }
 
@@ -191,7 +191,7 @@ class DataFrame : public Object {
     */
     virtual void fill_row(size_t idx, Row& row) {
         // loop over all of the columns
-        for (size_t col_idx = 0; col_idx < schema.width(); col_idx++) {
+        for (size_t col_idx = 0; col_idx < schema->width(); col_idx++) {
             Column* col = columns[col_idx];
             char col_type = col->get_type();
 
@@ -222,15 +222,15 @@ class DataFrame : public Object {
     *  the right schema and be filled with values, otherwise undedined.
     * Won't add row if it's not of the right width.  */
     virtual void add_row(Row& row) {
-        if (row.width() != schema.width()) {
+        if (row.width() != schema->width()) {
             // dont add row of incorrect width
             return;
         }
 
-        schema.add_row();
+        schema->add_row();
 
         // loop over all of the columns
-        for (size_t col_idx = 0; col_idx < schema.width(); col_idx++) {
+        for (size_t col_idx = 0; col_idx < schema->width(); col_idx++) {
             Column* col = columns[col_idx];
             char col_type = col->get_type();
 
@@ -277,18 +277,18 @@ class DataFrame : public Object {
 
     /** The number of rows in the dataframe. */
     virtual size_t nrows() {
-        return schema.length();
+        return schema->length();
     }
 
     /** The number of columns in the dataframe.*/
     virtual size_t ncols() {
-        return schema.width();
+        return schema->width();
     }
 
     /** Helper function to visit a chunk of rows in order. Row_start and 
         row_end must be valid row indices, or behavior is undefined. **/
     void map_chunk(size_t row_start, size_t row_end, Rower& r) {
-        Row* row = new Row(schema);  // TODO no need to be heap allocated
+        Row* row = new Row(*schema);  // TODO no need to be heap allocated
         for (size_t row_idx = row_start; row_idx <= row_end; row_idx++) {
             fill_row(row_idx, *row);
 
@@ -365,7 +365,7 @@ class DataFrame : public Object {
         DataFrame* new_df = new DataFrame(get_schema());
 
         // pass this row to the Rower and add to new_df is rower accepts it
-        Row* row = new Row(schema);
+        Row* row = new Row(*schema);
         for (size_t row_idx = 0; row_idx < nrows(); row_idx++) {
             fill_row(row_idx, *row);
 
@@ -448,9 +448,9 @@ class DistributedDataFrame : public DataFrame {
     }
 
     // Creates and sets empty columns in this dataframe according to the given schema
-    void set_empty_cols_(Schema& schema) {
-        for (size_t col_idx = 0; col_idx < schema.width(); col_idx++) {
-            char col_type = schema.col_type(col_idx);
+    void set_empty_cols_(Schema* schema) {
+        for (size_t col_idx = 0; col_idx < schema->width(); col_idx++) {
+            char col_type = schema->col_type(col_idx);
 
             if (col_type == INT_TYPE) {
                 columns[col_idx] = new DistributedIntColumn(store);
@@ -485,7 +485,7 @@ class DistributedDataFrame : public DataFrame {
         DistributedDataFrame* new_df = new DistributedDataFrame(store, get_schema());
 
         // pass this row to the Rower and add to new_df is rower accepts it
-        Row* row = new Row(schema);
+        Row* row = new Row(*schema);
         for (size_t row_idx = 0; row_idx < nrows(); row_idx++) {
             fill_row(row_idx, *row);
 
@@ -512,7 +512,7 @@ class DistributedDataFrame : public DataFrame {
 
     /** Maps given rower over all rows in this DDF that are on this node **/
     void local_map(Rower& r) {
-        Row row(schema);
+        Row row(*schema);
 
         for (size_t row_idx = 0; row_idx <= nrows(); row_idx++) {
             bool local_row = dynamic_cast<DistributedColumn*>(columns[0])->is_row_local(row_idx);

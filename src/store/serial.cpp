@@ -72,9 +72,9 @@ DistributedDataFrame* Serializer::deserialize_distributed_dataframe(char* msg, S
         serialized_cols[i] = strtok(nullptr, "~");
     }
 
-    Schema* empty_schema = new Schema();
+    Schema empty_schema;
     // Initialize empty dataframe
-    DistributedDataFrame* df = new DistributedDataFrame(store, *empty_schema);
+    DistributedDataFrame* df = new DistributedDataFrame(store, empty_schema);
 
     // Deserialize all serialized cols into real columns
     for (size_t i = 0; i < schema->width(); i++) {
