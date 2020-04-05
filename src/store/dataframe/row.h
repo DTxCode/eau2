@@ -48,7 +48,7 @@ class Row : public Object {
             fields[i] = new Field();
             field_types[i] = scm.col_type(i);
         }
-        
+
         // Init missings to be all true in this case
         missings = new bool[num_columns];
         for (size_t i = 0; i < num_columns; i++) {
@@ -58,6 +58,8 @@ class Row : public Object {
 
     ~Row() {
         for (size_t i = 0; i < num_columns; i++) {
+            // Note: no longer taking ownership of string*
+            // delete fields[i]->s_val;  // If we're given a string*, set() says we should delete it.
             delete fields[i];
         }
 
@@ -65,7 +67,7 @@ class Row : public Object {
         delete[] fields;
         delete[] missings;
     }
-    
+
     // Return whether the element at the given value is a missing value
     // Undefined behavior if the idx is out of bounds
     bool is_missing(size_t col_idx) {
@@ -102,7 +104,7 @@ class Row : public Object {
             // column does not hold floats
             return;
         }
-        
+
         // Check and update missings
         missings[col] = false;
 
@@ -120,7 +122,7 @@ class Row : public Object {
             // column does not hold bools
             return;
         }
-        
+
         // Check and update missings
         missings[col] = false;
 
@@ -157,7 +159,7 @@ class Row : public Object {
         } else if (col_type == BOOL_TYPE) {
             set(col_idx, false);
         } else if (col_type == FLOAT_TYPE) {
-            set(col_idx, (float) 0.0);
+            set(col_idx, (float)0.0);
         } else {
             set(col_idx, new String(""));
         }
@@ -212,6 +214,10 @@ class Row : public Object {
 
         // pass each field of this row to the fielder
         for (size_t i = 0; i < num_columns; i++) {
+            if (is_missing(i)) {
+                continue;  // Do not pass missings to fielder
+            }
+
             char type = field_types[i];
 
             if (type == INT_TYPE) {
