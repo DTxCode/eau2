@@ -6,6 +6,11 @@ run:
 
 ### Client
 
+# WordCount Demo
+test-word-count:
+	g++ -std=c++11 -Wall -pthread -g tests/client/word_count_demo.cpp -o word_count_demo
+	./word_count_demo
+
 # Network Demo Application test
 test-client-with-network:
 	g++ -std=c++11 -Wall -pthread -g tests/client/network_demo_test.cpp -o network_demo
