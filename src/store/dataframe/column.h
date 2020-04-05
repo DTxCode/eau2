@@ -354,8 +354,8 @@ class DistributedColumn : virtual public Column {
         this->capacity = num_chunks * INTERNAL_CHUNK_SIZE;
         this->chunk_keys = chunk_keys;
         this->missings_keys = missings_keys;
-        cached_chunk_idx = -1;
-        cached_missings_idx = -1;
+        cached_chunk_idx = num_chunks;
+        cached_missings_idx = num_chunks;
     }
 
     virtual ~DistributedColumn() {
@@ -512,7 +512,15 @@ class DistributedColumn : virtual public Column {
 
         delete[] missings;
         // Force cache to be reset
-        cached_missings_idx = -1;
+        cached_missings_idx = num_chunks;
+    }
+
+    // Whether the given row of this distributed column is stored on this node
+    bool is_row_local(size_t row_idx) {
+        size_t array_idx = row_idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
+
+        Key* k = chunk_keys[array_idx];
+        return k->get_home_node() == store->this_node();
     }
 };
 
@@ -654,7 +662,7 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
 
         // To avoid read/write conflicts with local cache:
         //  Force cache to be re-loaded after a set call
-        cached_chunk_idx = -1;
+        cached_chunk_idx = num_chunks;
     }
 
     // Add more keys to our lists of keys to accomodate for more items
@@ -689,7 +697,7 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
         delete[] cells;
 
         // force cache refresh
-        cached_chunk_idx = -1;
+        cached_chunk_idx = num_chunks;
     }
 
     // Add "missing" (0) to bottom of column
@@ -702,7 +710,7 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
         set_missing_dist(length, true);
 
         // force cache refresh
-        cached_missings_idx = -1;
+        cached_missings_idx = num_chunks;
 
         length++;
     }
@@ -844,7 +852,7 @@ class DistributedBoolColumn : public DistributedColumn, public BoolColumn {
 
         // To avoid read/write conflicts with local cache:
         //  Force cache to be re-loaded after a set call
-        cached_chunk_idx = -1;
+        cached_chunk_idx = num_chunks;
     }
 
     // Add more keys to our lists of keys to accomodate for more items
@@ -879,7 +887,7 @@ class DistributedBoolColumn : public DistributedColumn, public BoolColumn {
         delete[] cells;
 
         // force cache refresh
-        cached_chunk_idx = -1;
+        cached_chunk_idx = num_chunks;
     }
 
     // Add "missing" (0) to bottom of column
@@ -892,7 +900,7 @@ class DistributedBoolColumn : public DistributedColumn, public BoolColumn {
         set_missing_dist(length, true);
 
         // force cache refresh
-        cached_missings_idx = -1;
+        cached_missings_idx = num_chunks;
 
         length++;
     }
@@ -1035,7 +1043,7 @@ class DistributedFloatColumn : public DistributedColumn, public FloatColumn {
         set_missing_dist(idx, false);
         // To avoid read/write conflicts with local cache:
         //  Force cache to be re-loaded after a set call
-        cached_chunk_idx = -1;  // Unusable chunk idx
+        cached_chunk_idx = num_chunks;  // Unusable chunk idx
     }
 
     // Add more keys to our lists of keys to accomodate for more items
@@ -1069,7 +1077,7 @@ class DistributedFloatColumn : public DistributedColumn, public FloatColumn {
         delete[] cells;
 
         // force cache refresh
-        cached_chunk_idx = -1;
+        cached_chunk_idx = num_chunks;
     }
 
     // Add "missing" (0) to bottom of column
@@ -1081,7 +1089,7 @@ class DistributedFloatColumn : public DistributedColumn, public FloatColumn {
         // Mark value as missing and increment length
         set_missing_dist(length, true);
         // force cache refresh
-        cached_chunk_idx = -1;
+        cached_chunk_idx = num_chunks;
         length++;
     }
 };
@@ -1221,7 +1229,7 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
         set_missing_dist(idx, false);
         // To avoid read/write conflicts with local cache:
         //  Force cache to be re-loaded after a set call
-        cached_chunk_idx = -1;
+        cached_chunk_idx = num_chunks;
     }
 
     // Add more keys to our lists of keys to accomodate for more items
@@ -1252,7 +1260,7 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
         length++;
 
         // force cache refresh
-        cached_chunk_idx = -1;
+        cached_chunk_idx = num_chunks;
         delete[] cells;
     }
 
@@ -1266,7 +1274,7 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
         set_missing_dist(length, true);
 
         // force cache refresh
-        cached_chunk_idx = -1;
+        cached_chunk_idx = num_chunks;
         length++;
     }
 };

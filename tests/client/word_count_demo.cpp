@@ -111,9 +111,9 @@ class WordCount : public Application {
 
     // Returns a key for storing a node's partial WordCounts results
     Key* mk_key(size_t idx) {
-        size_t needed_buf_size = snprintf(nullptr, 0, "%s-%d", "wc-result-", idx) + 1;
+        size_t needed_buf_size = snprintf(nullptr, 0, "%s%d", "wc-result-", idx) + 1;
         char key_name[needed_buf_size];
-        snprintf(key_name, needed_buf_size, "%s-%d", "wc-result-", idx);
+        snprintf(key_name, needed_buf_size, "%s%d", "wc-result-", idx);
 
         return new Key(key_name, idx);
     }

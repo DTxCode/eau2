@@ -2,6 +2,7 @@
 *           David Tandetnik (tandetnik.da@husky.neu.edu) */
 #pragma once
 #include <thread>
+
 #include "../../utils/object.h"
 #include "../../utils/string.h"
 #include "../key.h"
@@ -154,8 +155,8 @@ class DataFrame : public Object {
     virtual bool is_missing(size_t col, size_t row) {
         return columns[col]->is_missing(row);
     }
- 	
-	/** Set the value at the given column and row to the given value.
+
+    /** Set the value at the given column and row to the given value.
     * If the column is not  of the right type or the indices are out of
     * bound, the result is undefined. 
     * Runtime error if invalid type or index. */
@@ -492,16 +493,57 @@ class DistributedDataFrame : public DataFrame {
 
         return new_df;
     }
-    
+
     // Indicates whether the cell at col,row is a missing value
     virtual bool is_missing(size_t col, size_t row) {
         return dynamic_cast<DistributedColumn*>(columns[col])->is_missing_dist(row);
     }
-    
+
     // Declares the given row,col cell as missing
     virtual void set_missing(size_t col, size_t row) {
         DistributedColumn* c = dynamic_cast<DistributedColumn*>(columns[col]);
 
         c->set_missing_dist(row, true);
+    }
+
+    /** Maps given rower over all rows in this DDF that are on this node **/
+    void local_map(Rower& r) {
+        Row row(schema);
+
+        for (size_t row_idx = 0; row_idx <= nrows(); row_idx++) {
+            bool local_row = dynamic_cast<DistributedColumn*>(columns[0])->is_row_local(row_idx);
+
+            if (!local_row) {
+                continue;  // do not consider rows that are not on this node
+            }
+
+            fill_row(row_idx, row);
+
+            r.accept(row);
+
+            // Now insert changes back into map (if any)
+            for (size_t j = 0; j < ncols(); j++) {
+                Column* col = columns[j];
+                char col_type = col->get_type();
+
+                // Handle missings first
+                if (row->is_missing(j)) {
+                    set_missing(j, row_idx);
+                    continue;
+                }
+
+                // get appropriately typed value out of the row, and set it in the column
+                // expect col schema to match row schema
+                if (col_type == INT_TYPE) {
+                    set(j, row_idx, row->get_int(j));
+                } else if (col_type == BOOL_TYPE) {
+                    set(j, row_idx, row->get_bool(j));
+                } else if (col_type == FLOAT_TYPE) {
+                    set(j, row_idx, row->get_float(j));
+                } else {
+                    set(j, row_idx, row->get_string(j));
+                }
+            }
+        }
     }
 };
