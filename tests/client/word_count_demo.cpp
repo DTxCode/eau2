@@ -116,6 +116,12 @@ class WordCount : public Application {
         // and then combines the results with reduce()
         if (this_node() == 0) {
             delete DataFrame::fromSorFile(data_key, store, file);
+            // Immediately try to open file
+            FILE* input_file = fopen(file_name, "r");
+            if (input_file == nullptr) {
+                exit_with_msg("Failed to open file to run WordCount on");
+            }
+
             local_count();
             reduce();
         } else {
@@ -226,8 +232,6 @@ int test_word_count() {
     WordCount wc1("data/wc_data.sor", &store1);
     WordCount wc2(nullptr, &store2);
     WordCount wc3(nullptr, &store3);
-
-
 
     // shutdown system
     s.shutdown();
