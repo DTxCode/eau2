@@ -1,9 +1,11 @@
 /* Authors: Ryan Heminway (heminway.r@husky.neu.edu)
 *           David Tandetnik (tandetnik.da@husky.neu.edu) */
 #pragma once
-#include "../client/sorer.h"
 #include "store.h"
+
 #include <mutex>
+
+#include "../client/sorer.h"
 #include "../utils/map.h"
 #include "dataframe/dataframe.h"
 #include "key.h"
@@ -407,12 +409,12 @@ DistributedDataFrame *DataFrame::fromDistributedColumn(Key *key, Store *store, D
     return df;
 }
 
-// The following fromSorFile method takes a file in SoR format and stores the 
-// data from the file in a DistributedDataFrame under the given key in the 
+// The following fromSorFile method takes a file in SoR format and stores the
+// data from the file in a DistributedDataFrame under the given key in the
 // given store.
-DistributedDataFrame *DataFrame::fromSorFile(Key* key, Store* store, FILE* fp) {
-    Sorer sor(fp, 0, 0); // Reads whole file
-    DistributedDataFrame* df = sor.get_dataframe(store);
+DistributedDataFrame *DataFrame::fromSorFile(Key *key, Store *store, FILE *fp) {
+    Sorer sor(fp, 0, 0);  // Reads whole file
+    DistributedDataFrame *df = sor.get_dataframe(store);
     store->put(key, df);
     return df;
 }

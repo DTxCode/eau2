@@ -3,10 +3,11 @@
 //          David Tandetnik (tandetnik.da@husky.neu.edu)
 #pragma once
 #include <assert.h>
+
 #include "../store/dataframe/dataframe.h"
 #include "../store/dataframe/field.h"
-#include "../utils/helper.h"
 #include "../store/serial.h"
+#include "../utils/helper.h"
 
 /* 
 * Utility class to parse SoR file into a DataFrame format.
@@ -41,7 +42,7 @@ class Sorer {
         } else {
             length = length_to_read;
         }
-        
+
         assert(length > 0);
         // Pre-processing step. Obtain number of columns and the schema
         // of the SoR file
@@ -88,7 +89,7 @@ class Sorer {
                 // Handle missings
                 if (is_empty_field(buffer, schema->col_type(col_idx))) {
                     row->set_missing(col_idx);
-                  // Based on schema, add data to row
+                    // Based on schema, add data to row
                 } else if (schema->col_type(col_idx) == INT_TYPE) {
                     int val = atoi(trim_whitespace(buffer));
                     row->set(col_idx, val);
@@ -130,7 +131,7 @@ class Sorer {
     bool is_empty_field(char* buffer, char col_type) {
         FIELD_TYPE val_type = parse_field_type(trim_whitespace(buffer));
         FIELD_TYPE col_field_type;
-        
+
         // Convert character col_type to FIELD_TYPE
         switch (col_type) {
             case INT_TYPE:
@@ -147,12 +148,11 @@ class Sorer {
                 break;
         }
 
-        // Field should be empty (missing) if it is EMPTY or its field_type 
+        // Field should be empty (missing) if it is EMPTY or its field_type
         //  does not match column type
         bool is_empty;
         is_empty = (val_type == EMPTY) || (val_type != col_field_type);
         return is_empty;
-
     }
 
     // Count number of columns in the longest line in first 500 rows

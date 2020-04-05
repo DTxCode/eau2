@@ -101,7 +101,14 @@ class WordCount : public Application {
         // Node 0 distibutes the data, waits for everyone (including itself) to do their local_maps,
         // and then combines the results with reduce()
         if (this_node() == 0) {
-            delete DataFrame::fromSorFile(data_key, &store, file_name);
+            // Immediately try to open file
+            FILE* input_file = fopen(file_name, "r");
+            if (input_file == nullptr) {
+                exit_with_msg("Failed to open file to run WordCount on");
+            }
+
+            delete DataFrame::fromSorFile(data_key, &store, input_file);
+
             local_count();
             reduce();
         } else {
@@ -208,7 +215,7 @@ int test_word_count() {
     Store store2(1, (char*)"127.0.0.1", 8001, master_ip, master_port);
     Store store3(2, (char*)"127.0.0.1", 8002, master_ip, master_port);
 
-    WordCount wc1(0, "FILENAME HERE", store1);
+    WordCount wc1(0, "tests/test_data/words.sor", store1);
     WordCount wc2(1, nullptr, store2);
     WordCount wc3(2, nullptr, store3);
 
