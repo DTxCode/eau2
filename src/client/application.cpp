@@ -13,7 +13,6 @@ class Application {
 
     Application(Store* store) {
         this->store = store;
-
     }
 
     size_t this_node() {
@@ -28,4 +27,3 @@ class Application {
     // Called on application start
     virtual void run_() = 0;
 };
-

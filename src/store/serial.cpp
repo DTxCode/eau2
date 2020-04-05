@@ -17,7 +17,7 @@
 // Serialize a DistributedDataFrame into char*
 // Will create same format and contents as Serializing a normal DF, with a pre-pended
 // string representing the serialized Store
-// "[Serialized Schema]~[Serialized Column 0]; ... ;[Serialized Column n-1]"
+// "[Serialized Schema]~[Serialized Column 0]~ ... ~[Serialized Column n-1]"
 char* Serializer::serialize_distributed_dataframe(DistributedDataFrame* df) { 
     // Track total buffer size we need
     size_t total_str_size = 0;
@@ -31,7 +31,7 @@ char* Serializer::serialize_distributed_dataframe(DistributedDataFrame* df) {
     char** col_strs = new char*[cols];
     for (size_t i = 0; i < cols; i++) {
         col_strs[i] = serialize_dist_col(dynamic_cast<DistributedColumn*>(df->get_col_(i)));
-        total_str_size += strlen(col_strs[i]) + 1;  // +1 for semicolons below
+        total_str_size += strlen(col_strs[i]) + 1;  // +1 for tilda below
     }
 
     char* serial_buffer = new char[total_str_size];
@@ -40,12 +40,12 @@ char* Serializer::serialize_distributed_dataframe(DistributedDataFrame* df) {
     strcpy(serial_buffer, schema_str);  
     strcat(serial_buffer, "~");
 
-    // Add serialized column messages to buffer, delimeted by ";"
+    // Add serialized column messages to buffer, delimeted by "~"
     for (size_t j = 0; j < cols; j++) {
         strcat(serial_buffer, col_strs[j]);
-        // Do not append ";" after last column string
+        // Do not append "~" after last column string
         if (j != cols - 1) {
-            strcat(serial_buffer, ";");
+            strcat(serial_buffer, "~");
         }
         delete[] col_strs[j];
     }
@@ -57,6 +57,7 @@ char* Serializer::serialize_distributed_dataframe(DistributedDataFrame* df) {
 // Expects given msg to have the form:
 // "[Serialized Schema]~[Serialized Dist_Column 0]~[...]~[Serialized Dist_Column n-1]"
 DistributedDataFrame* Serializer::deserialize_distributed_dataframe(char* msg, Store* store) { 
+    printf("SERIALIZED DDF: %s\n");
     char* schema_token = strtok(msg, "~");
     char* columns_token = strtok(nullptr, "\0");
     Schema* schema = deserialize_schema(schema_token);

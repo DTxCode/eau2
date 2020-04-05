@@ -1,6 +1,8 @@
+#pragma once
 #include <map>
 
 
+#include "../../src/store/store.cpp"
 #include "../../src/client/application.cpp"
 #include "../../src/store/dataframe/fielder.h"
 #include "../../src/store/dataframe/rower.h"
@@ -83,6 +85,9 @@ class WordCounter : public Rower {
  *   1) read the data (on to a single node)
  *   2) produce word counts per homed chunks, in parallel
  *   3) combine the results
+ *
+ * Assumes given file will be a SoR file of only strings. Malformed 
+ * files or non-existent filenames result in undefined behavior. 
  *******************************************************************/
 class WordCount : public Application {
    public:
@@ -92,10 +97,13 @@ class WordCount : public Application {
     WordCount(const char* file_name, Store* store) : Application(store) {
         data_key = new Key((char*)"wc-data", 0);
         this->file_name = file_name;
+
+	run_();
     }
 
     ~WordCount() {
         delete data_key;
+        delete file;
     }
 
     /** The master nodes reads the input, then all of the nodes count. */
@@ -103,7 +111,6 @@ class WordCount : public Application {
         // Node 0 distibutes the data, waits for everyone (including itself) to do their local_maps,
         // and then combines the results with reduce()
         if (this_node() == 0) {
-            // Immediately try to open file
             FILE* input_file = fopen(file_name, "r");
             if (input_file == nullptr) {
                 exit_with_msg("Failed to open file to run WordCount on");
@@ -184,7 +191,9 @@ class WordCount : public Application {
 
             s.p(word->c_str());
             s.p(": ");
-            s.pln(count);
+            s.p(count);
+            s.p("\n");
+            s.p("testig\n");
         }
     }
 
@@ -217,12 +226,10 @@ int test_word_count() {
     Store store2(1, (char*)"127.0.0.1", 8001, master_ip, master_port);
     Store store3(2, (char*)"127.0.0.1", 8002, master_ip, master_port);
 
+    //data/wc_data.sor
     WordCount wc1("tests/test_data/words.sor", &store1);
-    wc1.run_();
     WordCount wc2(nullptr, &store2);
-    wc2.run_();
     WordCount wc3(nullptr, &store3);
-    wc3.run_();
 
     // shutdown system
     s.shutdown();
