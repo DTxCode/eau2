@@ -61,6 +61,6 @@ bool test_ddf_multi_column() {
 
 int main() {
     assert(test_ddf_multi_column());
-    printf("=========== test_distributed_int_column PASSED =========\n");
+    printf("=========== test_ddf_multi_column PASSED =========\n");
     return 0;
 }

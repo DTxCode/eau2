@@ -24,7 +24,7 @@ union Field {
  * This class represents a single row of data constructed according to a
  * dataframe's schema. The purpose of this class is to make it easier to add
  * read/write complete rows. Internally a dataframe hold data in columns.
- * Rows have pointer equality.
+ * Rows have pointer equality. Rows do not own their data.
  */
 class Row : public Object {
    public:
@@ -58,7 +58,6 @@ class Row : public Object {
 
     ~Row() {
         for (size_t i = 0; i < num_columns; i++) {
-            delete fields[i]->s_val;  // If we're given a string*, set() says we should delete it.
             delete fields[i];
         }
 
@@ -87,9 +86,7 @@ class Row : public Object {
         }
 
         // Check and update missings
-        if (missings[col]) {
-            missings[col] = false;
-        }
+        missings[col] = false;
 
         // set value in union
         fields[col]->i_val = val;
@@ -107,9 +104,7 @@ class Row : public Object {
         }
         
         // Check and update missings
-        if (missings[col]) {
-            missings[col] = false;
-        }
+        missings[col] = false;
 
         // set value in union
         fields[col]->f_val = val;
@@ -127,15 +122,12 @@ class Row : public Object {
         }
         
         // Check and update missings
-        if (missings[col]) {
-            missings[col] = false;
-        }
+        missings[col] = false;
 
         // set value in union
         fields[col]->b_val = val;
     }
 
-    /** Acquire ownership of the string. */
     void set(size_t col, String* val) {
         if (col >= num_columns) {
             // trying to set out of bounds column
@@ -148,9 +140,7 @@ class Row : public Object {
         }
 
         // Check and update missings
-        if (missings[col]) {
-            missings[col] = false;
-        }
+        missings[col] = false;
 
         // set value in union
         fields[col]->s_val = val;

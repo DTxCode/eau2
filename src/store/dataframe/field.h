@@ -26,7 +26,7 @@ FIELD_TYPE parse_field_type(char* value) {
     }
 
     bool surrounded_by_quotes = value[0] == '\"' && value[len - 1] == '\"';
-    // Definitly a string
+    // Definitely a string
     if (surrounded_by_quotes) {
         return STRING;
     }

@@ -1,8 +1,7 @@
-// lang:CwC
+
 // Authors: Ryan Heminway (heminway.r@husky.neu.edu)
 //          David Tandetnik (tandetnik.da@husky.neu.edu)
 #pragma once
-
 #include <assert.h>
 #include "../store/dataframe/dataframe.h"
 #include "../store/dataframe/field.h"
@@ -19,8 +18,6 @@ class Sorer {
     FILE* fp;
     size_t from;
     size_t length;
-    size_t num_columns;
-    size_t num_rows;
     Schema* schema;
 
     /* Create a Sorer based on a file pointer.
@@ -32,7 +29,6 @@ class Sorer {
        that are too large to store. Always creates at least 1 chunk. If 
        length_to_read is 0, assumes the whole file should be read. */
     Sorer(FILE* file_ptr, size_t from_pt, size_t length_to_read) {
-        // TODO how much error handling do we want at this stage
         if (file_ptr == nullptr) {
             exit_with_msg("file_ptr cannot be null");
         }
@@ -50,9 +46,6 @@ class Sorer {
         // Pre-processing step. Obtain number of columns and the schema
         // of the SoR file
         parse_schema();
-        // Get number of rows in file in the region [from, length]
-        // for use in calculation get_chunk_as_df
-        count_rows();
     }
 
     ~Sorer() {
@@ -64,26 +57,13 @@ class Sorer {
        given chunk_id. The chunk_id corresponds to the chunk of the file, 
        in order. The id 0 should always be valid and corresponds to the 
        first chunk. */
-    DataFrame* get_chunk_as_df(size_t chunk_id, size_t num_chunks) {
-        if (num_chunks == 0) {
-            exit_with_msg("get_chunk_as_df: num_chunks must be > 0");
+    DistributedDataFrame* get_dataframe(Store* store) {
+        // move file pointer to next line after "from"
+        fseek(fp, from, SEEK_SET);
+        while (from != 0 && fgetc(fp) != '\n') {
         }
 
-        size_t rows_per_chunk = num_rows / num_chunks;
-        assert(rows_per_chunk > 0);
-
-        size_t from_row = chunk_id * rows_per_chunk;
-        size_t to_row = (chunk_id + 1) * rows_per_chunk;
-
-        // Ensure final chunk does not miss last few rows
-        if (chunk_id == (num_chunks - 1)) {
-            to_row = num_rows;
-        }
-
-        // Moves file pointer to 'from_row' point in file
-        go_to_row(from_row);
-
-        DataFrame* df = new DataFrame(*schema);
+        DistributedDataFrame* df = new DistributedDataFrame(store, *schema);
         Row* row = new Row(*schema);
 
         char buffer[255];
@@ -91,11 +71,13 @@ class Sorer {
         size_t col_idx = 0;
         size_t read_idx = 0;
         bool reading_val = false;
-        // For whole chunk:
+        size_t bytes_read = 0;
+        // For whole file:
         //  create Row object of each row's data
         //  add Row to df
         while (!feof(fp)) {
             char c = fgetc(fp);
+            bytes_read++;
             if (c == '<') {
                 reading_val = true;
                 read_idx = 0;
@@ -103,12 +85,11 @@ class Sorer {
                 reading_val = false;
                 buffer[read_idx] = '\0';
 
-                if (strcmp(buffer, "") == 0) {
+                // Handle missings
+                if (strcmp(buffer, "\0") == 0) {
                     row->set_missing(col_idx);
-                }
-
-                // Based on schema, add data to row
-                if (schema->col_type(col_idx) == INT_TYPE) {
+                  // Based on schema, add data to row
+                } else if (schema->col_type(col_idx) == INT_TYPE) {
                     int val = atoi(trim_whitespace(buffer));
                     row->set(col_idx, val);
                 } else if (schema->col_type(col_idx) == FLOAT_TYPE) {
@@ -133,11 +114,10 @@ class Sorer {
                 // Add row to dataframe
                 df->add_row(*row);
 
-                from_row++;
                 col_idx = 0;
             }
-            // Stop reading after chunk
-            if (from_row >= to_row) {
+            // Stop reading after length_to_read
+            if (bytes_read >= length) {
                 break;
             }
         }
@@ -145,63 +125,9 @@ class Sorer {
         return df;
     }
 
-    // Move file pointer to the given row_idx in the file
-    void go_to_row(size_t row_idx) {
-        // move file pointer to next line after "from"
-        fseek(fp, from, SEEK_SET);
-        while (from != 0 && fgetc(fp) != '\n') {
-        }
-
-        // Maximum number of characters possible in a row
-        size_t max_row_size = 255 * num_columns;
-        char buffer[max_row_size];
-
-        size_t cur_line_idx = 0;
-        while (!feof(fp)) {
-            if (cur_line_idx == row_idx) {
-                break;
-            }
-
-            // Read a whole line
-            fgets(buffer, max_row_size, fp);
-            cur_line_idx++;
-        }
-    }
-
-    // Count the total number of rows in the file in the given
-    // [from, from+length] region
-    // TODO could this overflow size_t range?
-    void count_rows() {
-        // return to beginning of range [from, from+length] of file
-        fseek(fp, from, SEEK_SET);
-        while (from != 0 && fgetc(fp) != '\n') {
-        }
-        
-        // Maximum number of characters possible in a row
-        size_t max_row_size = 255 * num_columns;
-        char buffer[max_row_size];
-
-        size_t cur_line_idx = 0;
-        size_t bytes_read = 0;
-        while (!feof(fp)) {
-            // Read a whole line
-            fgets(buffer, max_row_size, fp);
-            // Track bytes read
-            // TODO Does this count right number of bytes?
-            bytes_read += strlen(buffer);
-            cur_line_idx++;
-            // Only count until from+length
-            if (bytes_read >= length) {
-                break;
-            }
-        }
-
-        num_rows = cur_line_idx;
-    }
-
     // Count number of columns in the longest line in first 500 rows
     // Gives number of columns for the schema
-    void count_cols() {
+    size_t count_cols() {
         // return to beginning of file
         fseek(fp, 0, SEEK_SET);
 
@@ -228,12 +154,12 @@ class Sorer {
             }
         }
 
-        num_columns = max_fields;
+        return max_fields;
     }
 
     // Obtain the schema from the first 500 lines of the file
     void parse_schema() {
-        count_cols();
+        size_t num_columns = count_cols();
 
         // return to beginning of file
         fseek(fp, 0, SEEK_SET);
@@ -243,7 +169,6 @@ class Sorer {
         size_t read_idx = 0;
         size_t col_idx = 0;
         char buffer[255] = "";
-        char type;
         FIELD_TYPE column_types[num_columns];
         // Default type for every col is BOOL
         for (size_t i = 0; i < num_columns; i++) {

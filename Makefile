@@ -66,3 +66,5 @@ test-column:
 test-ddf:
 	g++ -std=c++11 -Wall -pthread -g tests/store/test_ddf.cpp -o ddf_test
 	./ddf_test
+	g++ -std=c++11 -Wall -pthread -g tests/store/test_missings_col.cpp -o missing_col_test
+	./missing_col_test
