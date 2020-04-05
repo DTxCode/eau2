@@ -77,7 +77,7 @@ class DataFrame : public Object {
     virtual void add_column(Column* col) {
         // If this is not the first column being added, only accept it if
         // it has the same number of rows as what's already in the dataframe
-        if (schema.length() != 0 && col->size() != schema.length()) {
+        if (schema.width() != 0 && col->size() != schema.length()) {
             return;
         }
 

@@ -185,6 +185,11 @@ bool test_ddf_serialize() {
     //printf("%s\n", ser_ddf);
 
     DistributedDataFrame* new_ddf = serial.deserialize_distributed_dataframe(ser_ddf, &store);
+    Schema* new_ddf_scm = &(new_ddf->schema);
+    //Schema new_ddf_scm = new_ddf->schema;
+    printf("SCM length: %zu\n", new_ddf_scm->length());
+
+    assert(new_ddf_scm->col_type(0) == 'I');
 
     assert(new_ddf->get_int(0, 1500) == 1500);
     assert(new_ddf->get_string(1, 1500)->equals(new String("ahoy")));
@@ -199,8 +204,29 @@ bool test_ddf_serialize() {
     return true;
 }
 
+bool test_schema_serialize() {
+    Schema scm("IFBS");
+
+    Serializer ser;
+    char* ser_scm = ser.serialize_schema(&scm);
+
+    printf("Serialized SCHEMA: %s\n", ser_scm);
+
+    Schema* new_scm = ser.deserialize_schema(ser_scm);
+
+    Schema scm_tst;
+    assert(0 == scm_tst.length());
+    assert(0 == new_scm->length());
+    assert('I' == new_scm->col_type(0));
+    assert('S' == new_scm->col_type(3));
+
+    return true;
+}
+
 
 int main() {
+    assert(test_schema_serialize());
+    printf("========== serialize schema PASSED ============\n");
     assert(test_string_array_serialize());  
     printf("========= serialize_string_array PASSED =============\n");
     assert(test_int_array_serialize());
