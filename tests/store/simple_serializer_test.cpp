@@ -1,4 +1,3 @@
-#pragma once
 #include "../../src/store/dataframe/dataframe.h"
 #include "../../src/store/serial.cpp"
 #include "../../src/store/network/master.h"
@@ -168,7 +167,7 @@ bool test_ddf_serialize() {
     DistributedColumn* d_f = new DistributedFloatColumn(&store);
     DistributedColumn* d_s = new DistributedStringColumn(&store);
 
-    for (int i = 0; i < 10000; i++) {
+    for (int i = 0; i < 10; i++) {
         d_i->push_back(i);
         d_s->push_back(new String("ahoy"));
         d_f->push_back((float) 5.5);
@@ -180,19 +179,18 @@ bool test_ddf_serialize() {
     ddf->add_column(d_s);
     ddf->add_column(d_f);
 
+    Schema* original_ddf_scm = &(ddf->schema);
+    assert(original_ddf_scm->col_type(0) == 'I');
+
     Serializer serial;
     char* ser_ddf = serial.serialize_distributed_dataframe(ddf);
-    //printf("%s\n", ser_ddf);
 
     DistributedDataFrame* new_ddf = serial.deserialize_distributed_dataframe(ser_ddf, &store);
     Schema* new_ddf_scm = &(new_ddf->schema);
-    //Schema new_ddf_scm = new_ddf->schema;
-    printf("SCM length: %zu\n", new_ddf_scm->length());
 
     assert(new_ddf_scm->col_type(0) == 'I');
-
-    assert(new_ddf->get_int(0, 1500) == 1500);
-    assert(new_ddf->get_string(1, 1500)->equals(new String("ahoy")));
+    assert(new_ddf->get_int(0, 6) == 6);
+    assert(new_ddf->get_string(1, 6)->equals(new String("ahoy")));
 
     // shutdown system
     s.shutdown();

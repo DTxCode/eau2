@@ -34,6 +34,7 @@ class DataFrame : public Object {
 
     /** Create a data frame from a schema and columns. All columns are created
     * empty. */
+    // TAKES OWNERSHIP OF GIVEN SCHEMA
     DataFrame(Schema& scm) : schema(scm) {
         columns = new Column*[scm.width()];
 
@@ -46,6 +47,7 @@ class DataFrame : public Object {
         }
 
         delete[] columns;
+	delete &schema;
     }
 
     // Creates and sets empty columns in this dataframe according to the given schema
