@@ -57,7 +57,6 @@ char* Serializer::serialize_distributed_dataframe(DistributedDataFrame* df) {
 // Expects given msg to have the form:
 // "[Serialized Schema]~[Serialized Dist_Column 0]~[...]~[Serialized Dist_Column n-1]"
 DistributedDataFrame* Serializer::deserialize_distributed_dataframe(char* msg, Store* store) { 
-    printf("SERIALIZED DDF: %s\n");
     char* schema_token = strtok(msg, "~");
     char* columns_token = strtok(nullptr, "\0");
     Schema* schema = deserialize_schema(schema_token);

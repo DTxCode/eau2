@@ -103,7 +103,6 @@ class WordCount : public Application {
 
     ~WordCount() {
         delete data_key;
-        delete file;
     }
 
     /** The master nodes reads the input, then all of the nodes count. */
