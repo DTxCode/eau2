@@ -86,7 +86,7 @@ class Sorer {
                 buffer[read_idx] = '\0';
 
                 // Handle missings
-                if (strcmp(buffer, "\0") == 0) {
+                if (is_empty_field(buffer, schema->col_type(col_idx))) {
                     row->set_missing(col_idx);
                   // Based on schema, add data to row
                 } else if (schema->col_type(col_idx) == INT_TYPE) {
@@ -123,6 +123,36 @@ class Sorer {
         }
 
         return df;
+    }
+
+    // checks whether the field represented by the given char* buffer
+    // should be an EMPTY (missing) field, given the type of the Column
+    bool is_empty_field(char* buffer, char col_type) {
+        FIELD_TYPE val_type = parse_field_type(trim_whitespace(buffer));
+        FIELD_TYPE col_field_type;
+        
+        // Convert character col_type to FIELD_TYPE
+        switch (col_type) {
+            case INT_TYPE:
+                col_field_type = INT;
+                break;
+            case FLOAT_TYPE:
+                col_field_type = FLOAT;
+                break;
+            case BOOL_TYPE:
+                col_field_type = BOOL;
+                break;
+            default:
+                col_field_type = STRING;
+                break;
+        }
+
+        // Field should be empty (missing) if it is EMPTY or its field_type 
+        //  does not match column type
+        bool is_empty;
+        is_empty = (val_type == EMPTY) || (val_type != col_field_type);
+        return is_empty;
+
     }
 
     // Count number of columns in the longest line in first 500 rows

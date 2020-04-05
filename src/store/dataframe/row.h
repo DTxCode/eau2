@@ -161,7 +161,8 @@ class Row : public Object {
         } else if (col_type == FLOAT_TYPE) {
             set(col_idx, (float)0.0);
         } else {
-            set(col_idx, new String(""));
+            // Do not allocate memory. Value of missing is not irrelevant
+            set(col_idx, nullptr);
         }
         missings[col_idx] = true;
     }

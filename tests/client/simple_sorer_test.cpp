@@ -28,15 +28,11 @@ bool test_sorer_without_missings() {
     if (input_file == nullptr) {
         exit_with_msg("Failed to open test file");
     }
-    printf("here\n");
 
     // Create Sorer to hand out dataframe from file
     Sorer s(input_file, from, length);
     DistributedDataFrame* my_df = s.get_dataframe(&store);
     
-    printf("here\n");
-
-
     char* actual = my_df->get_string(2, 2)->c_str();
     char* expected = "bye";
 
@@ -74,7 +70,7 @@ bool test_sorer_with_missings() {
     Sorer s(input_file, from, length);
     DistributedDataFrame* my_df = s.get_dataframe(&store);
 
-    Sys sys;
+    /*Sys sys;
     sys.p(my_df->get_string(2, 0)->c_str());
     sys.p("\n");
     sys.p(my_df->get_string(2, 1)->c_str());
@@ -83,8 +79,11 @@ bool test_sorer_with_missings() {
     sys.p("\n");
     sys.p(my_df->get_string(2, 3)->c_str());
     sys.p("\n");
+    sys.p(my_df->get_string(2, 1799)->c_str());
+    sys.p("\n");*/
 
-    assert(my_df->get_string(2, 3)->equals(new String("1.23")));
+    // Check a string deep in the file
+    assert(my_df->get_string(2, 1799)->equals(new String("no")));
     
     // shutdown system
     serv.shutdown();

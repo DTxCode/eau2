@@ -529,7 +529,7 @@ class DistributedDataFrame : public DataFrame {
                 char col_type = col->get_type();
 
                 // Handle missings first
-                if (row->is_missing(j)) {
+                if (row.is_missing(j)) {
                     set_missing(j, row_idx);
                     continue;
                 }
@@ -537,13 +537,13 @@ class DistributedDataFrame : public DataFrame {
                 // get appropriately typed value out of the row, and set it in the column
                 // expect col schema to match row schema
                 if (col_type == INT_TYPE) {
-                    set(j, row_idx, row->get_int(j));
+                    set(j, row_idx, row.get_int(j));
                 } else if (col_type == BOOL_TYPE) {
-                    set(j, row_idx, row->get_bool(j));
+                    set(j, row_idx, row.get_bool(j));
                 } else if (col_type == FLOAT_TYPE) {
-                    set(j, row_idx, row->get_float(j));
+                    set(j, row_idx, row.get_float(j));
                 } else {
-                    set(j, row_idx, row->get_string(j));
+                    set(j, row_idx, row.get_string(j));
                 }
             }
         }

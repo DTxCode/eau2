@@ -700,7 +700,6 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
         length++;
         // Default value in store already exists,
         // Mark value as missing and increment length
-        set(length - 1, 0);
         set_missing_dist(length - 1, true);
 
         // force cache refresh
@@ -890,7 +889,6 @@ class DistributedBoolColumn : public DistributedColumn, public BoolColumn {
         length++;
         // Default value in store already exists,
         // Mark value as missing and increment length
-        set(length - 1, true);
         set_missing_dist(length - 1, true);
 
         // force cache refresh
@@ -1080,7 +1078,6 @@ class DistributedFloatColumn : public DistributedColumn, public FloatColumn {
         length++;
         // Default value in store already exists,
         // Mark value as missing and increment length
-        set(length - 1, (float)0.0);
         set_missing_dist(length - 1, true);
 
         // force cache refresh
@@ -1266,7 +1263,6 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
         length++;
         // Default value in store already exists,
         // Mark value as missing and increment length
-        set(length - 1, new String(""));
         set_missing_dist(length - 1, true);
 
         // force cache refresh
