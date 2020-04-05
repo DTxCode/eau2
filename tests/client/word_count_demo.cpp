@@ -1,12 +1,14 @@
 #pragma once
 #include <map>
 
+
 #include "../../src/store/store.cpp"
 #include "../../src/client/application.cpp"
 #include "../../src/store/dataframe/fielder.h"
 #include "../../src/store/dataframe/rower.h"
 #include "../../src/store/key.h"
 #include "../../src/store/network/master.h"
+#include "../../src/store/store.cpp"
 
 /* Authors: Ryan Heminway (heminway.r@husky.neu.edu)
  *           David Tandetnik (tandetnik.da@husky.neu.edu) */
@@ -90,24 +92,17 @@ class WordCounter : public Rower {
 class WordCount : public Application {
    public:
     Key* data_key;
-    FILE* file;
+    const char* file_name;
 
-    WordCount(char* file_path, Store* store) : Application(store) {
-        data_key = new Key("wc-data", 0);
-        // Open file if its provided
-        if (file_path != nullptr) {
-            file = fopen(file_path, "r");
-            if (file == nullptr) {
-                exit_with_msg("WORDCOUNT: Failed to open provided file");
-            }
-        }
-        run_();
+    WordCount(const char* file_name, Store* store) : Application(store) {
+        data_key = new Key((char*)"wc-data", 0);
+        this->file_name = file_name;
+
+	run_();
     }
 
     ~WordCount() {
         delete data_key;
-        //fclose(file);
-        delete file;
     }
 
     /** The master nodes reads the input, then all of the nodes count. */
@@ -115,7 +110,13 @@ class WordCount : public Application {
         // Node 0 distibutes the data, waits for everyone (including itself) to do their local_maps,
         // and then combines the results with reduce()
         if (this_node() == 0) {
-            delete DataFrame::fromSorFile(data_key, store, file);
+            FILE* input_file = fopen(file_name, "r");
+            if (input_file == nullptr) {
+                exit_with_msg("Failed to open file to run WordCount on");
+            }
+
+            delete DataFrame::fromSorFile(data_key, store, input_file);
+
             local_count();
             reduce();
         } else {
@@ -167,7 +168,7 @@ class WordCount : public Application {
 
     // Merge the results of Wordcounter from all other nodes onto this node
     void reduce() {
-        std::map<String*, int>* final_word_counts;
+        std::map<String*, int> final_word_counts;
 
         // Loop through nodes in the network and collect their results
         for (size_t node_idx = 0; node_idx < num_nodes(); ++node_idx) {
@@ -175,7 +176,7 @@ class WordCount : public Application {
 
             DistributedDataFrame* partial_results = store->waitAndGet(partial_results_key);
 
-            merge(partial_results, final_word_counts);
+            merge(partial_results, &final_word_counts);
 
             delete partial_results;
             delete partial_results_key;
@@ -183,7 +184,7 @@ class WordCount : public Application {
 
         // Loop through final map and print counts
         Sys s;
-        for (std::map<String*, int>::iterator it = final_word_counts->begin(); it != final_word_counts->end(); it++) {
+        for (std::map<String*, int>::iterator it = final_word_counts.begin(); it != final_word_counts.end(); it++) {
             String* word = it->first;
             int count = it->second;
 
@@ -200,14 +201,15 @@ class WordCount : public Application {
         // Loop through DF and updates mappings in map
         for (size_t row_idx = 0; row_idx < df->nrows(); row_idx++) {
             String* word = df->get_string(0, row_idx);
+            int new_count = df->get_int(1, row_idx);
 
             if (map->count(word)) {
                 // count already exists
-                int count = map->find(word)->second;
-                (*map)[word] = count + 1;
+                int cur_count = map->find(word)->second;
+                (*map)[word] = cur_count + new_count;
             } else {
-                // new word, set count to 1
-                (*map)[word] = 1;
+                // new word, set count to what was in the DF
+                (*map)[word] = new_count;
             }
         }
     }
@@ -223,7 +225,8 @@ int test_word_count() {
     Store store2(1, (char*)"127.0.0.1", 8001, master_ip, master_port);
     Store store3(2, (char*)"127.0.0.1", 8002, master_ip, master_port);
 
-    WordCount wc1("data/wc_data.sor", &store1);
+    //data/wc_data.sor
+    WordCount wc1("tests/test_data/words.sor", &store1);
     WordCount wc2(nullptr, &store2);
     WordCount wc3(nullptr, &store3);
 

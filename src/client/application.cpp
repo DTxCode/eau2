@@ -15,9 +15,6 @@ class Application {
         this->store = store;
     }
 
-    ~Application() {
-    }
-
     size_t this_node() {
         return store->this_node();
     }
@@ -25,19 +22,6 @@ class Application {
     size_t num_nodes() {
         return store->num_nodes();
     }
-
-    // // Distributes data from sorer in even chunks across all nodes in the network
-    // void distribute_data_() {
-    //     int num_nodes = store->num_nodes();
-
-    //     for (size_t i = 0; i < num_nodes; i++) {
-    //         DataFrame* df = sorer->get_chunk_as_df(i, num_nodes);
-
-    //         Key* key = new Key("", i);  // TODO what are the keys here?
-
-    //         store->put(key, df);
-    //     }
-    // }
 
     // OVERRIDE
     // Called on application start
