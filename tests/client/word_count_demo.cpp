@@ -253,7 +253,8 @@ int test_word_count() {
     t2.join();
     t3.join();
     
-    */WordCount wc("data/wc_data.sor", &store1);
+    */
+    WordCount wc("data/wc_data.sor", &store1);
 
     // shutdown system
     s.shutdown();
