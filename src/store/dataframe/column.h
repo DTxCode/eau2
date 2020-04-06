@@ -480,9 +480,9 @@ class DistributedColumn : virtual public Column {
         size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
         Key* k = missings_keys[array_idx];
-        missings_ = store->get_bool_array_(k);
-        bool val = missings_[local_idx];
-        //delete[] missings_;
+        bool* this_missings = store->get_bool_array_(k);
+        bool val = this_missings[local_idx];
+        delete[] this_missings;
         return val;
 
         // TODO fix missings caching (currently has memory leak)

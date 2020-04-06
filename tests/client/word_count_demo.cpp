@@ -1,6 +1,5 @@
 #include <map>
 
-
 #include "../../src/store/store.cpp"
 #include "../../src/client/application.cpp"
 #include "../../src/store/dataframe/fielder.h"
@@ -71,7 +70,6 @@ class WordCounter : public Rower {
     }
 
     bool accept(Row& r) {
-	    printf("WordCounter visiting row\n");
         WordCountFielder f(word_counts);
 
         // f will store counts in word_counts
@@ -255,7 +253,7 @@ int test_word_count() {
     t2.join();
     t3.join();
     
-    */WordCount wc("tests/test_data/words.sor", &store1);
+    */WordCount wc("data/wc_data.sor", &store1);
 
     // shutdown system
     s.shutdown();
