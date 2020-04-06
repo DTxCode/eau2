@@ -320,7 +320,7 @@ class StringColumn : virtual public Column {
  * Each key represents a chunk of data, whether it is the cell values 
  * or missing values. A Column has an associated store (KVS) that it 
  * communicates with. */
-class DistributedColumn : virtual public Column {
+class DistributedColumn : virtual public Column { 
    public:
     size_t num_chunks = 10;
     // Gets length, capacity, num_chunks, missings from Column
@@ -403,6 +403,9 @@ class DistributedColumn : virtual public Column {
     virtual void resize_keys_dist() {
         size_t old_num_chunks = num_chunks;
         num_chunks = 2 * num_chunks;
+        // For cache reset
+        cached_missings_idx = num_chunks;
+        cached_chunk_idx = num_chunks;
         capacity = INTERNAL_CHUNK_SIZE * num_chunks;
 
         Key** new_missings_keys = new Key*[num_chunks];
@@ -486,12 +489,6 @@ class DistributedColumn : virtual public Column {
             cached_missings_idx = array_idx;
         }
 
-	//printf("Missings_ is ");
-	//for (size_t i = 0; i < INTERNAL_CHUNK_SIZE; i++) {
-	//	printf("%d,", missings_[i]);
-	//}
-	//printf("\n");
-        
 	// Use local is_missing
         return is_missing(local_idx);
     }
@@ -575,7 +572,7 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
     }
 
     // Copy constructor. Assumes other column is the same type as this one
-    DistributedIntColumn(Store* s, Column* col) : IntColumn() {
+    DistributedIntColumn(Store* s, DistributedIntColumn* col) : IntColumn() {
         store = s;
         length = 0;
         capacity = num_chunks * INTERNAL_CHUNK_SIZE;
@@ -590,10 +587,10 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
 
         // Copy over data from other column
         for (size_t row_idx = 0; row_idx < col->size(); row_idx++) {
-            int row_val = dynamic_cast<DistributedIntColumn*>(col)->as_int()->get(row_idx);
+            int row_val = col->as_int()->get(row_idx);
             push_back(row_val);
 
-            if (dynamic_cast<DistributedIntColumn*>(col)->is_missing_dist(row_idx)) {
+            if (col->is_missing_dist(row_idx)) {
                 // row_val we pushed above is fake, mark this cell as missing
                 set_missing_dist(row_idx, true);
             }
@@ -766,7 +763,7 @@ class DistributedBoolColumn : public DistributedColumn, public BoolColumn {
     }
 
     // Copy constructor. Assumes other column is the same type as this one
-    DistributedBoolColumn(Store* s, Column* col) : BoolColumn() {
+    DistributedBoolColumn(Store* s, DistributedBoolColumn* col) : BoolColumn() {
         store = s;
         length = 0;
         capacity = num_chunks * INTERNAL_CHUNK_SIZE;
@@ -781,10 +778,10 @@ class DistributedBoolColumn : public DistributedColumn, public BoolColumn {
 
         // Copy over data from other column
         for (size_t row_idx = 0; row_idx < col->size(); row_idx++) {
-            bool row_val = dynamic_cast<DistributedBoolColumn*>(col)->as_bool()->get(row_idx);
+            bool row_val = col->as_bool()->get(row_idx);
             push_back(row_val);
 
-            if (dynamic_cast<DistributedBoolColumn*>(col)->is_missing_dist(row_idx)) {
+            if (col->is_missing_dist(row_idx)) {
                 // row_val we pushed above is fake, mark this cell as missing
                 set_missing_dist(row_idx, true);
             }
@@ -955,7 +952,7 @@ class DistributedFloatColumn : public DistributedColumn, public FloatColumn {
     }
 
     // Copy constructor. Assumes other column is the same type as this one
-    DistributedFloatColumn(Store* s, Column* col) : FloatColumn() {
+    DistributedFloatColumn(Store* s, DistributedFloatColumn* col) : FloatColumn() {
         store = s;
         length = 0;
         capacity = num_chunks * INTERNAL_CHUNK_SIZE;
@@ -971,10 +968,10 @@ class DistributedFloatColumn : public DistributedColumn, public FloatColumn {
 
         // Copy over data from other column
         for (size_t row_idx = 0; row_idx < col->size(); row_idx++) {
-            float row_val = dynamic_cast<DistributedFloatColumn*>(col)->as_float()->get(row_idx);
+            float row_val = col->as_float()->get(row_idx);
             push_back(row_val);
 
-            if (dynamic_cast<DistributedFloatColumn*>(col)->is_missing_dist(row_idx)) {
+            if (col->is_missing_dist(row_idx)) {
                 // row_val we pushed above is fake, mark this cell as missing
                 set_missing_dist(row_idx, true);
             }
@@ -1144,7 +1141,7 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
     }
 
     // Copy constructor. Assumes other column is the same type as this one
-    DistributedStringColumn(Store* s, Column* col) : StringColumn() {
+    DistributedStringColumn(Store* s, DistributedStringColumn* col) : StringColumn() {
         store = s;
         length = 0;
         capacity = num_chunks * INTERNAL_CHUNK_SIZE;
@@ -1159,10 +1156,11 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
 
         // Copy over data from other column
         for (size_t row_idx = 0; row_idx < col->size(); row_idx++) {
-            String* row_val = dynamic_cast<DistributedStringColumn*>(col)->as_string()->get(row_idx);
+            String* row_val = col->as_string()->get(row_idx);
             push_back(row_val);
 
-            if (dynamic_cast<DistributedStringColumn*>(col)->is_missing_dist(row_idx)) {
+            if (col->is_missing_dist(row_idx)) {
+                printf("This could be an issue\n");
                 // row_val we pushed above is fake, mark this cell as missing
                 set_missing_dist(row_idx, true);
             }

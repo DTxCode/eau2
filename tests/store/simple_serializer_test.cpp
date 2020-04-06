@@ -171,6 +171,10 @@ bool test_ddf_serialize() {
         d_i->push_back(i);
         d_s->push_back(new String("ahoy"));
         d_f->push_back((float) 5.5);
+
+        assert(!d_i->is_missing_dist(i));
+        assert(!d_s->is_missing_dist(i));
+        assert(!d_f->is_missing_dist(i));
     }
 
     Schema empty;
@@ -178,17 +182,18 @@ bool test_ddf_serialize() {
     ddf->add_column(d_i);
     ddf->add_column(d_s);
     ddf->add_column(d_f);
-
-    Schema* original_ddf_scm = &(ddf->schema);
-    assert(original_ddf_scm->col_type(0) == 'I');
+    
+    for (size_t i = 0; i < ddf->nrows(); i++) {
+        assert(!ddf->is_missing(0, i));
+        //assert(!ddf->is_missing(1, i));
+        assert(!ddf->is_missing(2, i));
+    }
 
     Serializer serial;
     char* ser_ddf = serial.serialize_distributed_dataframe(ddf);
 
     DistributedDataFrame* new_ddf = serial.deserialize_distributed_dataframe(ser_ddf, &store);
-    Schema* new_ddf_scm = &(new_ddf->schema);
 
-    assert(new_ddf_scm->col_type(0) == 'I');
     assert(new_ddf->get_int(0, 6) == 6);
     assert(new_ddf->get_string(1, 6)->equals(new String("ahoy")));
 
@@ -223,6 +228,8 @@ bool test_schema_serialize() {
 
 
 int main() {
+    assert(test_ddf_serialize());
+    printf("========= serialize_ddf PASSED =============\n");
     assert(test_schema_serialize());
     printf("========== serialize schema PASSED ============\n");
     assert(test_string_array_serialize());  
@@ -237,8 +244,6 @@ int main() {
     printf("========= serialize_bool PASSED =============\n");
     assert(test_dist_col_serialize());
     printf("========= serialize_dist_col PASSED =============\n");
-    assert(test_ddf_serialize());
-    printf("========= serialize_ddf PASSED =============\n");
     /*assert(test_df_serialize());
     printf("========== test_serialize_df PASSED =============\n");*/
 }

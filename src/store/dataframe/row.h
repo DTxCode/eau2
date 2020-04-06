@@ -216,6 +216,7 @@ class Row : public Object {
         // pass each field of this row to the fielder
         for (size_t i = 0; i < num_columns; i++) {
             if (is_missing(i)) {
+                printf("This Row has missings!\n");
                 continue;  // Do not pass missings to fielder
             }
 

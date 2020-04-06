@@ -114,6 +114,7 @@ class DataFrame : public Object {
 
     // returns a copy of the given column
     virtual Column* get_col_copy_(Column* col) {
+        printf("This is the wrong get_col_copy!\n");
         char col_type = col->get_type();
 
         if (col_type == INT_TYPE) {
@@ -464,19 +465,58 @@ class DistributedDataFrame : public DataFrame {
             }
         }
     }
+    
+    /** Adds a column this dataframe, updates the schema, the new column
+    * is external, and appears as the last column of the dataframe.
+    * A nullptr colum is undefined. */
+    virtual void add_column(DistributedColumn* col) {
+        // If this is not the first column being added, only accept it if
+        // it has the same number of rows as what's already in the dataframe
+        if (schema->width() != 0 && col->size() != schema->length()) {
+            return;
+        }
+
+        char col_type = col->get_type();
+        // Use copy of given column so that we can delete it later
+        Column* col_copy = get_col_copy_(col);
+
+        // add new column information to schema
+        size_t old_schema_width = schema->width();
+        schema->add_column(col_type);
+        size_t new_schema_width = schema->width();
+
+        // If this is the first column being added, record new row info
+        if (schema->length() == 0) {
+            for (size_t row_idx = 0; row_idx < col_copy->size(); row_idx++) {
+                schema->add_row();
+            }
+        }
+
+        // increase column array size
+        Column** new_columns = new Column*[new_schema_width];
+        for (size_t col_idx = 0; col_idx < old_schema_width; col_idx++) {
+            new_columns[col_idx] = columns[col_idx];
+        }
+
+        // add new column
+        new_columns[new_schema_width - 1] = col_copy;
+
+        delete[] columns;
+        columns = new_columns;
+    }
 
     // returns a copy of the given column
     Column* get_col_copy_(Column* col) {
         char col_type = col->get_type();
 
         if (col_type == INT_TYPE) {
-            return new DistributedIntColumn(store, col);
+            return new DistributedIntColumn(store, dynamic_cast<DistributedIntColumn*>(col));
         } else if (col_type == BOOL_TYPE) {
-            return new DistributedBoolColumn(store, col);
+            return new DistributedBoolColumn(store, dynamic_cast<DistributedBoolColumn*>(col));
         } else if (col_type == FLOAT_TYPE) {
-            return new DistributedFloatColumn(store, col);
+            return new DistributedFloatColumn(store, dynamic_cast<DistributedFloatColumn*>(col));
         } else {
-            return new DistributedStringColumn(store, col);
+            return new DistributedStringColumn(store, dynamic_cast<DistributedStringColumn*>(col));
         }
     }
 
@@ -501,6 +541,7 @@ class DistributedDataFrame : public DataFrame {
 
     // Indicates whether the cell at col,row is a missing value
     virtual bool is_missing(size_t col, size_t row) {
+        //return false;
 	    return dynamic_cast<DistributedColumn*>(columns[col])->is_missing_dist(row);
     }
 
