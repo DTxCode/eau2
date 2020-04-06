@@ -199,7 +199,7 @@ class DataFrame : public Object {
             // Handle missing first
             if (is_missing(col_idx, idx)) {
                 printf("Filling idx %zu of row with missing\n", col_idx);
-		row.set_missing(col_idx);
+		        row.set_missing(col_idx);
                 continue;
             }
 

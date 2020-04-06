@@ -105,12 +105,12 @@ bool test_string_array_serialize() {
     Sys s;
     char* ser_strings1 = serial.serialize_strings(strings1, num_strings);
 
-    s.p(ser_strings1);
-    s.p("\n");
+    //s.p(ser_strings1);
+    //s.p("\n");
 
     String** new_strings1 = serial.deserialize_strings(ser_strings1);
 
-    s.p(new_strings1[0]->c_str());
+    /*s.p(new_strings1[0]->c_str());
     s.p("\n");
     s.p(new_strings1[1]->c_str());
     s.p("\n");
@@ -119,7 +119,7 @@ bool test_string_array_serialize() {
     s.p(new_strings1[3]->c_str());
     s.p("\n");
     s.p(new_strings1[4]->c_str());
-    s.p("\n");
+    s.p("\n");*/
 
     bool ret_value = true;
     assert(new_strings1[2]->equals(strings1[2]));
@@ -136,14 +136,19 @@ bool test_dist_col_serialize() {
 
     Store store(5, "127.0.0.1", 7070, master_ip, master_port);
 
-    DistributedColumn* d_i = new DistributedIntColumn(&store);
+    DistributedColumn* d_s = new DistributedStringColumn(&store);
+    for (size_t i = 0; i < 2500; i++) {
+        d_s->push_back(new String("test"));
+    }
 
     Serializer serial;
-    char* ser_d_i = serial.serialize_dist_col(d_i);
-    //printf(ser_d_i);
-    //printf("\n");
+    char* ser_d_s = serial.serialize_dist_col(d_s);
+    printf("%s\n", ser_d_s);
 
-    DistributedIntColumn* d_i2 = serial.deserialize_dist_int_col(ser_d_i, &store);
+    DistributedStringColumn* d_s2 = serial.deserialize_dist_string_col(ser_d_s, &store);
+    for (size_t i = 0; i < 2500; i++) {
+        assert(!d_s2->is_missing_dist(i));
+    }
     
     // shutdown system
     s.shutdown();
@@ -152,7 +157,7 @@ bool test_dist_col_serialize() {
     while (!store.is_shutdown()) {
     }
 
-    return d_i2->size() == 0;
+    return true;
 }
 
 bool test_ddf_serialize() {
@@ -173,7 +178,7 @@ bool test_ddf_serialize() {
         d_f->push_back((float) 5.5);
 
         assert(!d_i->is_missing_dist(i));
-        assert(!d_s->is_missing_dist(i));
+        //assert(!d_s->is_missing_dist(i));
         assert(!d_f->is_missing_dist(i));
     }
 
@@ -185,7 +190,7 @@ bool test_ddf_serialize() {
     
     for (size_t i = 0; i < ddf->nrows(); i++) {
         assert(!ddf->is_missing(0, i));
-        //assert(!ddf->is_missing(1, i));
+        assert(!ddf->is_missing(1, i));
         assert(!ddf->is_missing(2, i));
     }
 
@@ -213,7 +218,7 @@ bool test_schema_serialize() {
     Serializer ser;
     char* ser_scm = ser.serialize_schema(&scm);
 
-    printf("Serialized SCHEMA: %s\n", ser_scm);
+    //printf("Serialized SCHEMA: %s\n", ser_scm);
 
     Schema* new_scm = ser.deserialize_schema(ser_scm);
 
@@ -228,6 +233,8 @@ bool test_schema_serialize() {
 
 
 int main() {
+    assert(test_dist_col_serialize());
+    printf("========= serialize_dist_col PASSED =============\n");
     assert(test_ddf_serialize());
     printf("========= serialize_ddf PASSED =============\n");
     assert(test_schema_serialize());
@@ -242,8 +249,6 @@ int main() {
     printf("========= serialize_key PASSED =============\n");
     assert(test_bool_serialize());
     printf("========= serialize_bool PASSED =============\n");
-    assert(test_dist_col_serialize());
-    printf("========= serialize_dist_col PASSED =============\n");
     /*assert(test_df_serialize());
     printf("========== test_serialize_df PASSED =============\n");*/
 }

@@ -327,8 +327,8 @@ class DistributedColumn : virtual public Column {
     Key** missings_keys;  // Keys to bool chunks that make up missing bitmap
     Key** chunk_keys;     // Keys to each chunk of values in this column
     Store* store;         // KVS
-    size_t cached_chunk_idx;
-    size_t cached_missings_idx;
+    size_t cached_chunk_idx = 10;
+    size_t cached_missings_idx = 10;
 
     /* All method names appended with '_dist' are purely distributed.
 	*  DistributedColumn successors must be very careful in calling
@@ -479,9 +479,15 @@ class DistributedColumn : virtual public Column {
     virtual bool is_missing_dist(size_t idx) {
         size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
+        Key* k = missings_keys[array_idx];
+        missings_ = store->get_bool_array_(k);
+        bool val = missings_[local_idx];
+        //delete[] missings_;
+        return val;
 
+        // TODO fix missings caching (currently has memory leak)
         // Cache this chunk if its not already
-        if (array_idx != cached_missings_idx) {
+        /*if (array_idx != cached_missings_idx) {
             // Free old cache
             delete[] missings_;
             Key* k = missings_keys[array_idx];
@@ -489,8 +495,8 @@ class DistributedColumn : virtual public Column {
             cached_missings_idx = array_idx;
         }
 
-	// Use local is_missing
-        return is_missing(local_idx);
+	    // Use local is_missing
+        return is_missing(local_idx);*/
     }
 
     // Sets the value at idx as missing or not
@@ -1160,7 +1166,6 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
             push_back(row_val);
 
             if (col->is_missing_dist(row_idx)) {
-                printf("This could be an issue\n");
                 // row_val we pushed above is fake, mark this cell as missing
                 set_missing_dist(row_idx, true);
             }
