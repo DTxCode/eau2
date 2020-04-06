@@ -68,7 +68,7 @@ class Server {
             char *node_host = network->get_host_from_address(node);
             int node_port = network->get_port_from_address(node);
 
-            printf("... sending shutdown message to %s:%d\n", node_host, node_port);
+            //printf("... sending shutdown message to %s:%d\n", node_host, node_port);
             Message *response = network->send_and_receive_msg(&shutdown_msg, node_host, node_port);
 
             delete[] node_host;
@@ -117,7 +117,7 @@ class Server {
 
     // Register client that's connected on given socket
     void process_client_registration_(int connection, Message *registration_msg) {
-        printf("Server got registration request from node: %s\n", registration_msg->msg);
+        //printf("Server got registration request from node: %s\n", registration_msg->msg);
 
         // Send ACK back to node
         Message ack(my_ip_address, my_port, ACK, (char*) "");

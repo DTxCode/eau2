@@ -176,7 +176,7 @@ class Node {
 
     // Processes an update from the server with the list of connected nodes in the network
     void update_directory_(int connected_socket, Message *msg) {
-        printf("Node at %s:%d got a directory update from the server\n", my_ip_address, my_port);
+        //printf("Node at %s:%d got a directory update from the server\n", my_ip_address, my_port);
 
         // Get new directory list as a string
         char *new_directory = msg->msg;

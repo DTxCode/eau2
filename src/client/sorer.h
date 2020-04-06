@@ -88,6 +88,7 @@ class Sorer {
 
                 // Handle missings
                 if (is_empty_field(buffer, schema->col_type(col_idx))) {
+			printf("Sorer found a missing at column %zu\n", col_idx);
                     row->set_missing(col_idx);
                     // Based on schema, add data to row
                 } else if (schema->col_type(col_idx) == INT_TYPE) {

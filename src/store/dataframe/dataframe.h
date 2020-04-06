@@ -196,8 +196,9 @@ class DataFrame : public Object {
             char col_type = col->get_type();
 
             // Handle missing first
-            if (col->is_missing(idx)) {
-                row.set_missing(col_idx);
+            if (is_missing(col_idx, idx)) {
+                printf("Filling idx %zu of row with missing\n", col_idx);
+		row.set_missing(col_idx);
                 continue;
             }
 
@@ -500,7 +501,7 @@ class DistributedDataFrame : public DataFrame {
 
     // Indicates whether the cell at col,row is a missing value
     virtual bool is_missing(size_t col, size_t row) {
-        return dynamic_cast<DistributedColumn*>(columns[col])->is_missing_dist(row);
+	    return dynamic_cast<DistributedColumn*>(columns[col])->is_missing_dist(row);
     }
 
     // Declares the given row,col cell as missing
@@ -514,12 +515,15 @@ class DistributedDataFrame : public DataFrame {
     void local_map(Rower& r) {
         Row row(*schema);
 
-        for (size_t row_idx = 0; row_idx <= nrows(); row_idx++) {
+        for (size_t row_idx = 0; row_idx < nrows(); row_idx++) {
             bool local_row = dynamic_cast<DistributedColumn*>(columns[0])->is_row_local(row_idx);
 
             if (!local_row) {
+		    //printf("Row %zu is not local to node %zu\n", row_idx, store->this_node());
                 continue;  // do not consider rows that are not on this node
             }
+
+	    //printf("Row %zu of %zu is local to node %zu\n", row_idx, nrows(), store->this_node());
 
             fill_row(row_idx, row);
 

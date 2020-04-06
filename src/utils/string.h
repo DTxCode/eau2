@@ -159,3 +159,11 @@ class StrBuff : public Object {
         return res;
     }
 };
+
+class StringComp {
+	public:
+		bool operator() (String* s1, String* s2) const {
+			return strcmp(s1->c_str(), s2->c_str()) < 0;
+		}
+
+};

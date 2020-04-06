@@ -16,9 +16,9 @@
  */
 class WordCountFielder : public Fielder {
    public:
-    std::map<String*, int>* word_counts;
+    std::map<String*, int, StringComp>* word_counts;
 
-    WordCountFielder(std::map<String*, int>* word_counts) {
+    WordCountFielder(std::map<String*, int, StringComp>* word_counts) {
         this->word_counts = word_counts;
     }
 
@@ -38,9 +38,11 @@ class WordCountFielder : public Fielder {
     void accept(String* s) {
         if (word_counts->count(s)) {
             // count already exists
-            int count = word_counts->find(s)->second;
+ 	    int count = word_counts->find(s)->second;
+            //printf("Incremented count %d by 1 for word %s\n", count, s->c_str());
             (*word_counts)[s] = count + 1;
         } else {
+	    //printf("String %s has not been seen\n", s->c_str());
             (*word_counts)[s] = 1;
         }
     }
@@ -53,10 +55,10 @@ class WordCountFielder : public Fielder {
 // Rower that counts occurances of all strings it sees and stores them in a map
 class WordCounter : public Rower {
    public:
-    std::map<String*, int>* word_counts;
+    std::map<String*, int, StringComp>* word_counts;
 
     WordCounter() {
-        word_counts = new std::map<String*, int>;
+        word_counts = new std::map<String*, int, StringComp>;
     }
 
     ~WordCounter() {
@@ -64,11 +66,12 @@ class WordCounter : public Rower {
     }
 
     // Returns pointer to the actual map with data
-    std::map<String*, int>* get_word_counts() {
+    std::map<String*, int, StringComp>* get_word_counts() {
         return word_counts;
     }
 
     bool accept(Row& r) {
+	printf("WordCounter visitng row\n");
         WordCountFielder f(word_counts);
 
         // f will store counts in word_counts
@@ -106,7 +109,6 @@ class WordCount : public Application {
 
     /** The master nodes reads the input, then all of the nodes count. */
     void run_() override {
-	printf("WC %zu is running\n", this_node());
         // Node 0 distibutes the data, waits for everyone (including itself) to do their local_maps,
         // and then combines the results with reduce()
         if (this_node() == 0) {
@@ -135,13 +137,14 @@ class WordCount : public Application {
 
     /** Compute word counts on the local node and build a data frame. */
     void local_count() {
-	printf("local count on %zu starting\n", this_node());
         DistributedDataFrame* words = store->waitAndGet(data_key);
+
+	printf("Local count found words DDF with %zu rows and %zu columns\n", words->nrows(), words->ncols());
 
         // Create rower, apply it with local_map, and get the results in a map
         WordCounter counter;
         words->local_map(counter);
-        std::map<String*, int>* word_counts = counter.get_word_counts();
+        std::map<String*, int, StringComp>* word_counts = counter.get_word_counts();
 
         // Convert map to distributed data frame
         Schema string_int_schema("SI");
@@ -149,10 +152,11 @@ class WordCount : public Application {
         Row word_count_pair(string_int_schema);
 
         // loop through map and add entries to 2 column DDF
-        for (std::map<String*, int>::iterator it = word_counts->begin(); it != word_counts->end(); it++) {
+        for (std::map<String*, int, StringComp>::iterator it = word_counts->begin(); it != word_counts->end(); it++) {
             String* word = it->first;
             int count = it->second;
 
+	    printf("Node %zu counted %d for word %s\n", this_node(), count, word->c_str());
             word_count_pair.set(0, word);
             word_count_pair.set(1, count);
 
@@ -169,13 +173,15 @@ class WordCount : public Application {
 
     // Merge the results of Wordcounter from all other nodes onto this node
     void reduce() {
-        std::map<String*, int> final_word_counts;
+        std::map<String*, int, StringComp> final_word_counts;
 
         // Loop through nodes in the network and collect their results
         for (size_t node_idx = 0; node_idx < num_nodes(); ++node_idx) {
             Key* partial_results_key = mk_key(node_idx);
 
             DistributedDataFrame* partial_results = store->waitAndGet(partial_results_key);
+
+	    //printf("%zu got %zu partial results from node %zu\n", this_node(), partial_results->nrows(), node_idx);
 
             merge(partial_results, &final_word_counts);
 
@@ -185,7 +191,7 @@ class WordCount : public Application {
 
         // Loop through final map and print counts
         Sys s;
-        for (std::map<String*, int>::iterator it = final_word_counts.begin(); it != final_word_counts.end(); it++) {
+        for (std::map<String*, int, StringComp>::iterator it = final_word_counts.begin(); it != final_word_counts.end(); it++) {
             String* word = it->first;
             int count = it->second;
 
@@ -197,7 +203,7 @@ class WordCount : public Application {
     }
 
     // Adds the word counts stored in df to the given map
-    void merge(DistributedDataFrame* df, std::map<String*, int>* map) {
+    void merge(DistributedDataFrame* df, std::map<String*, int, StringComp>* map) {
         // Loop through DF and updates mappings in map
         for (size_t row_idx = 0; row_idx < df->nrows(); row_idx++) {
             String* word = df->get_string(0, row_idx);
@@ -206,9 +212,11 @@ class WordCount : public Application {
             if (map->count(word)) {
                 // count already exists
                 int cur_count = map->find(word)->second;
+		//printf("Merging counts for word %s. %d + %d\n", word->c_str(), cur_count, new_count);
                 (*map)[word] = cur_count + new_count;
             } else {
                 // new word, set count to what was in the DF
+		//printf("Merging new word %s\n", word->c_str());
                 (*map)[word] = new_count;
             }
         }
@@ -224,7 +232,7 @@ int test_word_count() {
 
     Store store1(0, (char*)"127.0.0.1", 8000, master_ip, master_port);
     Store store2(1, (char*)"127.0.0.1", 8001, master_ip, master_port);
-    Store store3(2, (char*)"127.0.0.1", 8002, master_ip, master_port);
+    //Store store3(2, (char*)"127.0.0.1", 8002, master_ip, master_port);
 
     //data/wc_data.sor
     std::thread t1([](Store& store1) {
@@ -235,14 +243,14 @@ int test_word_count() {
 	WordCount wc(nullptr, &store2);
     }, std::ref(store2));
 
-    std::thread t3([](Store& store3) {
-	WordCount wc(nullptr, &store3);
-    }, std::ref(store3));
+    //std::thread t3([](Store& store3) {
+//	WordCount wc(nullptr, &store3);
+ //   }, std::ref(store3));
 
 
     t1.join();
     t2.join();
-    t3.join();
+   // t3.join();
 
     // shutdown system
     s.shutdown();
@@ -252,8 +260,8 @@ int test_word_count() {
     }
     while (!store2.is_shutdown()) {
     }
-    while (!store3.is_shutdown()) {
-    }
+//    while (!store3.is_shutdown()) {
+//    }
 
     return true;
 }

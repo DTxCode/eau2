@@ -486,7 +486,13 @@ class DistributedColumn : virtual public Column {
             cached_missings_idx = array_idx;
         }
 
-        // Use local is_missing
+	//printf("Missings_ is ");
+	//for (size_t i = 0; i < INTERNAL_CHUNK_SIZE; i++) {
+	//	printf("%d,", missings_[i]);
+	//}
+	//printf("\n");
+        
+	// Use local is_missing
         return is_missing(local_idx);
     }
 
