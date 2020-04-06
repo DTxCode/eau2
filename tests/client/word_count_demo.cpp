@@ -1,6 +1,5 @@
 #include <map>
 
-
 #include "../../src/store/store.cpp"
 #include "../../src/client/application.cpp"
 #include "../../src/store/dataframe/fielder.h"
@@ -71,7 +70,6 @@ class WordCounter : public Rower {
     }
 
     bool accept(Row& r) {
-	    printf("WordCounter visiting row\n");
         WordCountFielder f(word_counts);
 
         // f will store counts in word_counts
@@ -116,9 +114,9 @@ class WordCount : public Application {
             if (input_file == nullptr) {
                 exit_with_msg("Failed to open file to run WordCount on");
             }
-
+            
             delete DataFrame::fromSorFile(data_key, store, input_file);
-
+            
             local_count();
             reduce();
         } else {
@@ -141,12 +139,6 @@ class WordCount : public Application {
 
 	    printf("Local count found words DDF with %zu rows and %zu columns\n", words->nrows(), words->ncols());
 
-        for (size_t i = 0; i < words->nrows(); i++) {
-            printf("(%d, %zu) : %s\n", 0, i, words->get_string(0, i)->c_str()); 
-            if (words->is_missing(0, i)) {
-                printf("SHES MISSING\n");
-            }
-        }
         printf("Before local_mapping\n");
 
         // Create rower, apply it with local_map, and get the results in a map
@@ -241,28 +233,27 @@ int test_word_count() {
     s.listen_for_clients();
 
     Store store1(0, (char*)"127.0.0.1", 8000, master_ip, master_port);
-//    Store store2(1, (char*)"127.0.0.1", 8001, master_ip, master_port);
-    //Store store3(2, (char*)"127.0.0.1", 8002, master_ip, master_port);
+  //  Store store2(1, (char*)"127.0.0.1", 8001, master_ip, master_port);
+   // Store store3(2, (char*)"127.0.0.1", 8002, master_ip, master_port);
 
     //data/wc_data.sor
-  //  std::thread t1([](Store& store1) {
-//	WordCount wc("tests/test_data/words.sor", &store1);
-//    }, std::ref(store1));
+/*    std::thread t1([](Store& store1) {
+	WordCount wc("data/wc_data.sor", &store1);
+    }, std::ref(store1));
 
-    WordCount wc("tests/test_data/words.sor", &store1);
+    std::thread t2([](Store& store2) {
+	WordCount wc(nullptr, &store2);
+    }, std::ref(store2));
 
-  //  std::thread t2([](Store& store2) {
-//	WordCount wc(nullptr, &store2);
-//    }, std::ref(store2));
-
-    //std::thread t3([](Store& store3) {
-//	WordCount wc(nullptr, &store3);
- //   }, std::ref(store3));
-
-
-    //t1.join();
-//    t2.join();
-   // t3.join();
+    std::thread t3([](Store& store3) {
+	WordCount wc(nullptr, &store3);
+    }, std::ref(store3));
+	
+    t1.join();
+    t2.join();
+    t3.join();
+    
+    */WordCount wc("data/wc_data.sor", &store1);
 
     // shutdown system
     s.shutdown();
@@ -270,10 +261,10 @@ int test_word_count() {
     // wait for nodes to finish
     while (!store1.is_shutdown()) {
     }
-  //  while (!store2.is_shutdown()) {
+    //while (!store2.is_shutdown()) {
     //}
-//    while (!store3.is_shutdown()) {
-//    }
+    //while (!store3.is_shutdown()) {
+    //}
 
     return true;
 }
