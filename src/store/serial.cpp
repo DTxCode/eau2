@@ -30,7 +30,7 @@ char* Serializer::serialize_distributed_dataframe(DistributedDataFrame* df) {
     size_t cols = df->ncols();
     char** col_strs = new char*[cols];
     for (size_t i = 0; i < cols; i++) {
-        col_strs[i] = serialize_dist_col(dynamic_cast<DistributedColumn*>(df->get_col_(i)));
+        col_strs[i] = serialize_dist_col(dynamic_cast<DistributedColumn*>(df->columns[i]));
         total_str_size += strlen(col_strs[i]) + 1;  // +1 for tilda below
     }
 
@@ -81,13 +81,21 @@ DistributedDataFrame* Serializer::deserialize_distributed_dataframe(char* msg, S
     for (size_t i = 0; i < schema->width(); i++) {
         char type = schema->col_type(i);
         if (type == INT_TYPE) {
-            df->add_column(deserialize_dist_int_col(serialized_cols[i], store));
+            DistributedIntColumn* d_i = deserialize_dist_int_col(serialized_cols[i], store);
+            df->add_column(d_i);
+            delete d_i;
         } else if (type == BOOL_TYPE) {
-            df->add_column(deserialize_dist_bool_col(serialized_cols[i], store));
+            DistributedBoolColumn* d_b = deserialize_dist_bool_col(serialized_cols[i], store);
+            df->add_column(d_b);
+            delete d_b;
         } else if (type == FLOAT_TYPE) {
-            df->add_column(deserialize_dist_float_col(serialized_cols[i], store));
+            DistributedFloatColumn* d_f = deserialize_dist_float_col(serialized_cols[i], store);
+            df->add_column(d_f);
+            delete d_f;
         } else {
-            df->add_column(deserialize_dist_string_col(serialized_cols[i], store));
+            DistributedStringColumn* d_s = deserialize_dist_string_col(serialized_cols[i], store);
+            df->add_column(d_s);
+            delete d_s;
         }
     }
     delete schema;
@@ -206,6 +214,7 @@ DistributedColumn* Serializer::deserialize_dist_col(char* msg, Store* store, cha
     } else {
         dc = new DistributedStringColumn(store, chunk_keys, missings_keys, length, num_chunks);
     }
+
     return dc;
 }
 

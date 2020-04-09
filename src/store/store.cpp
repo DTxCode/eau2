@@ -147,7 +147,6 @@ void Store::send_put_request_(Key *key, char *value) {
         exit(1);
     }
     
-    delete response->msg;
     delete response;
     delete[] other_node_host;
 }
@@ -280,10 +279,8 @@ char *Store::send_get_request_(Key *key) {
 
     char *serialized_value = duplicate(response->msg);
 
-    delete response->msg;
     delete response;
     delete[] other_node_host;
-
 
     return serialized_value;
 }
