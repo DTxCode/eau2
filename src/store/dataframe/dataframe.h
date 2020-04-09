@@ -560,11 +560,8 @@ class DistributedDataFrame : public DataFrame {
             bool local_row = dynamic_cast<DistributedColumn*>(columns[0])->is_row_local(row_idx);
 
             if (!local_row) {
-		    //printf("Row %zu is not local to node %zu\n", row_idx, store->this_node());
                 continue;  // do not consider rows that are not on this node
             }
-
-	    //printf("Row %zu of %zu is local to node %zu\n", row_idx, nrows(), store->this_node());
 
             fill_row(row_idx, row);
 

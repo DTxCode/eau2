@@ -15,6 +15,11 @@
 
 #define GETANDWAIT_SLEEP 25
 
+/*Store::Store(Store& s) : Node(s.my_ip_addess, s.my_port, s.server_ip_address, s.server_port) {
+    this->node_id = node_id;
+    this->map = s.map;
+}*/
+
 Store::Store(size_t node_id, char *my_ip_address, int my_port, char *server_ip_address, int server_port) : Node(my_ip_address, my_port, server_ip_address, server_port) {
     this->node_id = node_id;
     map = new Map();
@@ -90,6 +95,7 @@ void Store::put_(Key *k, bool *bools, size_t num) {
 
     put_char_(k, value);
 
+    // Delete memory allocated by serializer
     delete[] value;
 }
 
@@ -113,7 +119,7 @@ void Store::put_(Key *k, String **strings, size_t num) {
     char *value = serializer->serialize_strings(strings, num);
 
     put_char_(k, value);
-
+    
     delete[] value;
 }
 
@@ -140,7 +146,8 @@ void Store::send_put_request_(Key *key, char *value) {
         printf("Node %zu did not get successful ACK for its PUT request to node %zu\n", node_id, key_home);
         exit(1);
     }
-
+    
+    delete response->msg;
     delete response;
     delete[] other_node_host;
 }
@@ -273,8 +280,10 @@ char *Store::send_get_request_(Key *key) {
 
     char *serialized_value = duplicate(response->msg);
 
+    delete response->msg;
     delete response;
     delete[] other_node_host;
+
 
     return serialized_value;
 }

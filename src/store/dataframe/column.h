@@ -339,7 +339,7 @@ class DistributedColumn : virtual public Column {
     DistributedColumn() {
     }
 
-    DistributedColumn(Store* s, Key** chunk_keys, Key** missings_keys, size_t length, size_t num_chunks) {
+    DistributedColumn(Store* s, Key** chunk_keys, Key** missings_keys, size_t length, size_t num_chunks)  {
         store = s;
         this->length = length;
         this->num_chunks = num_chunks;
@@ -540,9 +540,8 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
         init_missings_dist();
 
         // Put default integer array for each chunk
-        int ints[INTERNAL_CHUNK_SIZE];
         for (size_t i = 0; i < num_chunks; i++) {
-            store->put_(chunk_keys[i], ints, INTERNAL_CHUNK_SIZE);
+            store->put_(chunk_keys[i], cells_, INTERNAL_CHUNK_SIZE);
         }
     }
 
@@ -562,9 +561,8 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
         init_missings_dist();
 
         // Put default integer array for each chunk
-        int ints[INTERNAL_CHUNK_SIZE];
         for (size_t i = 0; i < num_chunks; i++) {
-            store->put_(chunk_keys[i], ints, INTERNAL_CHUNK_SIZE);
+            store->put_(chunk_keys[i], cells_, INTERNAL_CHUNK_SIZE);
         }
 
         va_list vl;
@@ -586,9 +584,8 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
         init_missings_dist();
 
         // Put default integer array for each chunk
-        int ints[INTERNAL_CHUNK_SIZE];
         for (size_t i = 0; i < num_chunks; i++) {
-            store->put_(chunk_keys[i], ints, INTERNAL_CHUNK_SIZE);
+            store->put_(chunk_keys[i], cells_, INTERNAL_CHUNK_SIZE);
         }
 
         // Copy over data from other column
@@ -673,9 +670,8 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
         resize_missings_dist();
 
         // add default int array to new chunks
-        int ints[INTERNAL_CHUNK_SIZE];
         for (size_t i = old_num_chunks; i < num_chunks; i++) {
-            store->put_(chunk_keys[i], ints, INTERNAL_CHUNK_SIZE);
+            store->put_(chunk_keys[i], cells_, INTERNAL_CHUNK_SIZE);
         }
     }
 
@@ -731,9 +727,8 @@ class DistributedBoolColumn : public DistributedColumn, public BoolColumn {
         init_missings_dist();
 
         // Put default bool array for each chunk
-        bool bools[INTERNAL_CHUNK_SIZE];
         for (size_t i = 0; i < num_chunks; i++) {
-            store->put_(chunk_keys[i], bools, INTERNAL_CHUNK_SIZE);
+            store->put_(chunk_keys[i], cells_, INTERNAL_CHUNK_SIZE);
         }
     }
 
@@ -753,9 +748,8 @@ class DistributedBoolColumn : public DistributedColumn, public BoolColumn {
         init_missings_dist();
 
         // Put default bool array for each chunk
-        bool bools[INTERNAL_CHUNK_SIZE];
         for (size_t i = 0; i < num_chunks; i++) {
-            store->put_(chunk_keys[i], bools, INTERNAL_CHUNK_SIZE);
+            store->put_(chunk_keys[i], cells_, INTERNAL_CHUNK_SIZE);
         }
 
         va_list vl;
@@ -777,9 +771,8 @@ class DistributedBoolColumn : public DistributedColumn, public BoolColumn {
         init_missings_dist();
 
         // Put default bool array for each chunk
-        bool bools[INTERNAL_CHUNK_SIZE];
         for (size_t i = 0; i < num_chunks; i++) {
-            store->put_(chunk_keys[i], bools, INTERNAL_CHUNK_SIZE);
+            store->put_(chunk_keys[i], cells_, INTERNAL_CHUNK_SIZE);
         }
 
         // Copy over data from other column
@@ -862,9 +855,8 @@ class DistributedBoolColumn : public DistributedColumn, public BoolColumn {
         resize_missings_dist();
 
         // add default int array to new chunks
-        int ints[INTERNAL_CHUNK_SIZE];
         for (size_t i = old_num_chunks; i < num_chunks; i++) {
-            store->put_(chunk_keys[i], ints, INTERNAL_CHUNK_SIZE);
+            store->put_(chunk_keys[i], cells_, INTERNAL_CHUNK_SIZE);
         }
     }
 
@@ -920,9 +912,8 @@ class DistributedFloatColumn : public DistributedColumn, public FloatColumn {
         init_missings_dist();
 
         // Put default float array for each chunk
-        float floats[INTERNAL_CHUNK_SIZE];
         for (size_t i = 0; i < num_chunks; i++) {
-            store->put_(chunk_keys[i], floats, INTERNAL_CHUNK_SIZE);
+            store->put_(chunk_keys[i], cells_, INTERNAL_CHUNK_SIZE);
         }
     }
 
@@ -940,11 +931,10 @@ class DistributedFloatColumn : public DistributedColumn, public FloatColumn {
 
         init_keys_dist();
         init_missings_dist();
-
+        
         // Put default float array for each chunk
-        float floats[INTERNAL_CHUNK_SIZE];
         for (size_t i = 0; i < num_chunks; i++) {
-            store->put_(chunk_keys[i], floats, INTERNAL_CHUNK_SIZE);
+            store->put_(chunk_keys[i], cells_, INTERNAL_CHUNK_SIZE);
         }
 
         va_list vl;
@@ -965,11 +955,10 @@ class DistributedFloatColumn : public DistributedColumn, public FloatColumn {
 
         init_keys_dist();
         init_missings_dist();
-
+        
         // Put default float array for each chunk
-        float floats[INTERNAL_CHUNK_SIZE];
         for (size_t i = 0; i < num_chunks; i++) {
-            store->put_(chunk_keys[i], floats, INTERNAL_CHUNK_SIZE);
+            store->put_(chunk_keys[i], cells_, INTERNAL_CHUNK_SIZE);
         }
 
         // Copy over data from other column
@@ -1052,9 +1041,8 @@ class DistributedFloatColumn : public DistributedColumn, public FloatColumn {
         resize_missings_dist();
 
         // Put default float array for each chunk
-        float floats[INTERNAL_CHUNK_SIZE];
         for (size_t i = old_num_chunks; i < num_chunks; i++) {
-            store->put_(chunk_keys[i], floats, INTERNAL_CHUNK_SIZE);
+            store->put_(chunk_keys[i], cells_, INTERNAL_CHUNK_SIZE);
         }
     }
 
@@ -1109,9 +1097,8 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
         init_missings_dist();
 
         // Put default string array for each chunk
-        String* strings[INTERNAL_CHUNK_SIZE] = {};  // {} to ensure all String* are initialized to nullptr
         for (size_t i = 0; i < num_chunks; i++) {
-            store->put_(chunk_keys[i], strings, INTERNAL_CHUNK_SIZE);
+            store->put_(chunk_keys[i], cells_, INTERNAL_CHUNK_SIZE);
         }
     }
 
@@ -1131,9 +1118,8 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
         init_missings_dist();
 
         // Put default string array for each chunk
-        String* strings[INTERNAL_CHUNK_SIZE] = {};
         for (size_t i = 0; i < num_chunks; i++) {
-            store->put_(chunk_keys[i], strings, INTERNAL_CHUNK_SIZE);
+            store->put_(chunk_keys[i], cells_, INTERNAL_CHUNK_SIZE);
         }
 
         va_list vl;
@@ -1155,9 +1141,8 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
         init_missings_dist();
 
         // Put default string array for each chunk
-        String* strings[INTERNAL_CHUNK_SIZE] = {};
         for (size_t i = 0; i < num_chunks; i++) {
-            store->put_(chunk_keys[i], strings, INTERNAL_CHUNK_SIZE);
+            store->put_(chunk_keys[i], cells_, INTERNAL_CHUNK_SIZE);
         }
 
         // Copy over data from other column
@@ -1239,9 +1224,8 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
         resize_missings_dist();
 
         // Put default string array for each chunk
-        String* strings[INTERNAL_CHUNK_SIZE] = {};
         for (size_t i = old_num_chunks; i < num_chunks; i++) {
-            store->put_(chunk_keys[i], strings, INTERNAL_CHUNK_SIZE);
+            store->put_(chunk_keys[i], cells_, INTERNAL_CHUNK_SIZE);
         }
     }
 
