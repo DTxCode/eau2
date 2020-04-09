@@ -15,8 +15,7 @@
 #include "network/message.h"
 
 // Serialize a DistributedDataFrame into char*
-// Will create same format and contents as Serializing a normal DF, with a pre-pended
-// string representing the serialized Store
+// Creates char* with format: 
 // "[Serialized Schema]~[Serialized Column 0]~ ... ~[Serialized Column n-1]"
 char* Serializer::serialize_distributed_dataframe(DistributedDataFrame* df) { 
     // Track total buffer size we need

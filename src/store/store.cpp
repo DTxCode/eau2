@@ -180,9 +180,9 @@ bool *Store::get_bool_array_(Key *k) {
         return nullptr;
     }
 
-    // Assumes deserialize will delete given char*
     bool *bools = serializer->deserialize_bools(serialized_array);
 
+    delete[] serialized_array;
     return bools;
 }
 
@@ -193,9 +193,9 @@ int *Store::get_int_array_(Key *k) {
         return nullptr;
     }
 
-    // Assumes deserialize will delete given char*
     int *ints = serializer->deserialize_ints(serialized_array);
 
+    delete[] serialized_array;
     return ints;
 }
 
@@ -206,9 +206,9 @@ float *Store::get_float_array_(Key *k) {
         return nullptr;
     }
 
-    // Assumes deserialize will delete given char*
     float *floats = serializer->deserialize_floats(serialized_array);
-
+    
+    delete[] serialized_array;
     return floats;
 }
 
@@ -219,9 +219,9 @@ String **Store::get_string_array_(Key *k) {
         return nullptr;
     }
 
-    // Assumes deserialize will delete given char*
     String **strings = serializer->deserialize_strings(serialized_array);
 
+    delete[] serialized_array;
     return strings;
 }
 
