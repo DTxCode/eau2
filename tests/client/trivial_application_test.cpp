@@ -6,7 +6,7 @@
 // Trivial Application for testing
 class Trivial : public Application {
    public:
-    Trivial(Store* store) : Application(nullptr, 0, 0, store) {}
+    Trivial(Store* store) : Application(store) {}
 
     void run_() {
         size_t SZ = 1000 * 1000;
@@ -31,6 +31,7 @@ class Trivial : public Application {
 
         assert(sum == 0);
 
+        delete[] vals;
         delete df;
         delete df2;
     }
@@ -46,6 +47,7 @@ int test_trivial() {
     Store store(0, "127.0.0.1", 8000, master_ip, master_port);
 
     Trivial test(&store);
+    test.run_();
 
     // shutdown system
     s.shutdown();
