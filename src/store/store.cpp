@@ -428,25 +428,29 @@ DistributedDataFrame *DataFrame::fromSorFile(Key *key, Store *store, FILE *fp) {
 // The following fromScalar methods store `val` in a single cell in a DistributedDataFrame.
 // Saves that DDF in store under key and returns it.
 DistributedDataFrame *DataFrame::fromScalar(Key *key, Store *store, float val) {
-    DistributedFloatColumn col(store, 1, val);
+    DistributedFloatColumn col(store);
+    col.push_back(val);
 
     return fromDistributedColumn(key, store, &col);
 }
 
 DistributedDataFrame *DataFrame::fromScalar(Key *key, Store *store, bool val) {
-    DistributedBoolColumn col(store, 1, val);
+    DistributedBoolColumn col(store);
+    col.push_back(val);
 
     return fromDistributedColumn(key, store, &col);
 }
 
 DistributedDataFrame *DataFrame::fromScalar(Key *key, Store *store, int val) {
-    DistributedIntColumn col(store, 1, val);
+    DistributedIntColumn col(store);
+    col.push_back(val);
 
     return fromDistributedColumn(key, store, &col);
 }
 
 DistributedDataFrame *DataFrame::fromScalar(Key *key, Store *store, String *val) {
-    DistributedStringColumn col(store, 1, val);
+    DistributedStringColumn col(store);
+    col.push_back(val);
 
     return fromDistributedColumn(key, store, &col);
 }
