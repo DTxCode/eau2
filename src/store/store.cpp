@@ -454,3 +454,13 @@ DistributedDataFrame *DataFrame::fromScalar(Key *key, Store *store, String *val)
 
     return fromDistributedColumn(key, store, &col);
 }
+
+DistributedDataFrame* DataFrame::fromRower(Key* key, Store* store, char* schema, Rower& rower) {
+    Schema scm(schema);
+    DistributedDataFrame* df = new DisributedDataFrame(store, scm);
+    
+    // DF now has columns set up, rower will add values 
+    df->map(rower);
+    store->put(key, df);
+    return df;
+}
