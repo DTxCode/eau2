@@ -30,6 +30,21 @@ class Rower : public Object {
     virtual void join_delete(Rower* other) {}
 };
 
+/*******************************************************************************
+ *  Writer::
+ *  An interface for writing data to the end of a dataframe. The intent
+ *  is that this class should subclassed and the accept() method be given
+ *  a meaningful implementation. The done() method provides indication
+ *  when the writer has no more data to add. Not intended to be used
+ *  in the same contexts as a normal rower.
+ */
+class Writer : public Rower {
+   public:
+    /** This method should be called before each invocation of accept().
+        When this mehtod returns true, the writer is out of data to add. */
+    virtual bool done() { return true; }
+};
+
 // BoolFlipRower is a rower that flips the boolean values of any rows it sees.
 // Used for testing map.
 class BoolFlipRower : public Rower {

@@ -15,11 +15,6 @@
 
 #define GETANDWAIT_SLEEP 25
 
-/*Store::Store(Store& s) : Node(s.my_ip_addess, s.my_port, s.server_ip_address, s.server_port) {
-    this->node_id = node_id;
-    this->map = s.map;
-}*/
-
 Store::Store(size_t node_id, char *my_ip_address, int my_port, char *server_ip_address, int server_port) : Node(my_ip_address, my_port, server_ip_address, server_port) {
     this->node_id = node_id;
     map = new Map();
@@ -455,12 +450,18 @@ DistributedDataFrame *DataFrame::fromScalar(Key *key, Store *store, String *val)
     return fromDistributedColumn(key, store, &col);
 }
 
-DistributedDataFrame* DataFrame::fromRower(Key* key, Store* store, char* schema, Rower& rower) {
+DistributedDataFrame* DataFrame::fromWriter(Key* key, Store* store, char* schema, Writer& writer) {
     Schema scm(schema);
     DistributedDataFrame* df = new DisributedDataFrame(store, scm);
+
+    Row r(schema);
+    // While the writer has more values to add, 
+    // give it a row and incorporate that row
+    while (!writer.done()) {
+        writer.accept(r);
+        add_row(r);
+    }
     
-    // DF now has columns set up, rower will add values 
-    df->map(rower);
     store->put(key, df);
     return df;
 }

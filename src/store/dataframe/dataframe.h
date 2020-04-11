@@ -433,7 +433,7 @@ class DataFrame : public Object {
     static DistributedDataFrame* fromScalar(Key* key, Store* store, int val);
     static DistributedDataFrame* fromScalar(Key* key, Store* store, String* val);
 
-    static DistributedDataFrame* fromRower(Key* key, Store* store, char* schema, Rower& rower);
+    static DistributedDataFrame* fromWriter(Key* key, Store* store, char* schema, Writer& writer);
 };
 
 // DistributedDataFrame is a DataFrame that has all of its data in DistributedColumns
