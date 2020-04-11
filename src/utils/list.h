@@ -22,11 +22,11 @@ class List : public Object {
     }
 
     void increase_capacity() {
-        int new_capacity = capacity * 2;
+        size_t new_capacity = capacity * 2;
         Object** new_list = new Object*[new_capacity];
 
         // copy over data to new list
-        for (int i = 0; (size_t)i < length; i++) {
+        for (size_t i = 0; i < length; i++) {
             new_list[i] = list[i];
         }
 

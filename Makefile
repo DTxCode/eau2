@@ -80,3 +80,14 @@ test-ddf:
 	./ddf_test
 	g++ -std=c++11 -Wall -pthread -g tests/store/test_missings_col.cpp -o missing_col_test
 	./missing_col_test
+
+### Utils Tests
+
+# Map test
+test-map:
+	g++ -std=c++11 -Wall -pthread -g tests/store/test_map.cpp -o map_test
+	./map_test
+
+valgrind-map:
+	g++ -std=c++11 -Wall -pthread -g tests/store/test_map.cpp -o map_test
+	valgrind --leak-check=full --track-origins=yes ./map_test 

@@ -65,7 +65,9 @@ class Map : public Object {
     void delete_entries_() {
         for (size_t i = 0; i < key_space; i++) {
             List* value_list = value_lists[i];
-            for (size_t j = 0; j < value_list->size(); j++) {
+            size_t num_pairs = value_list->size();
+
+            for (size_t j = 0; j < num_pairs; j++) {
                 // Delete the pair pointer
                 delete value_list->remove(j);
             }

@@ -5,6 +5,7 @@
 #include "../../src/utils/map.h"  // Note: make sure this import comes last
 #include "../../src/utils/object.h"
 #include "../../src/utils/string.h"
+#include <stdlib.h>
 
 String* keys[5];
 Object* o_vals[5];
@@ -26,10 +27,10 @@ void init_data() {
     s_vals[4] = new String("ryan!");
 
     o_vals[0] = new Object();
-    o_vals[0] = new Object();
-    o_vals[0] = new Object();
-    o_vals[0] = new Object();
-    o_vals[0] = new Object();
+    o_vals[1] = new Object();
+    o_vals[2] = new Object();
+    o_vals[3] = new Object();
+    o_vals[4] = new Object();
 
     keys[0] = new String("key1");
     keys[1] = new String("key2");
@@ -58,17 +59,17 @@ void cleanup() {
 // Confirm the 'has_key' method returns true when the key should exist
 // and false when it shouldnt
 // Returns true if test passed, false if it failed
-bool test_has_key() {
+bool test_containsKey() {
     init_data();
     map->put(keys[0], o_vals[0]);
     map->put(keys[1], s_vals[1]);
     map->put(keys[2], o_vals[1]);
     bool passed = true;
-    passed = passed && map->has_key(keys[0]);
-    passed = passed && map->has_key(keys[1]);
-    passed = passed && map->has_key(keys[2]);
-    passed = passed && !map->has_key(keys[3]);
-    passed = passed && !map->has_key(keys[4]);
+    passed = passed && map->containsKey(keys[0]);
+    passed = passed && map->containsKey(keys[1]);
+    passed = passed && map->containsKey(keys[2]);
+    passed = passed && !map->containsKey(keys[3]);
+    passed = passed && !map->containsKey(keys[4]);
 
     cleanup();
     return passed;
@@ -81,35 +82,37 @@ bool test_get() {
     map->put(keys[0], o_vals[0]);
     map->put(keys[1], s_vals[1]);
     map->put(keys[2], o_vals[1]);
-    bool passed = true;
-    passed = passed && (o_vals[0]->equals(map->get(keys[0])));
-    passed = passed && (map->size() == 3);
-    passed = passed && (s_vals[1]->equals(map->get(keys[1])));
-    passed = passed && (map->size() == 3);
-    passed = passed && (o_vals[1]->equals(map->get(keys[2])));
-    passed = passed && !(o_vals[0]->equals(map->get(keys[2])));
-    passed = passed && !(s_vals[1]->equals(map->get(keys[3])));
-    passed = passed && (nullptr == map->get(keys[4]));
-    passed = passed && (nullptr == map->get(keys[3]));
+
+    assert(o_vals[0]->equals(map->get(keys[0])));
+    assert(map->size() == 3);
+    assert(s_vals[1]->equals(map->get(keys[1])));
+    assert(map->size() == 3);
+    assert(o_vals[1]->equals(map->get(keys[2])));
+    assert(!o_vals[0]->equals(map->get(keys[2])));
+    assert(!s_vals[1]->equals(map->get(keys[3])));
+    assert(nullptr == map->get(keys[4]));
+    assert(nullptr == map->get(keys[3]));
 
     cleanup();
-    return passed;
+    return true;
 }
 
 // Confirm the 'put' method works, assuming 'get' works
 // Returns true if test passed, false if it failed
 bool test_put() {
     init_data();
+
+    map->put(keys[0], o_vals[1]);
     map->put(keys[0], o_vals[0]);
     map->put(keys[3], s_vals[2]);
     map->put(keys[4], s_vals[3]);
     bool passed = true;
     passed = passed && (map->size() == 3);
-    passed = passed && map->has_key(keys[0]);
-    passed = passed && map->has_key(keys[3]);
-    passed = passed && map->has_key(keys[4]);
-    passed = passed && !map->has_key(keys[1]);
-    passed = passed && !map->has_key(keys[2]);
+    passed = passed && map->containsKey(keys[0]);
+    passed = passed && map->containsKey(keys[3]);
+    passed = passed && map->containsKey(keys[4]);
+    passed = passed && !map->containsKey(keys[1]);
+    passed = passed && !map->containsKey(keys[2]);
     passed = passed && (o_vals[0]->equals(map->get(keys[0])));
     passed = passed && (s_vals[2]->equals(map->get(keys[3])));
     passed = passed && (s_vals[3]->equals(map->get(keys[4])));
@@ -131,7 +134,7 @@ bool test_remove() {
     map->put(keys[4], s_vals[3]);
     bool passed = true;
     passed = passed && (map->size() == 3);
-    passed = passed && map->has_key(keys[0]);
+    passed = passed && map->containsKey(keys[0]);
     passed = passed && o_vals[0]->equals(map->remove(keys[0]));
     passed = passed && s_vals[2]->equals(map->remove(keys[3]));
     passed = passed && (map->size() == 1);
@@ -167,9 +170,10 @@ bool test_size() {
 
 // Main to run all tests
 int main(int argc, char** argv) {
-    test_get();
-    test_has_key();
-    test_put();
-    test_remove();
-    test_size();
+    assert(test_get());
+    assert(test_containsKey());
+    assert(test_put());
+    assert(test_remove());
+    assert(test_size());
+    printf("====== Map tests PASSED ===========\n");
 }
