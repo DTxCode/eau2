@@ -157,7 +157,7 @@ class Map : public Object {
             Pair* pair = dynamic_cast<Pair*>(entry);
 
             // if a key from the pair matches the given key, return the pair val
-	    if (pair->get_first()->equals(key)) {
+	        if (pair->get_first()->equals(key)) {
                 return pair->get_second();
             }
         }
@@ -189,8 +189,18 @@ class Map : public Object {
         // Updated existing key. Return the replaced value
         if (replaced) {
             Pair* replaced_pair = dynamic_cast<Pair*>(replaced);
+            Object* replaced_key = replaced_pair->get_first();
             Object* replaced_value = replaced_pair->get_second();
             delete replaced_pair;
+
+            // Remove the replaced key from list of keys and add the new one
+            // only if the new key isn't literally the same key as the replaced one
+            if (replaced_key != key) {
+                size_t removed_key_index = keys_->index_of(replaced_key);
+                keys_->remove(removed_key_index);
+                keys_->push_back(key);
+                delete replaced_key;
+            }
 
             // Remove the replaced value from list of values and add the new one.
             size_t removed_value_index = values_->index_of(replaced_value);

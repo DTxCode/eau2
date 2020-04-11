@@ -305,19 +305,11 @@ float Serializer::deserialize_float(char* msg) {
 // Serialize pointer String object to a character array
 // Copying c_str representation of the String for safety
 char* Serializer::serialize_string(String* value) {
-    char* data;
-    // Handle nullptr case --> return "\0"
-    if (nullptr == value) {
-        data = new char[1];
-        data[0] = '\0';
-        return data;
+    if (value == nullptr) {
+        return nullptr;
     }
-    // Do a fake write to check how much space we need
-    size_t buf_size = snprintf(nullptr, 0, "%s", value->c_str()) + 1;
-    data = new char[buf_size];
-    strcpy(data, value->c_str());
-    data[buf_size - 1] = '\0';
-    return data;
+
+    return value->get_string();
 }
 
 // De-serialize a character array to a string value
@@ -373,30 +365,36 @@ char* Serializer::serialize_string_array(StringArray* array) {
     // Will have a char* for each value. Track them separately
     //  because we do not know their size
     char** cell_strings = new char*[length];
-    size_t i;
     size_t total_size = 0;
     // For all cell-values, serialize and add to cell_strings
-    for (i = 0; i < length; i++) {
+    for (size_t i = 0; i < length; i++) {
         cell_strings[i] = serialize_string(array->get(i));
 
         // Track (a slight over-estimate due to null terminators) total
         // size required for message
-        total_size += strlen(cell_strings[i]);
+        if (cell_strings[i]) {
+            total_size += strlen(cell_strings[i]);
+        }
     }
 
     // size of cell char*s + (length - 1) commas + 1 for null terminator
     total_size += length;
     char* serial_buffer = new char[total_size];
+    serial_buffer[0] = '\0';
 
-    // Copy all value-strings into one buffer,
-    // starting with first value which doesn't need a comma
-    strcpy(serial_buffer, cell_strings[0]);
-    delete[] cell_strings[0];
+    // Loop through serialized values and concat, adding
+    // commas between values and accounting for nullptrs
+    // No need for first call to be strcpy instead of strcat as we 
+    // set index 0 to be \0 explictly above.
+    for (size_t i = 0; i < length; i++) {
+        if (i != 0) {
+            strcat(serial_buffer, ",");  // CSV
+        }
 
-    // Loop through any remaining values
-    for (i = 1; i < length; i++) {
-        strcat(serial_buffer, ",");  // CSV
-        strcat(serial_buffer, cell_strings[i]);
+        if (cell_strings[i]) {
+            strcat(serial_buffer, cell_strings[i]);
+        }
+
         delete[] cell_strings[i];
     }
 
@@ -586,20 +584,31 @@ char* Serializer::serialize_strings(String** strings, size_t num_values) {
     char* string_tokens[length];
     for (size_t i = 0; i < length; i++) {
         string_tokens[i] = serialize_string(strings[i]);
-        buf_size += strlen(string_tokens[i]);
+
+        if (string_tokens[i]) {
+            buf_size += strlen(string_tokens[i]);
+        }
     }
 
     data = new char[buf_size];
-    strcpy(data, string_tokens[0]);
-    
-    // Still need to delete initialized strings for each value
-    delete[] string_tokens[0];
+    data[0] = '\0';
 
-    for (size_t i = 1; i < length; i++) {
-        strcat(data, ",");  // CSV
-        strcat(data, string_tokens[i]);
+    // Loop through serialized values and concat, adding
+    // commas between values and accounting for nullptrs
+    // No need for first call to be strcpy instead of strcat as we 
+    // set index 0 to be \0 explictly above.
+    for (size_t i = 0; i < length; i++) {
+        if (i != 0) {
+            strcat(data, ",");  // CSV
+        }
+
+        if (string_tokens[i]) {
+            strcat(data, string_tokens[i]);
+        }
+
         delete[] string_tokens[i];
     }
+
     return data;
 }
 

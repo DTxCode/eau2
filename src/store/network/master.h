@@ -59,7 +59,7 @@ class Server {
             listener->join();
         }
 
-        printf("Server is shutting down itself and %zu other nodes...\n", registered_nodes->size());
+        // printf("Server is shutting down itself and %zu other nodes...\n", registered_nodes->size());
         Message shutdown_msg(my_ip_address, my_port, SHUTDOWN, (char*) "");
 
         // Loop over all the nodes this server knows about

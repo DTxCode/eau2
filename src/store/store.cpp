@@ -72,7 +72,8 @@ void Store::put_char_(Key *key, char *value) {
         // Value belongs on this node
         String *val = new String(value);  // deleted in destructor
         map_lock.lock();
-        map->put(key->clone(), val);
+        // Calling delete here in case put returns a replaced value
+        delete map->put(key->clone(), val);
         map_lock.unlock();
     } else {
         // Value belongs on another node
@@ -452,14 +453,14 @@ DistributedDataFrame *DataFrame::fromScalar(Key *key, Store *store, String *val)
 
 DistributedDataFrame* DataFrame::fromWriter(Key* key, Store* store, char* schema, Writer& writer) {
     Schema scm(schema);
-    DistributedDataFrame* df = new DisributedDataFrame(store, scm);
+    DistributedDataFrame* df = new DistributedDataFrame(store, scm);
 
-    Row r(schema);
+    Row r(scm);
     // While the writer has more values to add, 
     // give it a row and incorporate that row
     while (!writer.done()) {
         writer.accept(r);
-        add_row(r);
+        df->add_row(r);
     }
     
     store->put(key, df);

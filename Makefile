@@ -4,6 +4,9 @@ build:
 run:
 	./app -from 0 -len 1000 -f ./data/data.sor
 
+test: test-dist-column
+
+
 ### Client
 
 # WordCount Demo
@@ -64,9 +67,13 @@ valgrind-store:
 	valgrind --leak-check=full --track-origins=yes ./store_test
 
 # Distributed Column test
-test-column:
+test-dist-column:
 	g++ -std=c++11 -Wall -pthread -g tests/store/dist_column_test.cpp -o col_test
 	./col_test
+
+valgrind-dist-column:
+	g++ -std=c++11 -Wall -pthread -g tests/store/dist_column_test.cpp -o col_test
+	valgrind --leak-check=full --track-origins=yes ./col_test
 
 test-ddf:
 	g++ -std=c++11 -Wall -pthread -g tests/store/test_ddf.cpp -o ddf_test

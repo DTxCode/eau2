@@ -276,7 +276,7 @@ class StringColumn : virtual public Column {
 
     // Create empty column with default capacity 10
     StringColumn() {
-        cells_ = new String*[INTERNAL_CHUNK_SIZE];
+        cells_ = new String*[INTERNAL_CHUNK_SIZE]();
     }
 
     // Copy constructor. Assumes other column is the same type as this one

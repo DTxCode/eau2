@@ -123,7 +123,7 @@ class Node {
         if (response->msg_type == ACK) {
             // registered successfully
             registered = true;
-            printf("Node at %s:%d registered succesfully\n", my_ip_address, my_port);
+            // printf("Node at %s:%d registered succesfully\n", my_ip_address, my_port);
             delete response;
         } else {
             // error with registration
@@ -203,7 +203,7 @@ class Node {
     // Called when server tells this node to shut down
     // Cleans up run-time flags, but does not delete memory (handled by destructor)
     void shutdown_(int connected_socket) {
-        printf("Node at %s:%d is shutting down\n", my_ip_address, my_port);
+        // printf("Node at %s:%d is shutting down\n", my_ip_address, my_port);
 
         // Send ACK
         Message ack(my_ip_address, my_port, ACK, (char *)"");
