@@ -23,6 +23,8 @@ class Store : public Node {
     std::mutex map_lock;
     size_t node_id;
 
+//    Store(Store& s);
+
     Store(size_t node_id, char* my_ip_address, int my_port, char* server_ip_address, int server_port);
 
     ~Store();

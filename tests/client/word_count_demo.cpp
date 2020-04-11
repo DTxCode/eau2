@@ -176,7 +176,7 @@ class WordCount : public Application {
 
     // Merge the results of Wordcounter from all other nodes onto this node
     void reduce() {
-	printf("Node %zu is starting to reduce all partial results\n", this_node());
+	    //printf("Node %zu is starting to reduce all partial results\n", this_node());
         std::map<String*, int, StringComp> final_word_counts;
 
         // Loop through nodes in the network and collect their results
@@ -185,17 +185,17 @@ class WordCount : public Application {
 
             DistributedDataFrame* partial_results = store->waitAndGet(partial_results_key);
 
-	    //printf("%zu got %zu partial results from node %zu\n", this_node(), partial_results->nrows(), node_idx);
+	        //printf("%zu got %zu partial results from node %zu\n", this_node(), partial_results->nrows(), node_idx);
 
             merge(partial_results, &final_word_counts);
 	
-	    printf("Node %zu merged results from node %zu of total %zu\n", this_node(), node_idx, num_nodes());
+	        //printf("Node %zu merged results from node %zu of total %zu\n", this_node(), node_idx, num_nodes());
 
             delete partial_results;
             delete partial_results_key;
         }
 
-	printf("Node %zu merged all results and got:\n", this_node());
+	    // printf("Node %zu merged all results and got:\n", this_node());
         // Loop through final map and print counts
         Sys s;
         for (std::map<String*, int, StringComp>::iterator it = final_word_counts.begin(); it != final_word_counts.end(); it++) {
@@ -219,11 +219,11 @@ class WordCount : public Application {
             if (map->count(word)) {
                 // count already exists
                 int cur_count = map->find(word)->second;
-		//printf("Merging counts for word %s. %d + %d\n", word->c_str(), cur_count, new_count);
+		        //printf("Merging counts for word %s. %d + %d\n", word->c_str(), cur_count, new_count);
                 (*map)[word] = cur_count + new_count;
             } else {
                 // new word, set count to what was in the DF
-		//printf("Merging new word %s\n", word->c_str());
+		        //printf("Merging new word %s\n", word->c_str());
                 (*map)[word] = new_count;
             }
         }
@@ -245,23 +245,23 @@ int test_word_count() {
     s.listen_for_clients();
 
     Store store1(0, (char*)"127.0.0.1", 8000, master_ip, master_port);
-    Store store2(1, (char*)"127.0.0.1", 8001, master_ip, master_port);
+   //  Store store2(1, (char*)"127.0.0.1", 8001, master_ip, master_port);
    // Store store3(2, (char*)"127.0.0.1", 8002, master_ip, master_port);
 
     //data/wc_data.sor
-    std::thread t1(start_wc, (char*)"data/wc_data.sor", &store1);
+    //std::thread t1(start_wc, (char*)"data/wc_data.sor", &store1);
 
-    std::thread t2(start_wc, (char*) nullptr, &store2);
+    //std::thread t2(start_wc, (char*) nullptr, &store2);
 
   //  std::thread t3([](Store& store3) {
 //	WordCount wc(nullptr, &store3);
  //   }, std::ref(store3));
     
-    t1.join();
-    t2.join();
+    //t1.join();
+    //t2.join();
     //t3.join();
     
-    //WordCount wc("data/wc_data.sor", &store1);
+    WordCount wc("tests/test_data/wc_data.sor", &store1);
 
     // shutdown system
     s.shutdown();
@@ -269,8 +269,8 @@ int test_word_count() {
     // wait for nodes to finish
     while (!store1.is_shutdown()) {
     }
-    while (!store2.is_shutdown()) {
-    }
+    //while (!store2.is_shutdown()) {
+    //}
     //while (!store3.is_shutdown()) {
     //}
 

@@ -1,7 +1,7 @@
 /* Authors: Ryan Heminway (heminway.r@husky.neu.edu)
 *           David Tandetnik (tandetnik.da@husky.neu.edu) */
 #include "../../src/store/store.cpp"
-#include "../../src/client/application.cpp"
+#include "../../src/client/application.h"
 #include "../../src/store/network/master.h"
 #include "../../src/store/key.h"
 
@@ -11,10 +11,10 @@ class Demo : public Application {
     Key* verify;
     Key* check;
 
-    Demo(Store* store) : Application(nullptr, 0, 0, store) {
+    Demo(Store* store) : Application(store) {
         main = new Key((char*)"main" ,0);
-	verify = new Key((char*)"verif", 0);
-	check = new Key((char*)"check", 0);
+	    verify = new Key((char*)"verif", 0);
+	    check = new Key((char*)"check", 0);
     }
 
     ~Demo() {

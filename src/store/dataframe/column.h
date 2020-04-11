@@ -54,6 +54,17 @@ class Column : public Object {
     size_t capacity = INTERNAL_CHUNK_SIZE;  // Count of cells available
     bool* missings_;
 
+    // Default constructor
+    Column() {
+        missings_ = new bool[INTERNAL_CHUNK_SIZE];
+    }
+
+    // Virtual destructor will force child-classes to invoke their own
+    // destructors on deletion
+    virtual ~Column() {
+        delete[] missings_;
+    }
+
     // Return whether the element at the given value is a missing value
     // Undefined behavior if the idx is out of bounds
     virtual bool is_missing(size_t idx) {
@@ -113,7 +124,6 @@ class IntColumn : virtual public Column {
     // Create empty int column
     IntColumn() {
         cells_ = new int[INTERNAL_CHUNK_SIZE];
-        missings_ = new bool[INTERNAL_CHUNK_SIZE];
     }
 
     // Copy constructor. Assumes other column is the same type as this one
@@ -147,7 +157,6 @@ class IntColumn : virtual public Column {
     // Delete column array and int pointers
     virtual ~IntColumn() {
         delete[] cells_;
-        delete[] missings_;
     }
 
     // Returns this column as an integer column
@@ -167,7 +176,6 @@ class FloatColumn : virtual public Column {
     // Create empty column with default capacity 10
     FloatColumn() {
         cells_ = new float[INTERNAL_CHUNK_SIZE];
-        missings_ = new bool[INTERNAL_CHUNK_SIZE];
     }
 
     // Copy constructor. Assumes other column is the same type as this one
@@ -200,7 +208,6 @@ class FloatColumn : virtual public Column {
 
     // Delete column array and float pointers
     virtual ~FloatColumn() {
-        delete[] missings_;
         delete[] cells_;
     }
 
@@ -219,7 +226,6 @@ class BoolColumn : virtual public Column {
     // Create empty column with default capacity 10
     BoolColumn() {
         cells_ = new bool[INTERNAL_CHUNK_SIZE];
-        missings_ = new bool[INTERNAL_CHUNK_SIZE];
     }
 
     // Copy constructor. Assumes other column is the same type as this one
@@ -253,7 +259,6 @@ class BoolColumn : virtual public Column {
     // Delete column array and bool pointers
     virtual ~BoolColumn() {
         delete[] cells_;
-        delete[] missings_;
     }
 
     // Return this column as a BoolColumn
@@ -272,7 +277,6 @@ class StringColumn : virtual public Column {
     // Create empty column with default capacity 10
     StringColumn() {
         cells_ = new String*[INTERNAL_CHUNK_SIZE];
-        missings_ = new bool[INTERNAL_CHUNK_SIZE];
     }
 
     // Copy constructor. Assumes other column is the same type as this one
@@ -304,7 +308,6 @@ class StringColumn : virtual public Column {
     }
 
     virtual ~StringColumn() {
-        delete[] missings_;
         delete[] cells_;
     }
 
@@ -337,9 +340,22 @@ class DistributedColumn : virtual public Column {
 
     // Empty default that will be called automatically by child classes
     DistributedColumn() {
+
     }
 
-    DistributedColumn(Store* s, Key** chunk_keys, Key** missings_keys, size_t length, size_t num_chunks) {
+    // Build a DistColumn from a store, initializing the first set of keys
+    // To be called by child classes
+    DistributedColumn(Store* s) {
+        store = s;
+        length = 0;
+        capacity = num_chunks * INTERNAL_CHUNK_SIZE;
+        init_keys_dist();
+        init_missings_dist();
+    }
+
+    // Constructor that builds a DistColumn from all its components. 
+    // For Interal Use Only
+    DistributedColumn(Store* s, Key** chunk_keys, Key** missings_keys, size_t length, size_t num_chunks)  {
         store = s;
         this->length = length;
         this->num_chunks = num_chunks;
@@ -532,63 +548,19 @@ class DistributedColumn : virtual public Column {
 class DistributedIntColumn : public DistributedColumn, public IntColumn {
    public:
     // Create empty int column
-    DistributedIntColumn(Store* s) : IntColumn() {
-        store = s;
-        length = 0;
-        capacity = num_chunks * INTERNAL_CHUNK_SIZE;
-        init_keys_dist();
-        init_missings_dist();
-
+    DistributedIntColumn(Store* s) : DistributedColumn(s), IntColumn() {
         // Put default integer array for each chunk
-        int ints[INTERNAL_CHUNK_SIZE];
         for (size_t i = 0; i < num_chunks; i++) {
-            store->put_(chunk_keys[i], ints, INTERNAL_CHUNK_SIZE);
+            store->put_(chunk_keys[i], cells_, INTERNAL_CHUNK_SIZE);
         }
-    }
-
-    // Create int column with n entries, listed in order in
-    // the succeeding parameters
-    DistributedIntColumn(Store* s, int n, ...) : IntColumn() {
-        store = s;
-        length = 0;
-        capacity = num_chunks * INTERNAL_CHUNK_SIZE;
-        // Always make enough space
-        if ((size_t)n > capacity) {
-            capacity = n;
-            num_chunks = (n / INTERNAL_CHUNK_SIZE) + 1;
-        }
-
-        init_keys_dist();
-        init_missings_dist();
-
-        // Put default integer array for each chunk
-        int ints[INTERNAL_CHUNK_SIZE];
-        for (size_t i = 0; i < num_chunks; i++) {
-            store->put_(chunk_keys[i], ints, INTERNAL_CHUNK_SIZE);
-        }
-
-        va_list vl;
-        va_start(vl, n);
-        int val;
-        for (int i = 0; i < n; i++) {
-            val = va_arg(vl, int);
-            push_back(val);
-        }
-        va_end(vl);
     }
 
     // Copy constructor. Assumes other column is the same type as this one
-    DistributedIntColumn(Store* s, DistributedIntColumn* col) : IntColumn() {
-        store = s;
-        length = 0;
-        capacity = num_chunks * INTERNAL_CHUNK_SIZE;
-        init_keys_dist();
-        init_missings_dist();
-
+    DistributedIntColumn(Store* s, DistributedIntColumn* col) 
+        : DistributedColumn(s), IntColumn() {
         // Put default integer array for each chunk
-        int ints[INTERNAL_CHUNK_SIZE];
         for (size_t i = 0; i < num_chunks; i++) {
-            store->put_(chunk_keys[i], ints, INTERNAL_CHUNK_SIZE);
+            store->put_(chunk_keys[i], cells_, INTERNAL_CHUNK_SIZE);
         }
 
         // Copy over data from other column
@@ -604,9 +576,9 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
     }
 
     // Generic constructor that specifies all values
-    DistributedIntColumn(Store* s, Key** chunk_keys, Key** missings_keys, size_t length, size_t num_chunks)
-        : DistributedColumn(s, chunk_keys, missings_keys, length, num_chunks) {
-    }
+    DistributedIntColumn(Store* s, Key** chunk_keys, Key** missings_keys, size_t length, 
+        size_t num_chunks) 
+        : DistributedColumn(s, chunk_keys, missings_keys, length, num_chunks) {}
 
     ~DistributedIntColumn() {
         // Memory associated with keys is deleted in DistributedColumn
@@ -673,9 +645,8 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
         resize_missings_dist();
 
         // add default int array to new chunks
-        int ints[INTERNAL_CHUNK_SIZE];
         for (size_t i = old_num_chunks; i < num_chunks; i++) {
-            store->put_(chunk_keys[i], ints, INTERNAL_CHUNK_SIZE);
+            store->put_(chunk_keys[i], cells_, INTERNAL_CHUNK_SIZE);
         }
     }
 
@@ -723,63 +694,19 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
 class DistributedBoolColumn : public DistributedColumn, public BoolColumn {
    public:
     // Create empty bool column
-    DistributedBoolColumn(Store* s) : BoolColumn() {
-        store = s;
-        length = 0;
-        capacity = num_chunks * INTERNAL_CHUNK_SIZE;
-        init_keys_dist();
-        init_missings_dist();
-
+    DistributedBoolColumn(Store* s) : DistributedColumn(s), BoolColumn() {
         // Put default bool array for each chunk
-        bool bools[INTERNAL_CHUNK_SIZE];
         for (size_t i = 0; i < num_chunks; i++) {
-            store->put_(chunk_keys[i], bools, INTERNAL_CHUNK_SIZE);
+            store->put_(chunk_keys[i], cells_, INTERNAL_CHUNK_SIZE);
         }
-    }
-
-    // Create bool column with n entries, listed in order in
-    // the succeeding parameters
-    DistributedBoolColumn(Store* s, int n, ...) : BoolColumn() {
-        store = s;
-        length = 0;
-        capacity = num_chunks * INTERNAL_CHUNK_SIZE;
-        // Always make enough space
-        if ((size_t)n > capacity) {
-            capacity = n;
-            num_chunks = (n / INTERNAL_CHUNK_SIZE) + 1;
-        }
-
-        init_keys_dist();
-        init_missings_dist();
-
-        // Put default bool array for each chunk
-        bool bools[INTERNAL_CHUNK_SIZE];
-        for (size_t i = 0; i < num_chunks; i++) {
-            store->put_(chunk_keys[i], bools, INTERNAL_CHUNK_SIZE);
-        }
-
-        va_list vl;
-        va_start(vl, n);
-        bool val;
-        for (int i = 0; i < n; i++) {
-            val = va_arg(vl, int);
-            push_back(val);
-        }
-        va_end(vl);
     }
 
     // Copy constructor. Assumes other column is the same type as this one
-    DistributedBoolColumn(Store* s, DistributedBoolColumn* col) : BoolColumn() {
-        store = s;
-        length = 0;
-        capacity = num_chunks * INTERNAL_CHUNK_SIZE;
-        init_keys_dist();
-        init_missings_dist();
-
+    DistributedBoolColumn(Store* s, DistributedBoolColumn* col) 
+        : DistributedColumn(s), BoolColumn() {
         // Put default bool array for each chunk
-        bool bools[INTERNAL_CHUNK_SIZE];
         for (size_t i = 0; i < num_chunks; i++) {
-            store->put_(chunk_keys[i], bools, INTERNAL_CHUNK_SIZE);
+            store->put_(chunk_keys[i], cells_, INTERNAL_CHUNK_SIZE);
         }
 
         // Copy over data from other column
@@ -862,9 +789,8 @@ class DistributedBoolColumn : public DistributedColumn, public BoolColumn {
         resize_missings_dist();
 
         // add default int array to new chunks
-        int ints[INTERNAL_CHUNK_SIZE];
         for (size_t i = old_num_chunks; i < num_chunks; i++) {
-            store->put_(chunk_keys[i], ints, INTERNAL_CHUNK_SIZE);
+            store->put_(chunk_keys[i], cells_, INTERNAL_CHUNK_SIZE);
         }
     }
 
@@ -912,64 +838,19 @@ class DistributedBoolColumn : public DistributedColumn, public BoolColumn {
 class DistributedFloatColumn : public DistributedColumn, public FloatColumn {
    public:
     // Create empty float column
-    DistributedFloatColumn(Store* s) : FloatColumn() {
-        store = s;
-        length = 0;
-        capacity = num_chunks * INTERNAL_CHUNK_SIZE;
-        init_keys_dist();
-        init_missings_dist();
-
+    DistributedFloatColumn(Store* s) : DistributedColumn(s), FloatColumn() {
         // Put default float array for each chunk
-        float floats[INTERNAL_CHUNK_SIZE];
         for (size_t i = 0; i < num_chunks; i++) {
-            store->put_(chunk_keys[i], floats, INTERNAL_CHUNK_SIZE);
+            store->put_(chunk_keys[i], cells_, INTERNAL_CHUNK_SIZE);
         }
-    }
-
-    // Create float column with n entries, listed in order in
-    // the succeeding parameters
-    DistributedFloatColumn(Store* s, int n, ...) : FloatColumn() {
-        store = s;
-        length = 0;
-        capacity = num_chunks * INTERNAL_CHUNK_SIZE;
-        // Always make enough space
-        if ((size_t)n > capacity) {
-            capacity = n;
-            num_chunks = (n / INTERNAL_CHUNK_SIZE) + 1;
-        }
-
-        init_keys_dist();
-        init_missings_dist();
-
-        // Put default float array for each chunk
-        float floats[INTERNAL_CHUNK_SIZE];
-        for (size_t i = 0; i < num_chunks; i++) {
-            store->put_(chunk_keys[i], floats, INTERNAL_CHUNK_SIZE);
-        }
-
-        va_list vl;
-        va_start(vl, n);
-        float val;
-        for (int i = 0; i < n; i++) {
-            val = va_arg(vl, double);
-            push_back(val);
-        }
-        va_end(vl);
     }
 
     // Copy constructor. Assumes other column is the same type as this one
-    DistributedFloatColumn(Store* s, DistributedFloatColumn* col) : FloatColumn() {
-        store = s;
-        length = 0;
-        capacity = num_chunks * INTERNAL_CHUNK_SIZE;
-
-        init_keys_dist();
-        init_missings_dist();
-
+    DistributedFloatColumn(Store* s, DistributedFloatColumn* col) 
+        : DistributedColumn(s), FloatColumn() {
         // Put default float array for each chunk
-        float floats[INTERNAL_CHUNK_SIZE];
         for (size_t i = 0; i < num_chunks; i++) {
-            store->put_(chunk_keys[i], floats, INTERNAL_CHUNK_SIZE);
+            store->put_(chunk_keys[i], cells_, INTERNAL_CHUNK_SIZE);
         }
 
         // Copy over data from other column
@@ -1052,9 +933,8 @@ class DistributedFloatColumn : public DistributedColumn, public FloatColumn {
         resize_missings_dist();
 
         // Put default float array for each chunk
-        float floats[INTERNAL_CHUNK_SIZE];
         for (size_t i = old_num_chunks; i < num_chunks; i++) {
-            store->put_(chunk_keys[i], floats, INTERNAL_CHUNK_SIZE);
+            store->put_(chunk_keys[i], cells_, INTERNAL_CHUNK_SIZE);
         }
     }
 
@@ -1101,63 +981,20 @@ class DistributedFloatColumn : public DistributedColumn, public FloatColumn {
 class DistributedStringColumn : public DistributedColumn, public StringColumn {
    public:
     // Create empty String* column
-    DistributedStringColumn(Store* s) : StringColumn() {
-        store = s;
-        length = 0;
-        capacity = num_chunks * INTERNAL_CHUNK_SIZE;
-        init_keys_dist();
-        init_missings_dist();
-
+    DistributedStringColumn(Store* s) 
+    : DistributedColumn(s), StringColumn() {
         // Put default string array for each chunk
-        String* strings[INTERNAL_CHUNK_SIZE] = {};  // {} to ensure all String* are initialized to nullptr
         for (size_t i = 0; i < num_chunks; i++) {
-            store->put_(chunk_keys[i], strings, INTERNAL_CHUNK_SIZE);
+            store->put_(chunk_keys[i], cells_, INTERNAL_CHUNK_SIZE);
         }
-    }
-
-    // Create String* column with n entries, listed in order in
-    // the succeeding parameters
-    DistributedStringColumn(Store* s, int n, ...) : StringColumn() {
-        store = s;
-        length = 0;
-        capacity = num_chunks * INTERNAL_CHUNK_SIZE;
-        // Always make enough space
-        if ((size_t)n > capacity) {
-            capacity = n;
-            num_chunks = (n / INTERNAL_CHUNK_SIZE) + 1;
-        }
-
-        init_keys_dist();
-        init_missings_dist();
-
-        // Put default string array for each chunk
-        String* strings[INTERNAL_CHUNK_SIZE] = {};
-        for (size_t i = 0; i < num_chunks; i++) {
-            store->put_(chunk_keys[i], strings, INTERNAL_CHUNK_SIZE);
-        }
-
-        va_list vl;
-        va_start(vl, n);
-        String* val;
-        for (int i = 0; i < n; i++) {
-            val = va_arg(vl, String*);
-            push_back(val);
-        }
-        va_end(vl);
     }
 
     // Copy constructor. Assumes other column is the same type as this one
-    DistributedStringColumn(Store* s, DistributedStringColumn* col) : StringColumn() {
-        store = s;
-        length = 0;
-        capacity = num_chunks * INTERNAL_CHUNK_SIZE;
-        init_keys_dist();
-        init_missings_dist();
-
+    DistributedStringColumn(Store* s, DistributedStringColumn* col) 
+        : DistributedColumn(s), StringColumn() {
         // Put default string array for each chunk
-        String* strings[INTERNAL_CHUNK_SIZE] = {};
         for (size_t i = 0; i < num_chunks; i++) {
-            store->put_(chunk_keys[i], strings, INTERNAL_CHUNK_SIZE);
+            store->put_(chunk_keys[i], cells_, INTERNAL_CHUNK_SIZE);
         }
 
         // Copy over data from other column
@@ -1239,9 +1076,8 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
         resize_missings_dist();
 
         // Put default string array for each chunk
-        String* strings[INTERNAL_CHUNK_SIZE] = {};
         for (size_t i = old_num_chunks; i < num_chunks; i++) {
-            store->put_(chunk_keys[i], strings, INTERNAL_CHUNK_SIZE);
+            store->put_(chunk_keys[i], cells_, INTERNAL_CHUNK_SIZE);
         }
     }
 

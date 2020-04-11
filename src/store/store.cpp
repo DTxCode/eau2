@@ -90,6 +90,7 @@ void Store::put_(Key *k, bool *bools, size_t num) {
 
     put_char_(k, value);
 
+    // Delete memory allocated by serializer
     delete[] value;
 }
 
@@ -113,7 +114,7 @@ void Store::put_(Key *k, String **strings, size_t num) {
     char *value = serializer->serialize_strings(strings, num);
 
     put_char_(k, value);
-
+    
     delete[] value;
 }
 
@@ -140,7 +141,7 @@ void Store::send_put_request_(Key *key, char *value) {
         printf("Node %zu did not get successful ACK for its PUT request to node %zu\n", node_id, key_home);
         exit(1);
     }
-
+    
     delete response;
     delete[] other_node_host;
 }
@@ -174,9 +175,9 @@ bool *Store::get_bool_array_(Key *k) {
         return nullptr;
     }
 
-    // Assumes deserialize will delete given char*
     bool *bools = serializer->deserialize_bools(serialized_array);
 
+    delete[] serialized_array;
     return bools;
 }
 
@@ -187,9 +188,9 @@ int *Store::get_int_array_(Key *k) {
         return nullptr;
     }
 
-    // Assumes deserialize will delete given char*
     int *ints = serializer->deserialize_ints(serialized_array);
 
+    delete[] serialized_array;
     return ints;
 }
 
@@ -200,9 +201,9 @@ float *Store::get_float_array_(Key *k) {
         return nullptr;
     }
 
-    // Assumes deserialize will delete given char*
     float *floats = serializer->deserialize_floats(serialized_array);
-
+    
+    delete[] serialized_array;
     return floats;
 }
 
@@ -213,9 +214,9 @@ String **Store::get_string_array_(Key *k) {
         return nullptr;
     }
 
-    // Assumes deserialize will delete given char*
     String **strings = serializer->deserialize_strings(serialized_array);
 
+    delete[] serialized_array;
     return strings;
 }
 
@@ -422,25 +423,45 @@ DistributedDataFrame *DataFrame::fromSorFile(Key *key, Store *store, FILE *fp) {
 // The following fromScalar methods store `val` in a single cell in a DistributedDataFrame.
 // Saves that DDF in store under key and returns it.
 DistributedDataFrame *DataFrame::fromScalar(Key *key, Store *store, float val) {
-    DistributedFloatColumn col(store, 1, val);
+    DistributedFloatColumn col(store);
+    col.push_back(val);
 
     return fromDistributedColumn(key, store, &col);
 }
 
 DistributedDataFrame *DataFrame::fromScalar(Key *key, Store *store, bool val) {
-    DistributedBoolColumn col(store, 1, val);
+    DistributedBoolColumn col(store);
+    col.push_back(val);
 
     return fromDistributedColumn(key, store, &col);
 }
 
 DistributedDataFrame *DataFrame::fromScalar(Key *key, Store *store, int val) {
-    DistributedIntColumn col(store, 1, val);
+    DistributedIntColumn col(store);
+    col.push_back(val);
 
     return fromDistributedColumn(key, store, &col);
 }
 
 DistributedDataFrame *DataFrame::fromScalar(Key *key, Store *store, String *val) {
-    DistributedStringColumn col(store, 1, val);
+    DistributedStringColumn col(store);
+    col.push_back(val);
 
     return fromDistributedColumn(key, store, &col);
+}
+
+DistributedDataFrame* DataFrame::fromWriter(Key* key, Store* store, char* schema, Writer& writer) {
+    Schema scm(schema);
+    DistributedDataFrame* df = new DisributedDataFrame(store, scm);
+
+    Row r(schema);
+    // While the writer has more values to add, 
+    // give it a row and incorporate that row
+    while (!writer.done()) {
+        writer.accept(r);
+        add_row(r);
+    }
+    
+    store->put(key, df);
+    return df;
 }

@@ -432,6 +432,8 @@ class DataFrame : public Object {
     static DistributedDataFrame* fromScalar(Key* key, Store* store, bool val);
     static DistributedDataFrame* fromScalar(Key* key, Store* store, int val);
     static DistributedDataFrame* fromScalar(Key* key, Store* store, String* val);
+
+    static DistributedDataFrame* fromWriter(Key* key, Store* store, char* schema, Writer& writer);
 };
 
 // DistributedDataFrame is a DataFrame that has all of its data in DistributedColumns
@@ -560,11 +562,8 @@ class DistributedDataFrame : public DataFrame {
             bool local_row = dynamic_cast<DistributedColumn*>(columns[0])->is_row_local(row_idx);
 
             if (!local_row) {
-		    //printf("Row %zu is not local to node %zu\n", row_idx, store->this_node());
                 continue;  // do not consider rows that are not on this node
             }
-
-	    //printf("Row %zu of %zu is local to node %zu\n", row_idx, nrows(), store->this_node());
 
             fill_row(row_idx, row);
 
