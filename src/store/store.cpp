@@ -15,7 +15,8 @@
 
 #define GETANDWAIT_SLEEP 25
 
-Store::Store(size_t node_id, char *my_ip_address, int my_port, char *server_ip_address, int server_port) : Node(my_ip_address, my_port, server_ip_address, server_port) {
+Store::Store(size_t node_id, char *my_ip_address, int my_port, char *server_ip_address, int server_port) 
+        : Node(my_ip_address, my_port, server_ip_address, server_port) {
     this->node_id = node_id;
     map = new Map();
 }

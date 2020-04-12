@@ -1,10 +1,10 @@
-build:
-	g++ -std=c++11 -Wall -pthread src/client/application.cpp -o app
+build: #TODO: replace with Linus
+	g++ -std=c++11 -Wall -pthread src/client/application.cpp -o app 
 
-run:
+run: #TODO: replace with Linus
 	./app -from 0 -len 1000 -f ./data/data.sor
 
-test: test-dist-column
+test: test-dist-column test-server-node test-serializer
 
 
 ### Client
@@ -44,6 +44,15 @@ valgrind-client-sorer:
 
 ### Store
 
+# Distributed Column test
+test-dist-column:
+	g++ -std=c++11 -Wall -pthread -g tests/store/dist_column_test.cpp -o col_test
+	./col_test
+
+valgrind-dist-column:
+	g++ -std=c++11 -Wall -pthread -g tests/store/dist_column_test.cpp -o col_test
+	valgrind --leak-check=full --track-origins=yes ./col_test
+
 # Server-node test
 test-server-node:
 	g++ -std=c++11 -Wall -pthread -g tests/store/server_node_test.cpp -o server_node_test
@@ -54,12 +63,12 @@ valgrind-server-node:
 	valgrind --leak-check=full --track-origins=yes ./server_node_test
 
 # Simple serializer test
-test-simple-serializer:
-	g++ -std=c++11 -Wall -pthread -g tests/store/simple_serializer_test.cpp -o serial_test
+test-serializer:
+	g++ -std=c++11 -Wall -pthread -g tests/store/serializer_test.cpp -o serial_test
 	./serial_test
 
-valgrind-simple-serializer:
-	g++ -std=c++11 -Wall -pthread -g tests/store/simple_serializer_test.cpp -o serial_test
+valgrind-serializer:
+	g++ -std=c++11 -Wall -pthread -g tests/store/serializer_test.cpp -o serial_test
 	valgrind --leak-check=full --track-origins=yes ./serial_test
 
 # Store test
@@ -71,15 +80,7 @@ valgrind-store:
 	g++ -std=c++11 -Wall -pthread -g tests/store/store_test.cpp -o store_test
 	valgrind --leak-check=full --track-origins=yes ./store_test
 
-# Distributed Column test
-test-dist-column:
-	g++ -std=c++11 -Wall -pthread -g tests/store/dist_column_test.cpp -o col_test
-	./col_test
-
-valgrind-dist-column:
-	g++ -std=c++11 -Wall -pthread -g tests/store/dist_column_test.cpp -o col_test
-	valgrind --leak-check=full --track-origins=yes ./col_test
-
+# DDF test
 test-ddf:
 	g++ -std=c++11 -Wall -pthread -g tests/store/test_ddf.cpp -o ddf_test
 	./ddf_test

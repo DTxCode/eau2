@@ -123,7 +123,7 @@ class IntColumn : virtual public Column {
 
     // Create empty int column
     IntColumn() {
-        cells_ = new int[INTERNAL_CHUNK_SIZE];
+        cells_ = new int[INTERNAL_CHUNK_SIZE]();
     }
 
     // Copy constructor. Assumes other column is the same type as this one
@@ -175,7 +175,7 @@ class FloatColumn : virtual public Column {
 
     // Create empty column with default capacity 10
     FloatColumn() {
-        cells_ = new float[INTERNAL_CHUNK_SIZE];
+        cells_ = new float[INTERNAL_CHUNK_SIZE]();
     }
 
     // Copy constructor. Assumes other column is the same type as this one
@@ -225,7 +225,7 @@ class BoolColumn : virtual public Column {
 
     // Create empty column with default capacity 10
     BoolColumn() {
-        cells_ = new bool[INTERNAL_CHUNK_SIZE];
+        cells_ = new bool[INTERNAL_CHUNK_SIZE]();
     }
 
     // Copy constructor. Assumes other column is the same type as this one
@@ -1017,7 +1017,15 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
     ~DistributedStringColumn() {
         // Memory associated with keys is deleted in DistributedColumn
         // Memory associated with values of keys in store are deleted in Store destructor
-        // Memory associated with cells/missing is deleted in normal IntColumn
+        // Memory associated with cells/missing is deleted in normal StringColumn
+
+        // Normal string column does not delete String* it owns, but Distributed needs to
+        // because they represent the cache, not external strings.
+        for (size_t i = 0; i < INTERNAL_CHUNK_SIZE; i++) {
+            delete cells_[i]; // delete String*
+        }
+
+        // delete[] cells_ handled in StringColumn destructor
     }
 
     // Return this column as a StringColumn
@@ -1031,7 +1039,7 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
         // Load chunk into cache if its not
         if (array_idx != cached_chunk_idx) {
             // Free old cache
-            delete[] cells_;
+            delete_string_cells_(cells_);
             Key* k = chunk_keys[array_idx];
             cells_ = store->get_string_array_(k);
             cached_chunk_idx = array_idx;
@@ -1050,24 +1058,32 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
     /** Set value at idx. An out of bound idx is undefined.  */
     void set(size_t idx, String* val) {
         if (idx >= length) {
+            printf("WARN: Tried to set value in String column out of bounds.\n");
             return;
         }
+
         size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
         Key* k = chunk_keys[array_idx];
 
+        // Get current cells and set new value in store
         String** cells = store->get_string_array_(k);
+        String* replaced_value = cells[local_idx];
         cells[local_idx] = val;
         store->put_(k, cells, INTERNAL_CHUNK_SIZE);
 
-        delete[] cells;
+        // Put old value back into cells and delete the list
+        cells[local_idx] = replaced_value;
+        delete_string_cells_(cells); 
 
         // We may be overwriting a missing, so mark cell as not-missing
         set_missing_dist(idx, false);
+
         // To avoid read/write conflicts with local cache:
         //  Force cache to be re-loaded after a set call
         cached_chunk_idx = num_chunks;
     }
+
 
     // Add more keys to our lists of keys to accomodate for more items
     void resize() {
@@ -1086,18 +1102,28 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
         if (length == capacity) {
             resize();
         }
+
         size_t array_idx = length / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = length % INTERNAL_CHUNK_SIZE;
         Key* k = chunk_keys[array_idx];
+
+        // Get current cells and set new value in store
         String** cells = store->get_string_array_(k);
+        String* replaced_value = cells[local_idx];
         cells[local_idx] = val;
         store->put_(k, cells, INTERNAL_CHUNK_SIZE);
-        // No need to call set_missing_dist because default is false
-        length++;
 
-        // force cache refresh
-        cached_chunk_idx = num_chunks;
-        delete[] cells;
+        // Put old value back into cells and delete the list
+        cells[local_idx] = replaced_value;
+        delete_string_cells_(cells); 
+
+        // No need to call set_missing_dist because default is false
+
+        // To avoid read/write conflicts with local cache:
+        //  Force cache to be re-loaded after a set call
+        cached_chunk_idx = num_chunks;   
+        
+        length++;
     }
 
     // Add "missing" (0) to bottom of column
@@ -1112,5 +1138,14 @@ class DistributedStringColumn : public DistributedColumn, public StringColumn {
 
         // force cache refresh
         cached_chunk_idx = num_chunks;
+    }
+
+    // Deletes array of string pointers
+    void delete_string_cells_(String** cells) {
+        for (size_t i = 0; i < INTERNAL_CHUNK_SIZE; i++) {
+            delete cells[i]; // delete String*
+        }
+
+        delete[] cells;
     }
 };
