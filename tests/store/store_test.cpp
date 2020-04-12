@@ -1,16 +1,16 @@
-#pragma once
 #include "../../src/store/store.cpp"
 #include <assert.h>
 #include "../../src/store/network/master.h"
+#include "../test_utils.h"
 
 // Tests creating a server and a store, and then putting/getting from the same store
 bool test_simple_put_get() {
     char* master_ip = (char*)"127.0.0.1";
-    int master_port = 8888;
+    int master_port = rand_port();
     Server s(master_ip, master_port);
     s.listen_for_clients();
 
-    Store store(0, (char*)"127.0.0.1", 8000, master_ip, master_port);
+    Store store(0, (char*)"127.0.0.1", rand_port(), master_ip, master_port);
 
     // Create keys
     Key k1((char*)"bools", 0);
@@ -41,8 +41,12 @@ bool test_simple_put_get() {
     assert(floats[1] == floats2[1]);
     assert(strings[1]->equals(strings2[1]));
 
-    //delete strings2[0];
-    //delete strings2[1];
+    delete[] bools2;
+    delete[] ints2;
+    delete[] floats2;
+    delete strings2[0];
+    delete strings2[1];
+    delete[] strings2;
 
     // shutdown system
     s.shutdown();
@@ -57,13 +61,13 @@ bool test_simple_put_get() {
 // Tests creating a server and two stores, and then having one store put/get a value to/from the other store.
 bool test_network_put_get() {
     char* master_ip = (char*)"127.0.0.1";
-    int master_port = 7777;
+    int master_port = rand_port();
     Server s(master_ip, master_port);
     s.listen_for_clients();
 
-    Store store1(0, (char*)"127.0.0.1", 7000, master_ip, master_port);
+    Store store1(0, (char*)"127.0.0.1", rand_port(), master_ip, master_port);
 
-    Store store2(1, (char*)"127.0.0.1", 7001, master_ip, master_port);
+    Store store2(1, (char*)"127.0.0.1", rand_port(), master_ip, master_port);
 
     // Create keys
     Key k1((char*)"bools", 1);
@@ -94,8 +98,12 @@ bool test_network_put_get() {
     assert(floats[1] == floats2[1]);
     assert(strings[1]->equals(strings2[1]));
 
+    delete[] bools2;
+    delete[] ints2;
+    delete[] floats2;
     delete strings2[0];
     delete strings2[1];
+    delete[] strings2;
 
     // shutdown system
     s.shutdown();
@@ -112,21 +120,26 @@ bool test_network_put_get() {
 // Test whether store can put and get a distributed data frame
 bool test_network_distributed_df() {
     char* master_ip = (char*)"127.0.0.1";
-    int master_port = 6777;
+    int master_port = rand_port();
     Server s(master_ip, master_port);
     s.listen_for_clients();
 
-    Store store1(0, (char*)"127.0.0.1", 6000, master_ip, master_port);
+    Store store1(0, (char*)"127.0.0.1", rand_port(), master_ip, master_port);
 
-    Store store2(1, (char*)"127.0.0.1", 6001, master_ip, master_port);
+    Store store2(1, (char*)"127.0.0.1", rand_port(), master_ip, master_port);
 
     // key to store on another node
     Key k((char*)"key", 1);
 
-    DistributedIntColumn* i_c = new DistributedIntColumn(&store1, 4, 1, 2, 3, 5);
+    DistributedIntColumn i_c(&store1);
+    i_c.push_back(0);
+    i_c.push_back(1);
+    i_c.push_back(2);
+    i_c.push_back(3);
+
     Schema empty_schema;
     DistributedDataFrame df(&store1, empty_schema);
-    df.add_column(i_c);
+    df.add_column(&i_c);
 
     // Put and get the DDF to/from the other node
     store1.put(&k, &df);
@@ -136,6 +149,8 @@ bool test_network_distributed_df() {
     assert(df.get_int(0, 1) == df2->get_int(0, 1));
     assert(df.get_int(0, 2) == df2->get_int(0, 2));
     assert(df.get_int(0, 3) == df2->get_int(0, 3));
+
+    delete df2;
 
     // shutdown system
     s.shutdown();
@@ -152,21 +167,26 @@ bool test_network_distributed_df() {
 // Test whether store can put and waitAndGet a distributed data frame
 bool test_network_distributed_df_waitAndGet() {
     char* master_ip = (char*)"127.0.0.1";
-    int master_port = 5777;
+    int master_port = rand_port();
     Server s(master_ip, master_port);
     s.listen_for_clients();
 
-    Store store1(0, (char*)"127.0.0.1", 5000, master_ip, master_port);
+    Store store1(0, (char*)"127.0.0.1", rand_port(), master_ip, master_port);
 
-    Store store2(1, (char*)"127.0.0.1", 5001, master_ip, master_port);
+    Store store2(1, (char*)"127.0.0.1", rand_port(), master_ip, master_port);
 
     // key to store on another node
     Key k((char*)"key", 1);
 
-    DistributedIntColumn* i_c = new DistributedIntColumn(&store1, 4, 1, 2, 3, 5);
+    DistributedIntColumn i_c(&store1);
+    i_c.push_back(0);
+    i_c.push_back(1);
+    i_c.push_back(2);
+    i_c.push_back(3);
+
     Schema empty_schema;
     DistributedDataFrame df(&store1, empty_schema);
-    df.add_column(i_c);
+    df.add_column(&i_c);
 
     // Put and get the DDF to/from the other node
     store1.put(&k, &df);
@@ -176,6 +196,8 @@ bool test_network_distributed_df_waitAndGet() {
     assert(df.get_int(0, 1) == df2->get_int(0, 1));
     assert(df.get_int(0, 2) == df2->get_int(0, 2));
     assert(df.get_int(0, 3) == df2->get_int(0, 3));
+
+    delete df2;
 
     // shutdown system
     s.shutdown();
