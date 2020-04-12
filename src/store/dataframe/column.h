@@ -123,7 +123,7 @@ class IntColumn : virtual public Column {
 
     // Create empty int column
     IntColumn() {
-        cells_ = new int[INTERNAL_CHUNK_SIZE];
+        cells_ = new int[INTERNAL_CHUNK_SIZE]();
     }
 
     // Copy constructor. Assumes other column is the same type as this one
@@ -175,7 +175,7 @@ class FloatColumn : virtual public Column {
 
     // Create empty column with default capacity 10
     FloatColumn() {
-        cells_ = new float[INTERNAL_CHUNK_SIZE];
+        cells_ = new float[INTERNAL_CHUNK_SIZE]();
     }
 
     // Copy constructor. Assumes other column is the same type as this one
@@ -225,7 +225,7 @@ class BoolColumn : virtual public Column {
 
     // Create empty column with default capacity 10
     BoolColumn() {
-        cells_ = new bool[INTERNAL_CHUNK_SIZE];
+        cells_ = new bool[INTERNAL_CHUNK_SIZE]();
     }
 
     // Copy constructor. Assumes other column is the same type as this one
