@@ -420,13 +420,16 @@ class DataFrame : public Object {
             s.pln();
         }
     }
+    
+    // TODO 
+    virtual void local_map(Rower& row) {}
 
     static DistributedDataFrame* fromArray(Key* key, Store* store, size_t count, float* vals);
     static DistributedDataFrame* fromArray(Key* key, Store* store, size_t count, bool* vals);
     static DistributedDataFrame* fromArray(Key* key, Store* store, size_t count, int* vals);
     static DistributedDataFrame* fromArray(Key* key, Store* store, size_t count, String** vals);
     static DistributedDataFrame* fromDistributedColumn(Key* key, Store* store, DistributedColumn* col);
-    static DistributedDataFrame* fromSorFile(Key* key, Store* store, FILE* fp); 
+    static DistributedDataFrame* fromSorFile(Key* key, Store* store, char *file_path); 
 
     static DistributedDataFrame* fromScalar(Key* key, Store* store, float val);
     static DistributedDataFrame* fromScalar(Key* key, Store* store, bool val);

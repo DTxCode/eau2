@@ -26,4 +26,8 @@ class Application {
     // OVERRIDE
     // Called on application start
     virtual void run_() = 0;
+
+    // Called when application is created. Calls user extended functionality 
+    //  in run_
+    void run() { run_(); }
 };

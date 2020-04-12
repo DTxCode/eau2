@@ -411,10 +411,14 @@ DistributedDataFrame *DataFrame::fromDistributedColumn(Key *key, Store *store, D
     return df;
 }
 
-// The following fromSorFile method takes a file in SoR format and stores the
+// The following fromSorFile method takes a file_path in SoR format and stores the
 // data from the file in a DistributedDataFrame under the given key in the
 // given store.
-DistributedDataFrame *DataFrame::fromSorFile(Key *key, Store *store, FILE *fp) {
+DistributedDataFrame *DataFrame::fromSorFile(Key *key, Store *store, char *file_path) {
+    FILE* fp = fopen(file_path, "r");
+    if (fp == nullptr) {
+        exit_with_msg("Failed to open file to create DataFrame");
+    }
     Sorer sor(fp, 0, 0);  // Reads whole file
     DistributedDataFrame *df = sor.get_dataframe(store);
     store->put(key, df);

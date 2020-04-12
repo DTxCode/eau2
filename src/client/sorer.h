@@ -151,8 +151,14 @@ class Sorer {
 
         // Field should be empty (missing) if it is EMPTY or its field_type
         //  does not match column type
+        // SPECIAL CASES: field is bool but column is int or float
+        //                field is int but column is float
+        bool case_1 = (val_type == BOOL && (col_field_type == INT
+            || col_field_type == FLOAT));
+        bool case_2 = (val_type == INT && (col_field_type == FLOAT));
         bool is_empty;
-        is_empty = (val_type == EMPTY) || (val_type != col_field_type);
+        is_empty = (val_type == EMPTY) || ((val_type != col_field_type) 
+                                           && !case_1 && !case_2);
         return is_empty;
     }
 
