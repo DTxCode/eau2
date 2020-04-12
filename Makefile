@@ -4,6 +4,7 @@ build: #TODO: replace with Linus
 run: #TODO: replace with Linus
 	./app -from 0 -len 1000 -f ./data/data.sor
 
+# Run all tests
 test: test-dist-column test-server-node test-serializer
 
 

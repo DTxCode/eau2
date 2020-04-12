@@ -63,6 +63,7 @@ bool test_bool_array_serialize() {
     }
 
     delete[] ser_bools1;
+    delete[] new_bools1;
 
     return ret_value;
 }
@@ -85,6 +86,7 @@ bool test_int_array_serialize() {
     }
 
     delete[] ser_ints1;
+    delete[] new_ints1;
 
     return ret_value;
 }
@@ -196,11 +198,13 @@ bool test_ddf_serialize() {
 
     Serializer serial;
     char* ser_ddf = serial.serialize_distributed_dataframe(&ddf);
-
     DistributedDataFrame* new_ddf = serial.deserialize_distributed_dataframe(ser_ddf, &store);
 
     assert(new_ddf->get_int(0, 6) == 6);
     assert(new_ddf->get_string(1, 6)->equals(&str));
+
+    delete[] ser_ddf;
+    delete new_ddf;
 
     // shutdown system
     s.shutdown();
@@ -208,9 +212,6 @@ bool test_ddf_serialize() {
     // wait for nodes to finish
     while (!store.is_shutdown()) {
     }
-
-    delete[] ser_ddf;
-    delete new_ddf;
 
     return true;
 }

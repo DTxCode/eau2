@@ -23,6 +23,10 @@ char* Serializer::serialize_distributed_dataframe(DistributedDataFrame* df) {
 
     // Serialize schema
     char* schema_str = serialize_schema(&df->get_schema());
+    if (schema_str == nullptr) {
+        // DF has no columns and no schema
+        return nullptr;
+    }
     total_str_size += strlen(schema_str);
 
     // Serialize all columns
@@ -33,6 +37,8 @@ char* Serializer::serialize_distributed_dataframe(DistributedDataFrame* df) {
         total_str_size += strlen(col_strs[i]) + 1;  // +1 for tilda below
     }
 
+    // Combine all serialized pieces into one char*
+    total_str_size += 1; // for null terminator
     char* serial_buffer = new char[total_str_size];
 
     // Copy schema and column strings into buffer
@@ -48,8 +54,10 @@ char* Serializer::serialize_distributed_dataframe(DistributedDataFrame* df) {
         }
         delete[] col_strs[j];
     }
+
     delete[] col_strs;
     delete[] schema_str;
+
     return serial_buffer;
 }
 
@@ -57,6 +65,12 @@ char* Serializer::serialize_distributed_dataframe(DistributedDataFrame* df) {
 // Expects given msg to have the form:
 // "[Serialized Schema]~[Serialized Dist_Column 0]~[...]~[Serialized Dist_Column n-1]"
 DistributedDataFrame* Serializer::deserialize_distributed_dataframe(char* msg, Store* store) { 
+    if (msg == nullptr) {
+        // empty DDF
+        Schema empty_schema;
+        return new DistributedDataFrame(store, empty_schema);
+    }
+    
     char* schema_token = strtok(msg, "~");
     char* columns_token = strtok(nullptr, "\0");
     Schema* schema = deserialize_schema(schema_token);
@@ -424,7 +438,7 @@ char* Serializer::serialize_schema(Schema* schema) {
     StringArray col_type_strs;
 
     // Convert char to string with null-terminator
-    char* char_str = new char[2];
+    char char_str[2];
     char_str[1] = '\0';
 
     // Track all column types and names as Strings
@@ -435,22 +449,34 @@ char* Serializer::serialize_schema(Schema* schema) {
 
     // Leverage existing S/D methods for StringArray
     char* col_types = serialize_string_array(&col_type_strs);
-    delete[] char_str;
+    
+    for (size_t i = 0; i < col_type_strs.size(); i++) {
+        delete col_type_strs.get(i);
+    }
+
     return col_types;
 }
 
 // Deserialize a char* msg into a Schema objects
 // Expects char* msg format as given by serialize_schema
 Schema* Serializer::deserialize_schema(char* msg) {
+    if (msg == nullptr) {
+        return new Schema();
+    }
+
     StringArray* col_types = deserialize_string_array(msg);
     size_t col_count = col_types->size();
+
     Schema* fill_schema = new Schema();
     char* col_type_str;
     for (size_t i = 0; i < col_count; i++) {
         col_type_str = col_types->get(i)->c_str();
         fill_schema->add_column(col_type_str[0]);
+        delete col_types->get(i);
     }
+
     delete col_types;
+    
     return fill_schema;
 }
 
