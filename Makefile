@@ -10,6 +10,11 @@ test: test-dist-column test-server-node test-serializer
 
 ### Client
 
+# Linus Demo
+test-linus:
+	g++ -std=c++11 -Wall -pthread -g tests/client/linus_demo.cpp -o linus_demo
+	./linus_demo
+
 # WordCount Demo
 test-word-count:
 	g++ -std=c++11 -Wall -pthread -g tests/client/word_count_demo.cpp -o word_count_demo
