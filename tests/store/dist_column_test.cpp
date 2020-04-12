@@ -21,7 +21,7 @@ bool test_distributed_int_column() {
         dist_intc.push_back(i);
     }
 
-    int val = dist_intc.get(25);
+    int val = dist_intc.get(555);
 
     s.shutdown();
     while (!store1.is_shutdown()) {
@@ -29,7 +29,7 @@ bool test_distributed_int_column() {
     while (!store2.is_shutdown()) {
     }
 
-    assert(val == 25);
+    assert(val == 555);
 
     return true;
 }
@@ -113,7 +113,7 @@ bool test_distributed_string_column() {
     }
 
     for (size_t i = 0; i < 100; i++) {
-        String* val = dist_stringc.get(25);
+        String* val = dist_stringc.get(i);
         assert(str.equals(val));
     }
     
@@ -121,12 +121,12 @@ bool test_distributed_string_column() {
 }
 
 int main() {
-    // assert(test_distributed_int_column());
-    // printf("=========== test_distributed_int_column PASSED =========\n");
-    // assert(test_distributed_bool_column());
-    // printf("=========== test_distributed_bool_column PASSED =========\n");
-    // assert(test_distributed_float_column());
-    // printf("=========== test_distributed_float_column PASSED =========\n");
+    assert(test_distributed_int_column());
+    printf("=========== test_distributed_int_column PASSED =========\n");
+    assert(test_distributed_bool_column());
+    printf("=========== test_distributed_bool_column PASSED =========\n");
+    assert(test_distributed_float_column());
+    printf("=========== test_distributed_float_column PASSED =========\n");
     assert(test_distributed_string_column());
     printf("=========== test_distributed_string_column PASSED =========\n");
     return 0;

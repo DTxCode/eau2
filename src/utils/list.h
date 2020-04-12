@@ -50,6 +50,7 @@ class List : public Object {
     virtual void add(size_t i, Object* e) {
         if (i > length) {
             // Insert index out of bounds
+            printf("ERROR: tried to add element to list at out-of-bounds index\n");
             exit(1);
         }
 
@@ -67,7 +68,9 @@ class List : public Object {
         }
 
         // set element at i now that there's space for it
+        // printf("Add is adding object at address %p to this list at index %zu\n", e, i);
         list[i] = e;
+
         length += 1;
     }
 
@@ -79,6 +82,7 @@ class List : public Object {
             int index_to_insert = i + j;
             Object* object_to_insert = c->get(j);
 
+            // printf("Add_all processing %p from given list\n", object_to_insert);
             add(index_to_insert, object_to_insert);
         }
     }
@@ -94,6 +98,7 @@ class List : public Object {
     virtual Object* get(size_t index) {
         if (index >= length) {
             // index out of bounds
+            printf("ERROR: tried to get element from list at out-of-bounds index\n");
             exit(1);
         }
 
@@ -104,10 +109,12 @@ class List : public Object {
     virtual Object* remove(size_t i) {
         if (i >= length) {
             // remove index out of bounds
+            printf("ERROR: tried to remove element from list at out-of-bounds index\n");
             exit(1);
         }
 
         Object* removed_element = list[i];
+        // printf("List is removing element %p at index %zu\n", removed_element, i);
 
         // shift elements after the one to remove to the left
         for (int j = i + 1; (size_t)j < length; j++) {
@@ -122,6 +129,7 @@ class List : public Object {
     virtual Object* set(size_t i, Object* e) {
         if (i >= length) {
             // set index out of bounds
+            printf("ERROR: tried to set element from list at out-of-bounds index\n");
             exit(1);
         }
 
@@ -143,6 +151,20 @@ class List : public Object {
             Object* element = list[i];
 
             if (element->equals(o)) {
+                return i;
+            }
+        }
+
+        return size() + 1;
+    }
+
+    // Returns the index of the first occurrence
+    // of o, or >size() if not there. Uses pointer equality!
+    virtual size_t index_of_pointer(Object* o) {
+        for (size_t i = 0; i < length; i++) {
+            Object* element = list[i];
+
+            if (element == o) {
                 return i;
             }
         }

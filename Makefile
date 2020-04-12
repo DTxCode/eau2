@@ -1,7 +1,7 @@
-build:
-	g++ -std=c++11 -Wall -pthread src/client/application.cpp -o app
+build: #TODO: replace with Linus
+	g++ -std=c++11 -Wall -pthread src/client/application.cpp -o app 
 
-run:
+run: #TODO: replace with Linus
 	./app -from 0 -len 1000 -f ./data/data.sor
 
 test: test-dist-column
