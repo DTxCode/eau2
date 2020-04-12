@@ -4,7 +4,7 @@ build: #TODO: replace with Linus
 run: #TODO: replace with Linus
 	./app -from 0 -len 1000 -f ./data/data.sor
 
-test: test-dist-column test-server-node
+test: test-dist-column test-server-node test-serializer
 
 
 ### Client
@@ -58,12 +58,12 @@ valgrind-server-node:
 	valgrind --leak-check=full --track-origins=yes ./server_node_test
 
 # Simple serializer test
-test-simple-serializer:
-	g++ -std=c++11 -Wall -pthread -g tests/store/simple_serializer_test.cpp -o serial_test
+test-serializer:
+	g++ -std=c++11 -Wall -pthread -g tests/store/serializer_test.cpp -o serial_test
 	./serial_test
 
-valgrind-simple-serializer:
-	g++ -std=c++11 -Wall -pthread -g tests/store/simple_serializer_test.cpp -o serial_test
+valgrind-serializer:
+	g++ -std=c++11 -Wall -pthread -g tests/store/serializer_test.cpp -o serial_test
 	valgrind --leak-check=full --track-origins=yes ./serial_test
 
 # Store test
