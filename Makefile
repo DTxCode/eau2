@@ -2,19 +2,15 @@ build:
 	g++ -std=c++11 -Wall -pthread -g tests/client/linus_demo.cpp -o linus 
 
 run:
-	./linus -node_id 0 -node_port 4000 -degrees 1 -start_server 1
-	./linus -node_id 1 -node_port 4001 -degrees 1 
+	./linus -num_nodes 1 -node_id 0 -node_port 4000 -degrees 5 -start_server 1
+	#./linus -node_id 1 -node_port 4001 -degrees 1 
+	echo "Linus passed if tagged users is 9 (for degree 5)"
 
 # Run all tests
 test: test-dist-column test-server-node test-serializer test-store test-ddf test-map
 	echo "All tests passed!"
 
 ### Client
-
-# Linus Demo
-test-linus:
-	g++ -std=c++11 -Wall -pthread -g tests/client/linus_demo.cpp -o linus_demo
-	./linus_demo
 
 # WordCount Demo
 test-word-count:
