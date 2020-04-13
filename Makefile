@@ -1,5 +1,5 @@
 build:
-	g++ -std=c++11 -Wall -pthread tests/client/linus_demo.cpp -o linus 
+	g++ -std=c++11 -Wall -pthread -g tests/client/linus_demo.cpp -o linus 
 
 run:
 	./linus -node_id 0 -node_port 4000 -degrees 1 -start_server 1

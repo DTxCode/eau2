@@ -424,7 +424,7 @@ int main(int argc, char** argv) {
     char* users_file = args.users_file;
     char* commits_file = args.commits_file;
 
-    while (store.num_nodes() != 2) {}
+    while (store.num_nodes() != args.num_nodes) {}
 
     Linus linus(&store, degrees, proj_file, users_file, commits_file);
     linus.run();

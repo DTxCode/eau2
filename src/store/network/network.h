@@ -174,7 +174,9 @@ class Network {
 
         // first extract how many bytes we're expecting from this socket
         // read size - 1 to always ensure there's a null terminator
+        printf("DEBUG: read_from_socket_ calling initial read...\n");
         size_t bytes_read = read(socket, buffer, max_message_chunk_size - 1);
+        printf("       read %zu bytes\n", bytes_read);
 
         if (bytes_read < 0) {
             perror("ERROR reading from socket");
@@ -187,6 +189,10 @@ class Network {
 
         // Initialize msg and bytes_read, then loop until bytes_read >= message_length
         char* message = strtok(nullptr, "\0");  // The actual message
+        if (message == nullptr) {
+            printf("ERROR: read_from_socket_ failed to parse message after length header. Was expecting %zu bytes.\n", message_length);
+            exit(1);
+        }
         String* msg = new String(message);
         bytes_read = msg->size();
 
@@ -194,6 +200,7 @@ class Network {
             bzero(buffer, max_message_chunk_size);
 
             // read size - 1 to always ensure there's a null terminator
+            printf("DEBUG: read_from_socket_ has read %zu of %zu expected bytes. Calling read...\n", bytes_read, message_length);
             int new_bytes_read = read(socket, buffer, max_message_chunk_size - 1);
 
             if (new_bytes_read < 0) {

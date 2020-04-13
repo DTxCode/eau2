@@ -67,6 +67,11 @@ void Store::put(Key *k, DistributedDataFrame *df) {
 // Saves the given char* to the given key. For internal use only.
 // Uses copies of given key/value (does not modify or delete them)
 void Store::put_char_(Key *key, char *value) {
+    if (value == nullptr) {
+        printf("ERROR: Tried to put a nullptr value into the store under key %s\n", key->get_name());
+        exit(1);
+    }
+
     size_t key_home = key->get_home_node();
 
     if (key_home == node_id) {
@@ -307,9 +312,13 @@ void Store::handle_message(int connected_socket, Message *msg) {
     // printf("Node %s:%d got message from another node with type %d and contents \"%s\"\n", my_ip_address, my_port, msg->msg_type, msg->msg);
 
     if (msg->msg_type == PUT) {
+        printf("DEBUG: Node %zu got PUT request \n", this_node());
         handle_put_(connected_socket, msg);
+        printf("DEBUG: Node %zu responded to PUT Request\n", this_node());
     } else if (msg->msg_type == GET) {
+        // printf("DEBUG: Node %zu got GET request \n", this_node());
         handle_get_(connected_socket, msg);
+        // printf("DEBUG: Node %zu responded to GET Request\n", this_node());
     } else {
         printf("WARN: Store got a message from another node with unknown message type %d\n", msg->msg_type);
     }

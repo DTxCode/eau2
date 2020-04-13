@@ -12,6 +12,7 @@ class Arguments {
         char* master_ip;
         int master_port;
 
+        size_t num_nodes;
         int node_id;
         char* node_ip;
         int node_port;
@@ -27,6 +28,7 @@ class Arguments {
             master_ip = (char*) "127.0.0.1";
             master_port = 4444;
 
+            num_nodes = 1;
             node_id = -1; // TODO enforce this is set
             node_ip = (char*) "127.0.0.1";
             node_port = 0000; // TODO enforce this is set
@@ -50,6 +52,9 @@ class Arguments {
                     master_port = atoi(flag_value);
                     if (master_port == 0) exit_with_msg("ERROR: invalid master_port");
 
+                } else if (equal_strings(flag_name, "-num_nodes")) {
+                    num_nodes = atoi(flag_value);
+                    
                 } else if (equal_strings(flag_name, "-node_id")) {
                     node_id = atoi(flag_value); // Note can't tell between valid 0 and error 0 here
 
