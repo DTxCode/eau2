@@ -640,69 +640,122 @@ char* Serializer::serialize_strings(String** strings, size_t num_values) {
 
 // Deserializer a char* msg into a c-array of bools
 bool* Serializer::deserialize_bools(char* msg) {
-    bool bools_temp[strlen(msg)];  // Temporarily oversize the storage
-    char* token;
-    // Tokenize message
-    token = strtok(msg, ",");
-    size_t idx = 0;
-    // For all tokens in the message, deserialize them based on type
-    // and add them to the column via push_back
-    while (token) {
-        bools_temp[idx] = deserialize_bool(token);
-        token = strtok(nullptr, ",");
-        idx++;  // After token is created
+    // printf("DEBUG: deserializing bools array: %s\n", msg);
+
+    Sys s;
+    size_t num_bools = s.count_char(",", msg) + 1;
+
+    if (num_bools == 0) return nullptr;
+
+    bool* bools = new bool[num_bools];
+
+    char* token = strsep(&msg, ",");
+    for (size_t i = 0; i < num_bools; i++) {
+        bools[i] = deserialize_bool(token);
+        token = strsep(&msg, ",");
     }
 
-    bool* bools_final = new bool[idx];
-    for (size_t i = 0; i < idx; i++) {
-        bools_final[i] = bools_temp[i];
-    }
+    return bools;
 
-    return bools_final;
+
+
+    // bool bools_temp[strlen(msg)];  // Temporarily oversize the storage
+    // char* token;
+    // // Tokenize message
+    // token = strtok(msg, ",");
+    // size_t idx = 0;
+    // // For all tokens in the message, deserialize them based on type
+    // // and add them to the column via push_back
+    // while (token) {
+    //     bools_temp[idx] = deserialize_bool(token);
+    //     token = strtok(nullptr, ",");
+    //     idx++;  // After token is created
+    // }
+
+    // bool* bools_final = new bool[idx];
+    // for (size_t i = 0; i < idx; i++) {
+    //     bools_final[i] = bools_temp[i];
+    // }
+
+    // return bools_final;
 }
 
 int* Serializer::deserialize_ints(char* msg) {
-    int ints_temp[strlen(msg)];  // Temporarily oversize the storage
-    char* token;
-    // Tokenize message
-    token = strtok(msg, ",");
-    size_t idx = 0;
-    // For all tokens in the message, deserialize them based on type
-    // and add them to the column via push_back
-    while (token) {
-        ints_temp[idx] = deserialize_int(token);
-        token = strtok(nullptr, ",");
-        idx++;  // After token is created
+    // printf("DEBUG: deserializing ints array: %s\n", msg);
+
+    Sys s;
+    size_t num_ints = s.count_char(",", msg) + 1;
+
+    if (num_ints == 0) return nullptr;
+
+    int* ints = new int[num_ints];
+
+    char* token = strsep(&msg, ",");
+    for (size_t i = 0; i < num_ints; i++) {
+        ints[i] = deserialize_int(token);
+        token = strsep(&msg, ",");
     }
 
-    int* ints_final = new int[idx];
-    for (size_t i = 0; i < idx; i++) {
-        ints_final[i] = ints_temp[i];
-    }
+    return ints;
 
-    return ints_final;
+    // int ints_temp[strlen(msg)];  // Temporarily oversize the storage
+    // char* token;
+    // // Tokenize message
+    // token = strtok(msg, ",");
+    // size_t idx = 0;
+    // // For all tokens in the message, deserialize them based on type
+    // // and add them to the column via push_back
+    // while (token) {
+    //     ints_temp[idx] = deserialize_int(token);
+    //     token = strtok(nullptr, ",");
+    //     idx++;  // After token is created
+    // }
+
+    // int* ints_final = new int[idx];
+    // for (size_t i = 0; i < idx; i++) {
+    //     ints_final[i] = ints_temp[i];
+    // }
+
+    // return ints_final;
 }
 
 float* Serializer::deserialize_floats(char* msg) {
-    float floats_temp[strlen(msg)];  // Temporarily oversize the storage
-    char* token;
-    // Tokenize message
-    token = strtok(msg, ",");
-    size_t idx = 0;
-    // For all tokens in the message, deserialize them based on type
-    // and add them to the column via push_back
-    while (token) {
-        floats_temp[idx] = deserialize_float(token);
-        token = strtok(nullptr, ",");
-        idx++;  // After token is created
+    // printf("DEBUG: deserializing floats array: %s\n", msg);
+
+    Sys s;
+    size_t num_floats = s.count_char(",", msg) + 1;
+
+    if (num_floats == 0) return nullptr;
+
+    float* floats = new float[num_floats];
+
+    char* token = strsep(&msg, ",");
+    for (size_t i = 0; i < num_floats; i++) {
+        floats[i] = deserialize_float(token);
+        token = strsep(&msg, ",");
     }
 
-    float* floats_final = new float[idx];
-    for (size_t i = 0; i < idx; i++) {
-        floats_final[i] = floats_temp[i];
-    }
+    return floats;
 
-    return floats_final;
+    // float floats_temp[strlen(msg)];  // Temporarily oversize the storage
+    // char* token;
+    // // Tokenize message
+    // token = strtok(msg, ",");
+    // size_t idx = 0;
+    // // For all tokens in the message, deserialize them based on type
+    // // and add them to the column via push_back
+    // while (token) {
+    //     floats_temp[idx] = deserialize_float(token);
+    //     token = strtok(nullptr, ",");
+    //     idx++;  // After token is created
+    // }
+
+    // float* floats_final = new float[idx];
+    // for (size_t i = 0; i < idx; i++) {
+    //     floats_final[i] = floats_temp[i];
+    // }
+
+    // return floats_final;
 }
 
 String** Serializer::deserialize_strings(char* msg) {

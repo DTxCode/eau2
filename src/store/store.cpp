@@ -312,9 +312,9 @@ void Store::handle_message(int connected_socket, Message *msg) {
     // printf("Node %s:%d got message from another node with type %d and contents \"%s\"\n", my_ip_address, my_port, msg->msg_type, msg->msg);
 
     if (msg->msg_type == PUT) {
-        printf("DEBUG: Node %zu got PUT request \n", this_node());
+        // printf("DEBUG: Node %zu got PUT request \n", this_node());
         handle_put_(connected_socket, msg);
-        printf("DEBUG: Node %zu responded to PUT Request\n", this_node());
+        // printf("DEBUG: Node %zu responded to PUT Request\n", this_node());
     } else if (msg->msg_type == GET) {
         // printf("DEBUG: Node %zu got GET request \n", this_node());
         handle_get_(connected_socket, msg);

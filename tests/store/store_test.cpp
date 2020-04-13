@@ -36,6 +36,10 @@ bool test_simple_put_get() {
     float* floats2 = store.get_float_array_(&k3);
     String** strings2 = store.get_string_array_(&k4);
 
+    // printf("%d %d\n", bools2[0], bools2[1]);
+    // printf("%d %d\n", ints2[0], ints2[1]);
+    // printf("%f %f\n", floats2[0], floats2[1]);
+    
     assert(bools[1] == bools2[1]);
     assert(ints[1] == ints2[1]);
     assert(floats[1] == floats2[1]);
