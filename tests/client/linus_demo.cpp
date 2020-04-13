@@ -62,11 +62,28 @@ class Set {
 
     size_t size() { return size_; }
 
+    size_t num_true() {
+        size_t count = 0;
+        for (size_t i=0; i<size_; i++) {
+            if (vals_[i]) count++;
+        }
+
+        return count;
+    }
+
     /** Performs set union in place. */
     void union_(Set& from) {
         for (size_t i = 0; i < from.size_; i++) 
             if (from.test(i))
                 set(i);
+    }
+
+    void print() {
+        printf("Set contains: ");
+        for (size_t i=0; i<size_; i++) {
+            printf("%d,", vals_[i]);
+        }
+        printf("\n");
     }
 };
 
@@ -98,7 +115,7 @@ class SetUpdater : public Rower {
 class SetWriter: public Writer {
    public:
     Set& set_; // set to read from
-    int i_ = 0;  // position in set
+    size_t i_ = 0;  // position in set
 
     SetWriter(Set& set): set_(set) { }
 
@@ -109,7 +126,7 @@ class SetWriter: public Writer {
     }
 
     bool accept(Row & row) { 
-        row.set(0, i_++);
+        row.set(0, (int)i_++);
         return true;
     }
 };
@@ -139,11 +156,15 @@ class ProjectsTagger : public Rower {
     bool accept(Row & row) override {
         int pid = row.get_int(0);
         int uid = row.get_int(1);
-        if (uSet.test(uid)) 
+        // printf("Projects tagger processing commit for project %d from user %d\n", pid, uid);
+        if (uSet.test(uid)) {
+            // printf("... author is a collaborator\n");
             if (!pSet.test(pid)) {
+                // printf("... marking %d as new project\n", pid);
                 pSet.set(pid);
                 newProjects.set(pid);
             }
+        }
         return false;
     }
 };
@@ -184,8 +205,8 @@ class UsersTagger : public Rower {
  **************************************************************************/
 class Linus : public Application {
    public:
-    size_t DEGREES = 1;  // How many degrees of separation from linus?
-    int LINUS = 1; //4967;   // The uid of Linus (offset in the user df)
+    size_t DEGREES = 3;  // How many degrees of separation from linus?
+    int LINUS = 0; //4967;   // The OFFSET of the uid of Linus in the DF
     const char* PROJ = "data/projects_small.sor";
     const char* USER = "data/users_small.sor";
     const char* COMM = "data/commits_small.sor";
@@ -196,6 +217,22 @@ class Linus : public Application {
     Set* pSet; // projects of collaborators
 
     Linus(Store* store): Application(store) {}
+
+    Linus(Store* store, size_t degrees, char* proj_file, char* users_file, char* commits_file)
+         : Application(store) {
+        DEGREES = degrees;
+        PROJ = proj_file;
+        USER = users_file;
+        COMM = commits_file;
+    }
+
+    ~Linus() {
+        delete projects;
+        delete users;
+        delete commits;
+        delete uSet;
+        delete pSet;
+    }
 
     /** Compute DEGREES of Linus.  */
     void run_() override {
@@ -224,22 +261,38 @@ class Linus : public Application {
         Key* cK = new Key((char*) "comts", 0);
         if (this_node() == 0) {
             printf("Reading...\n");
+
             projects = DataFrame::fromSorFile(pK, store, (char*) PROJ);
             printf("%zu projects\n", projects->nrows());
+            // projects->print();
+
             users = DataFrame::fromSorFile(uK, store, (char*) USER);
             printf("%zu users\n", users->nrows());
+            // users->print();
+
             commits = DataFrame::fromSorFile(cK, store, (char*) COMM);
             printf("%zu commits\n", commits->nrows());
-            // This dataframe contains the id of Linus.
-            delete DataFrame::fromScalar(new Key((char*)"users-0-0", 0), store, LINUS);
+            // commits->print();
+
+
+            // Make initial collaboraters DF with just Linus.
+            Key* initial_collabs_key = mk_key((char*) "users", 0, 0);
+            delete DataFrame::fromScalar(initial_collabs_key, store, LINUS);
+            delete initial_collabs_key;
         } else {
+            printf("Node %zu waiting for initial data from master node\n", store->this_node());
             projects = dynamic_cast<DataFrame*>(store->waitAndGet(pK));
             users = dynamic_cast<DataFrame*>(store->waitAndGet(uK));
             commits = dynamic_cast<DataFrame*>(store->waitAndGet(cK));
+            printf("Node %zu finished reading input from master node\n", store->this_node());
         }
         // All users and all projects set to false initially
         uSet = new Set(users);
         pSet = new Set(projects);
+
+        delete pK;
+        delete uK;
+        delete cK;
     }
 
 
@@ -247,24 +300,33 @@ class Linus : public Application {
      *  datafrrames (projects, users, commits), the sets of tagged users and
      *  projects, and the users added in the previous round. */
     void step(size_t stage) {
-        printf("Stage: %zu\n", stage);
+        printf("Node %zu starting step at stage %zu\n", store->this_node(), stage);
         // Key of the shape: users-stage-0
-        Key* uK = mk_key("users", stage, 0);
+        Key* uK = mk_key((char*) "users", stage, 0);
 
         // A df with all the users added on the previous round
         DataFrame* newUsers = dynamic_cast<DataFrame*>(store->waitAndGet(uK));
-        // users is DF of all user info    
+        // printf("Starting with %zu new users\n", newUsers->nrows());
+        // Create set with length = all users    
         Set delta(users);
-        SetUpdater upd(delta); 
+    
         // For all users in newUsers, set that user bit to True in delta 
+        SetUpdater upd(delta); 
         newUsers->map(upd); 
         delete newUsers;
-        // At this point delta is updated with the newUsers
+
+        // printf("Delta from new users");
+        // delta.print();
+
+        // At this point delta has bool flags set to true for the newUsers
 
         // Mark all projects touched by the users in delta as projects related to linus
         ProjectsTagger ptagger(delta, *pSet, projects);
         // IMPORTANT: Will only update with projects on this node
         commits->local_map(ptagger);
+        // printf("Pset with projects of new users marked:");
+        // ptagger.newProjects.print();
+
         // Merge results from other nodes
         merge(ptagger.newProjects, "projects", stage);
         // Add new projects to set of projects related to linus
@@ -274,14 +336,15 @@ class Linus : public Application {
         UsersTagger utagger(ptagger.newProjects, *uSet, users);
         // IMPORTANT: Will only update with users on this node
         commits->local_map(utagger);
+
         // Merge results from other nodes
         merge(utagger.newUsers, "users", stage + 1);
         // Add new users to set of users related to linus
         uSet->union_(utagger.newUsers); 
 
         printf("After stage %zu : \n", stage);
-        printf("   tagged projects: %zu\n", pSet->size());
-        printf("   tagged users: %zu\n", uSet->size());
+        printf("   tagged projects: %zu\n", pSet->num_true());
+        printf("   tagged users: %zu\n", uSet->num_true());
     }
 
     /** Gather updates to the given set from all the nodes in the systems.
@@ -296,27 +359,33 @@ class Linus : public Application {
                 // STEP (2)
                 Key* nK = mk_key((char*) name, stage, i);
                 // New elements
+                printf("  waiting for node %zu to give me data under key %s\n", i, nK->get_name());
                 DataFrame* delta = dynamic_cast<DataFrame*>(store->waitAndGet(nK));
-                printf("  received delta of %zu elements from node %zu\n", 
+                printf("  ... received delta of %zu elements from node %zu\n", 
                         delta->nrows(), i);
                 // Update the given set with new elements
                 SetUpdater upd(set);
                 delta->map(upd);
+
+                delete nK;
                 delete delta;
             }
             // STEP (3)
-            printf("    storing %zu merged elements \n", set.size());
+            printf("    After merge, master has %zu %s elements \n", set.size(), name);
             // Create a new DF from the updated set 
             SetWriter writer(set);
             Key* k = mk_key((char*) name, stage, 0);
-            delete DataFrame::fromWriter(k, store, "I", writer);
+            delete DataFrame::fromWriter(k, store, (char*) "I", writer);
+            delete k;
         } else {
             // STEP (1) 
-            printf("   sending %zu elements to master node \n", set.size());
+            printf("   sending %zu %s elements to master node \n", set.size(), name);
             // Put a DF in KVS with updated elements (for master node to process)
             SetWriter writer(set);
             Key* k = mk_key((char*) name, stage, this_node());
-            delete DataFrame::fromWriter(k, store, "I", writer);
+            printf("   ...under key %s\n", k->get_name());
+            delete DataFrame::fromWriter(k, store, (char*) "I", writer);
+            delete k;
 
             // STEP (4)
             // Get the merged result from master node
@@ -326,35 +395,97 @@ class Linus : public Application {
             SetUpdater upd(set);
             merged->map(upd);
             delete merged;
+            delete mK;
         }
     }
 }; // Linus
 
-bool test_linus() {
-    char* master_ip = (char*)"127.0.0.1";
-    int master_port = rand_port();
-    Server s(master_ip, master_port);
-    s.listen_for_clients();
+int main(int argc, char** argv) {
+    Arguments args(argc, argv);
 
-    Store store1(0, (char*)"127.0.0.1", rand_port(), master_ip, master_port);
-   //  Store store2(1, (char*)"127.0.0.1", 8001, master_ip, master_port);
-   // Store store3(2, (char*)"127.0.0.1", 8002, master_ip, master_port);
+    bool start_server = args.start_server;
+    char* master_ip = args.master_ip;
+    int master_port = args.master_port;
 
-    Linus linus(&store1);
-    linus.run();
-
-    // shutdown system
-    s.shutdown();
-
-    // wait for nodes to finish
-    while (!store1.is_shutdown()) {
+    Server* s = nullptr;
+    if (start_server) {
+        s = new Server(master_ip, master_port);
+        s->listen_for_clients();
     }
 
-    return true;
-}
+    int node_id = args.node_id;
+    char* node_ip = args.node_ip;
+    int node_port = args.node_port;
 
-int main() {
-    assert(test_linus());
-    printf("=================test_linus PASSED if correct number of collaborators printed==================\n");
+    Store store(node_id, node_ip, node_port, master_ip, master_port);
+
+    int degrees = args.degrees;
+    char* proj_file = args.proj_file;
+    char* users_file = args.users_file;
+    char* commits_file = args.commits_file;
+
+    while (store.num_nodes() != 2) {}
+
+    Linus linus(&store, degrees, proj_file, users_file, commits_file);
+    linus.run();
+
+    if (start_server) {
+        s->shutdown();
+        delete s;
+    }
+
+    while (!store.is_shutdown()) {}
+
     return 0;
 }
+
+
+
+
+
+// // Called by threads to simulate the different nodes
+// int start_linus(Store* store) { 
+// 	printf("Thread for node %zu is starting \n", store->this_node());
+//     Linus linus(store);
+//     linus.run();
+// 	return 0;
+// }
+
+// bool test_linus() {
+//     char* master_ip = (char*)"127.0.0.1";
+//     int master_port = rand_port();
+//     Server s(master_ip, master_port);
+//     s.listen_for_clients();
+
+//     Store store1(0, (char*)"127.0.0.1", rand_port(), master_ip, master_port);
+//     Store store2(1, (char*)"127.0.0.1", rand_port(), master_ip, master_port);
+//    // Store store3(2, (char*)"127.0.0.1", 8002, master_ip, master_port);
+
+//     Linus linus1(&store1);
+//     linus1.run();
+
+//     Linus linus2(&store2);
+//     linus2.run();
+
+//     // std::thread t1(start_linus, &store1);
+//     // std::thread t2(start_linus, &store2);
+//     // t1.join();
+//     // t2.join();
+
+//     // shutdown system
+//     s.shutdown();
+
+//     // wait for nodes to finish
+//     while (!store1.is_shutdown()) {
+//     }
+//     while (!store2.is_shutdown()) {
+//     }
+
+//     return true;
+// }
+
+// int main() {
+//     assert(test_linus());
+//     printf("=================test_linus PASSED if correct number of collaborators printed==================\n");
+//     return 0;
+// }

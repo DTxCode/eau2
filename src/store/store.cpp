@@ -400,7 +400,7 @@ DistributedDataFrame *DataFrame::fromArray(Key *key, Store *store, size_t count,
 
 // Stores copy of col in store under key
 DistributedDataFrame *DataFrame::fromDistributedColumn(Key *key, Store *store, DistributedColumn *col) {
-    Schema *empty_schema = new Schema();
+    Schema *empty_schema = new Schema(); // TODO: I think this can be stack allocated. DDF will make its own copy.
     DistributedDataFrame *df = new DistributedDataFrame(store, *empty_schema);
 
     // add column to DF

@@ -67,7 +67,9 @@ class Sorer {
         DistributedDataFrame* df = new DistributedDataFrame(store, *schema);
         Row* row = new Row(*schema);
 
-        char buffer[255];
+        size_t MAX_LINE_LENGTH = 256;
+        char buffer[MAX_LINE_LENGTH];
+        bzero(buffer, MAX_LINE_LENGTH);
 
         size_t col_idx = 0;
         size_t read_idx = 0;
@@ -111,15 +113,19 @@ class Sorer {
                 col_idx++;
             } else if (reading_val) {  // Copy value into buffer
                 buffer[read_idx] = c;
+                // printf("Read so far %s\n", buffer);
                 read_idx++;
             } else if (c == '\n') {
+                // printf("Adding row to df. Read %zu bytes of total desired %zu.\n", bytes_read, length);
                 // Add row to dataframe
                 df->add_row(*row);
 
                 col_idx = 0;
+                bzero(buffer, MAX_LINE_LENGTH);
             }
             // Stop reading after length_to_read
             if (bytes_read >= length) {
+                // printf("Stopping reading DF because reached length\n");
                 break;
             }
         }

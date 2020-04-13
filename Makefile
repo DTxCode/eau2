@@ -1,8 +1,9 @@
-build: #TODO: replace with Linus
-	g++ -std=c++11 -Wall -pthread src/client/application.cpp -o app 
+build:
+	g++ -std=c++11 -Wall -pthread tests/client/linus_demo.cpp -o linus 
 
-run: #TODO: replace with Linus
-	./app -from 0 -len 1000 -f ./data/data.sor
+run:
+	./linus -node_id 0 -node_port 4000 -degrees 1 -start_server 1
+	./linus -node_id 1 -node_port 4001 -degrees 1 
 
 # Run all tests
 test: test-dist-column test-server-node test-serializer test-store test-ddf test-map
