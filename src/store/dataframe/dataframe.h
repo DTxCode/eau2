@@ -290,11 +290,11 @@ class DataFrame : public Object {
     /** Helper function to visit a chunk of rows in order. Row_start and 
         row_end must be valid row indices, or behavior is undefined. **/
     void map_chunk(size_t row_start, size_t row_end, Rower& r) {
-        Row* row = new Row(*schema);  // TODO no need to be heap allocated
+        Row row(*schema);  
         for (size_t row_idx = row_start; row_idx <= row_end; row_idx++) {
-            fill_row(row_idx, *row);
+            fill_row(row_idx, row);
 
-            r.accept(*row);
+            r.accept(row);
 
             // Now insert changes back into map (if any)
             for (size_t j = 0; j < ncols(); j++) {
@@ -302,7 +302,7 @@ class DataFrame : public Object {
                 char col_type = col->get_type();
 
                 // Handle missings first
-                if (row->is_missing(j)) {
+                if (row.is_missing(j)) {
                     set_missing(j, row_idx);
                     continue;
                 }
@@ -310,13 +310,13 @@ class DataFrame : public Object {
                 // get appropriately typed value out of the row, and set it in the column
                 // expect col schema to match row schema
                 if (col_type == INT_TYPE) {
-                    set(j, row_idx, row->get_int(j));
+                    set(j, row_idx, row.get_int(j));
                 } else if (col_type == BOOL_TYPE) {
-                    set(j, row_idx, row->get_bool(j));
+                    set(j, row_idx, row.get_bool(j));
                 } else if (col_type == FLOAT_TYPE) {
-                    set(j, row_idx, row->get_float(j));
+                    set(j, row_idx, row.get_float(j));
                 } else {
-                    set(j, row_idx, row->get_string(j));
+                    set(j, row_idx, row.get_string(j));
                 }
             }
         }
@@ -324,6 +324,10 @@ class DataFrame : public Object {
 
     /** Visit rows in order */
     virtual void map(Rower& r) {
+        // Nothing to do with no rows
+        if (nrows() == 0) {
+            return;
+        }
         map_chunk(0, nrows() - 1, r);
     }
 
