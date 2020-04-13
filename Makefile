@@ -5,8 +5,8 @@ run: #TODO: replace with Linus
 	./app -from 0 -len 1000 -f ./data/data.sor
 
 # Run all tests
-test: test-dist-column test-server-node test-serializer test-store
-
+test: test-dist-column test-server-node test-serializer test-store test-ddf
+	echo "All tests passed!"
 
 ### Client
 
@@ -83,16 +83,19 @@ valgrind-store:
 
 # DDF test
 test-ddf:
-	g++ -std=c++11 -Wall -pthread -g tests/store/test_ddf.cpp -o ddf_test
+	g++ -std=c++11 -Wall -pthread -g tests/store/ddf_test.cpp -o ddf_test
 	./ddf_test
-	g++ -std=c++11 -Wall -pthread -g tests/store/test_missings_col.cpp -o missing_col_test
-	./missing_col_test
+
+valgrind-ddf:
+	g++ -std=c++11 -Wall -pthread -g tests/store/ddf_test.cpp -o ddf_test
+	valgrind --leak-check=full --track-origins=yes ./ddf_test
+
 
 ### Utils Tests
 
 # Map test
 test-map:
-	g++ -std=c++11 -Wall -pthread -g tests/store/test_map.cpp -o map_test
+	g++ -std=c++11 -Wall -pthread -g tests/utils/map_test.cpp -o map_test
 	./map_test
 
 valgrind-map:
