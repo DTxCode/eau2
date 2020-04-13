@@ -132,17 +132,17 @@ bool test_remove() {
     map->put(keys[0], o_vals[0]);
     map->put(keys[3], s_vals[2]);
     map->put(keys[4], s_vals[3]);
-    bool passed = true;
-    passed = passed && (map->size() == 3);
-    passed = passed && map->containsKey(keys[0]);
-    passed = passed && o_vals[0]->equals(map->remove(keys[0]));
-    passed = passed && s_vals[2]->equals(map->remove(keys[3]));
-    passed = passed && (map->size() == 1);
-    passed = passed && !o_vals[0]->equals(map->remove(keys[4]));
-    passed = passed && (map->size() == 0);
+    
+    assert((map->size() == 3));
+    assert(map->containsKey(keys[0]));
+    assert(o_vals[0]->equals(map->remove(keys[0])));
+    assert(s_vals[2]->equals(map->remove(keys[3])));
+    assert((map->size() == 1));
+    assert(!o_vals[0]->equals(map->remove(keys[4])));
+    assert((map->size() == 0));
 
     cleanup();
-    return passed;
+    return true;
 }
 
 // Confirm 'size' method returns the number of keys in the map

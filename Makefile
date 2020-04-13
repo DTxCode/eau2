@@ -5,7 +5,7 @@ run: #TODO: replace with Linus
 	./app -from 0 -len 1000 -f ./data/data.sor
 
 # Run all tests
-test: test-dist-column test-server-node test-serializer test-store test-ddf
+test: test-dist-column test-server-node test-serializer test-store test-ddf test-map
 	echo "All tests passed!"
 
 ### Client
@@ -99,5 +99,5 @@ test-map:
 	./map_test
 
 valgrind-map:
-	g++ -std=c++11 -Wall -pthread -g tests/store/test_map.cpp -o map_test
+	g++ -std=c++11 -Wall -pthread -g tests/utils/map_test.cpp -o map_test
 	valgrind --leak-check=full --track-origins=yes ./map_test 
