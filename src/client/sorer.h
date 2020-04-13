@@ -65,7 +65,7 @@ class Sorer {
         }
 
         DistributedDataFrame* df = new DistributedDataFrame(store, *schema);
-        Row* row = new Row(*schema);
+        Row row(*schema);
 
         size_t MAX_LINE_LENGTH = 256;
         char buffer[MAX_LINE_LENGTH];
@@ -91,22 +91,22 @@ class Sorer {
                 // Handle missings
                 if (is_empty_field(buffer, schema->col_type(col_idx))) {
 			        printf("Sorer found a missing at column %zu\n", col_idx);
-                    row->set_missing(col_idx);
+                    row.set_missing(col_idx);
                     // Based on schema, add data to row
                 } else if (schema->col_type(col_idx) == INT_TYPE) {
                     int val = atoi(trim_whitespace(buffer));
-                    row->set(col_idx, val);
+                    row.set(col_idx, val);
                 } else if (schema->col_type(col_idx) == FLOAT_TYPE) {
                     float val = (float)atof(trim_whitespace(buffer));
-                    row->set(col_idx, val);
+                    row.set(col_idx, val);
                 } else if (schema->col_type(col_idx) == STRING_TYPE) {
-                    String* val = new String(trim_whitespace(buffer));
-                    row->set(col_idx, val);
+                    String* val = new String(trim_whitespace(buffer)); // TODO: who deletes this?
+                    row.set(col_idx, val);
                 } else {  // BOOL_TYPE
                     if (strcmp(trim_whitespace(buffer), "1") == 0) {
-                        row->set(col_idx, true);
+                        row.set(col_idx, true);
                     } else {
-                        row->set(col_idx, false);
+                        row.set(col_idx, false);
                     }
                 }
 
@@ -118,7 +118,7 @@ class Sorer {
             } else if (c == '\n') {
                 // printf("Adding row to df. Read %zu bytes of total desired %zu.\n", bytes_read, length);
                 // Add row to dataframe
-                df->add_row(*row);
+                df->add_row(row);
 
                 col_idx = 0;
                 bzero(buffer, MAX_LINE_LENGTH);

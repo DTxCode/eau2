@@ -43,6 +43,7 @@ class Message {
     // Constructs a Message from the given stringified Message
     // Expects given string to have format [SENDER IP ADDRESS]:[SENDER PORT];[MESSAGE TYPE];[MESSAGE]
     Message(char* message_string) {
+        printf("DEBUG: Constructing message from string: %s\n", message_string);
         if (message_string == nullptr) {
             printf("ERROR cannot create Message from empty string\n");
             exit(1);

@@ -312,7 +312,9 @@ class Linus : public Application {
     
         // For all users in newUsers, set that user bit to True in delta 
         SetUpdater upd(delta); 
-        newUsers->map(upd); 
+        newUsers->map(upd);
+
+        delete uK;
         delete newUsers;
 
         // printf("Delta from new users");
@@ -359,10 +361,10 @@ class Linus : public Application {
                 // STEP (2)
                 Key* nK = mk_key((char*) name, stage, i);
                 // New elements
-                printf("  waiting for node %zu to give me data under key %s\n", i, nK->get_name());
+                // printf("  waiting for node %zu to give me data under key %s\n", i, nK->get_name());
                 DataFrame* delta = dynamic_cast<DataFrame*>(store->waitAndGet(nK));
-                printf("  ... received delta of %zu elements from node %zu\n", 
-                        delta->nrows(), i);
+                printf("   received %zu new %s elements from node %zu\n", delta->nrows(), name, i);
+
                 // Update the given set with new elements
                 SetUpdater upd(set);
                 delta->map(upd);
@@ -371,7 +373,7 @@ class Linus : public Application {
                 delete delta;
             }
             // STEP (3)
-            printf("    After merge, master has %zu %s elements \n", set.size(), name);
+            printf("    After merge, master has %zu (true) %s elements \n", set.num_true(), name);
             // Create a new DF from the updated set 
             SetWriter writer(set);
             Key* k = mk_key((char*) name, stage, 0);
@@ -379,11 +381,11 @@ class Linus : public Application {
             delete k;
         } else {
             // STEP (1) 
-            printf("   sending %zu %s elements to master node \n", set.size(), name);
+            printf("   sending %zu %s elements to master node \n", set.num_true(), name);
             // Put a DF in KVS with updated elements (for master node to process)
             SetWriter writer(set);
             Key* k = mk_key((char*) name, stage, this_node());
-            printf("   ...under key %s\n", k->get_name());
+            // printf("   ...under key %s\n", k->get_name());
             delete DataFrame::fromWriter(k, store, (char*) "I", writer);
             delete k;
 
@@ -391,7 +393,8 @@ class Linus : public Application {
             // Get the merged result from master node
             Key* mK = mk_key((char*) name, stage, 0);
             DataFrame* merged = dynamic_cast<DataFrame*>(store->waitAndGet(mK));
-            printf("    receiving %zu merged elements \n", merged->nrows());
+            printf("   updated from master and now have %zu true %s elements \n", merged->nrows(), name);
+
             SetUpdater upd(set);
             merged->map(upd);
             delete merged;

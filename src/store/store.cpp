@@ -275,7 +275,10 @@ char *Store::send_get_request_(Key *key) {
         // key does not exist
         return nullptr;
     } else if (response->msg_type != ACK) {
-        printf("Node %zu did not get successful NACK or ACK for its GET request to node %zu\n", node_id, key_home);
+        printf("ERROR: Node %zu did not get successful NACK or ACK for its GET request to node %zu\n", node_id, key_home);
+        exit(1);
+    } else if (response->msg == nullptr) {
+        printf("ERROR: Node %zu got a nullptr response body to its GET request. Full response was %s\n", node_id, response->to_string());
         exit(1);
     }
 
@@ -409,8 +412,8 @@ DistributedDataFrame *DataFrame::fromArray(Key *key, Store *store, size_t count,
 
 // Stores copy of col in store under key
 DistributedDataFrame *DataFrame::fromDistributedColumn(Key *key, Store *store, DistributedColumn *col) {
-    Schema *empty_schema = new Schema(); // TODO: I think this can be stack allocated. DDF will make its own copy.
-    DistributedDataFrame *df = new DistributedDataFrame(store, *empty_schema);
+    Schema empty_schema;
+    DistributedDataFrame *df = new DistributedDataFrame(store, empty_schema);
 
     // add column to DF
     df->add_column(col);

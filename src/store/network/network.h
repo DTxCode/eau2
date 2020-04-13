@@ -177,7 +177,7 @@ class Network {
         // printf("DEBUG: read_from_socket_ calling initial read...\n");
         size_t bytes_read = read(socket, buffer, max_message_chunk_size - 1);
         // printf("       read %zu bytes\n", bytes_read);
-        // printf("DEBUG: read_from_socket read %zu initial bytes: %s\n", bytes_read, buffer);
+        printf("DEBUG: read_from_socket read %zu initial bytes: %s\n", bytes_read, buffer);
 
         if (bytes_read < 0) {
             perror("ERROR reading from socket");
@@ -238,6 +238,8 @@ class Network {
 
         // Send message to server
         int bytes_written = write(socket, prepended_message, strlen(prepended_message));
+
+        printf("DEBUG: write_to_socket_ wrote %d bytes: %s\n", bytes_written, prepended_message);
 
         if (bytes_written < 0) {
             perror("ERROR writing to socket");
