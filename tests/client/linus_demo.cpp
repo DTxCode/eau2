@@ -3,6 +3,7 @@
 #include "../../src/store/dataframe/dataframe.h"
 #include "../../src/store/store.cpp"
 #include "../../src/store/dataframe/rower.h"
+#include "../test_utils.h"
 
 /** Authors:
 *	Ryan Heminway (heminway.r@husky.neu.edu)
@@ -331,11 +332,11 @@ class Linus : public Application {
 
 bool test_linus() {
     char* master_ip = (char*)"127.0.0.1";
-    int master_port = 8888;
+    int master_port = rand_port();
     Server s(master_ip, master_port);
     s.listen_for_clients();
 
-    Store store1(0, (char*)"127.0.0.1", 8000, master_ip, master_port);
+    Store store1(0, (char*)"127.0.0.1", rand_port(), master_ip, master_port);
    //  Store store2(1, (char*)"127.0.0.1", 8001, master_ip, master_port);
    // Store store3(2, (char*)"127.0.0.1", 8002, master_ip, master_port);
 

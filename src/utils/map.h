@@ -323,19 +323,26 @@ class Map : public Object {
         size_t bucket_id = key->hash() % key_space;
         List* value_list = value_lists[bucket_id];
 
-        for (size_t j = 0; j < value_list->size(); j++) {
+        size_t num_pairs = value_list->size();
+        for (size_t j = 0; j < num_pairs; j++) {
             Pair* pair = dynamic_cast<Pair*>(value_list->get(j));
 
             // if a key from the pair matches the given, store val for return
             if (pair->get_first()->equals(key)) {
+                // Remove pair from value_list and free its memory
                 value_list->remove(j);
-                removed_val = pair->get_second();
+                Object* pair_key = pair->get_first();
+                Object* pair_value = pair->get_second();
+                delete pair; // Does not delete key and value above
+
+                // Remember the value we're removing
+                removed_val = pair_value;
 
                 // Remove removed key and value
-                size_t removed_key_index = keys_->index_of(pair->get_first());
+                size_t removed_key_index = keys_->index_of(pair_key);
                 keys_->remove(removed_key_index);
 
-                size_t removed_value_index = values_->index_of(pair->get_second());
+                size_t removed_value_index = values_->index_of_pointer(pair_value);
                 values_->remove(removed_value_index);
 
                 // Update keyspace if this bucket is now empty

@@ -35,7 +35,7 @@ class DataFrame : public Object {
     /** Create a data frame from a schema and columns. All columns are created
     * empty. */
     DataFrame(Schema& scm) {
-	schema = new Schema(scm);
+	    schema = new Schema(scm);
         columns = new Column*[scm.width()];
 
         set_empty_cols_(schema);
@@ -47,7 +47,7 @@ class DataFrame : public Object {
         }
 
         delete[] columns;
-	delete schema;
+	    delete schema;
     }
 
     // Creates and sets empty columns in this dataframe according to the given schema
@@ -446,18 +446,21 @@ class DistributedDataFrame : public DataFrame {
 
     DistributedDataFrame(Store* store, DataFrame& df) : DataFrame(df) {
         this->store = store;
-        set_empty_cols_(schema);
+        set_empty_dist_cols_(schema);
     }
 
     DistributedDataFrame(Store* store, Schema& scm) : DataFrame(scm) {
         this->store = store;
-        set_empty_cols_(schema);
+        set_empty_dist_cols_(schema);
     }
 
-    // Creates and sets empty columns in this dataframe according to the given schema
-    void set_empty_cols_(Schema* schema) {
+    // Overrides normal columns in this dataframe with distributed versions
+    void set_empty_dist_cols_(Schema* schema) {
         for (size_t col_idx = 0; col_idx < schema->width(); col_idx++) {
             char col_type = schema->col_type(col_idx);
+
+            // Delete empty column that base constructor added
+            delete columns[col_idx];
 
             if (col_type == INT_TYPE) {
                 columns[col_idx] = new DistributedIntColumn(store);

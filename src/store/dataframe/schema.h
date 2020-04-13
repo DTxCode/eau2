@@ -63,10 +63,14 @@ class Schema : public Object {
     * is external. Names are expectd to be unique, duplicates result
     * in undefined behavior. */
     void add_column(char type) {
-        // convert char into String
-        String* type_s = new String(&type);
+        char col_type[2];
+        col_type[0] = type;
+        col_type[1] = '\0';
 
-        col_types->push_back(type_s);
+        // convert char into String
+        String* col_type_s = new String(col_type);
+
+        col_types->push_back(col_type_s);
     }
 
     /* Adds a row by simplying increasing the number of rows 
