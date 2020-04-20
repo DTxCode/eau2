@@ -205,6 +205,7 @@ bool *Store::get_bool_array_(Key *k) {
     char *serialized_array = get_char_(k, true);
 
     if (serialized_array == nullptr) {
+        printf("WARN: get_bool_array_ return nullptr for key %s,%zu\n", k->get_name(), k->get_home_node());
         return nullptr;
     }
 
@@ -218,6 +219,7 @@ int *Store::get_int_array_(Key *k) {
     char *serialized_array = get_char_(k, true);
 
     if (serialized_array == nullptr) {
+        printf("WARN: get_int_array_ return nullptr for key %s,%zu\n", k->get_name(), k->get_home_node());
         return nullptr;
     }
 
@@ -231,6 +233,7 @@ float *Store::get_float_array_(Key *k) {
     char *serialized_array = get_char_(k, true);
 
     if (serialized_array == nullptr) {
+        printf("WARN: get_float_array_ return nullptr for key %s,%zu\n", k->get_name(), k->get_home_node());
         return nullptr;
     }
 
@@ -244,6 +247,7 @@ String **Store::get_string_array_(Key *k) {
     char *serialized_array = get_char_(k, true);
 
     if (serialized_array == nullptr) {
+        printf("WARN: get_string_array_ return nullptr for key %s,%zu\n", k->get_name(), k->get_home_node());
         return nullptr;
     }
 
@@ -371,7 +375,7 @@ void Store::handle_message(int connected_socket, Message *msg) {
         handle_get_(connected_socket, msg);
         // printf("DEBUG: Node %zu responded to GET Request\n", this_node());
     } else {
-        printf("WARN: Store got a message from another node with unknown message type %d\n", msg->msg_type);
+        printf("WARN: Store got a message from another node with unexpected message type %d\n", msg->msg_type);
     }
 }
 
@@ -379,6 +383,7 @@ void Store::handle_message(int connected_socket, Message *msg) {
 void Store::handle_put_(int connected_socket, Message *msg) {
     char *msg_contents = msg->msg;
 
+    printf("DEBUG: Handling a PUT with msg contents %s\n", msg_contents);
     // put together Key
     char *key_str = strtok(msg_contents, "~");
     Key key(key_str, node_id);  // This node got a PUT request, so the key must live on this node.
@@ -398,6 +403,8 @@ void Store::handle_put_(int connected_socket, Message *msg) {
 void Store::handle_get_(int connected_socket, Message *msg) {
     // Message consists of just the key
     char *key_str = msg->msg;
+    printf("DEBUG: Handling a GET with msg contents %s\n", key_str);
+
     Key key(key_str, node_id);  // This node got a GET request, so the key must live on this node.
 
     char *serialized_value = get_char_(&key, true);

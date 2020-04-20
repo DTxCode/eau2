@@ -173,7 +173,7 @@ class Network {
         size_t msg_size = 0;
 
         if (read(socket, &msg_size, sizeof(size_t)) < (long) sizeof(size_t)) {
-            printf("ERROR reading msg size from socket\n");
+            printf("ERROR reading msg size from socket. Error num %d\n", errno);
             exit(1);
         }
 

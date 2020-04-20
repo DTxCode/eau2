@@ -642,10 +642,10 @@ char* Serializer::serialize_strings(String** strings, size_t num_values) {
 bool* Serializer::deserialize_bools(char* msg) {
     // printf("DEBUG: deserializing bools array: %s\n", msg);
 
+    assert(msg);
+
     Sys s;
     size_t num_bools = s.count_char(",", msg) + 1;
-
-    if (num_bools == 0) return nullptr;
 
     bool* bools = new bool[num_bools];
 
@@ -656,8 +656,6 @@ bool* Serializer::deserialize_bools(char* msg) {
     }
 
     return bools;
-
-
 
     // bool bools_temp[strlen(msg)];  // Temporarily oversize the storage
     // char* token;
@@ -683,10 +681,10 @@ bool* Serializer::deserialize_bools(char* msg) {
 int* Serializer::deserialize_ints(char* msg) {
     // printf("DEBUG: deserializing ints array: %s\n", msg);
 
+    assert(msg);
+
     Sys s;
     size_t num_ints = s.count_char(",", msg) + 1;
-
-    if (num_ints == 0) return nullptr;
 
     int* ints = new int[num_ints];
 
@@ -722,10 +720,10 @@ int* Serializer::deserialize_ints(char* msg) {
 float* Serializer::deserialize_floats(char* msg) {
     // printf("DEBUG: deserializing floats array: %s\n", msg);
 
+    assert(msg);
+
     Sys s;
     size_t num_floats = s.count_char(",", msg) + 1;
-
-    if (num_floats == 0) return nullptr;
 
     float* floats = new float[num_floats];
 
@@ -759,10 +757,11 @@ float* Serializer::deserialize_floats(char* msg) {
 }
 
 String** Serializer::deserialize_strings(char* msg) {
+
+    assert(msg);
+
     Sys s;
     size_t num_strings = s.count_char(",", msg) + 1;
-
-    if (num_strings == 0) return nullptr;
 
     String** strings = new String*[num_strings];
 

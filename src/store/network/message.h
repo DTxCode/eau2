@@ -43,7 +43,8 @@ class Message {
     // Constructs a Message from the given stringified Message
     // Expects given string to have format [SENDER IP ADDRESS]:[SENDER PORT];[MESSAGE TYPE];[MESSAGE]
     Message(char* message_string) {
-        // printf("DEBUG: Constructing message from string: %s\n", message_string);
+        printf("DEBUG: Constructing message from string: %s\n", message_string);
+
         if (message_string == nullptr) {
             printf("ERROR cannot create Message from empty string\n");
             exit(1);
@@ -57,7 +58,7 @@ class Message {
 
         sender_ip_address = strtok(msg_duplicate, ":");
         if (strlen(sender_ip_address) == 0) {
-            printf("ERROR failed to parse Message.sender_ip_address from the given string: %s", message_string);
+            printf("ERROR failed to parse Message.sender_ip_address from the given string: %s\n", message_string);
             exit(1);
         }
 
@@ -76,17 +77,18 @@ class Message {
 
         // can be empty string
         msg = strtok(nullptr, "\0");
+        if (msg == nullptr) {
+            msg = new char[1];
+            msg[0] = '\0';
+        }
     }
 
     // Returns a string representation of this Message in the format
     // [SENDER IP ADDRESS]:[SENDER PORT];[MESSAGE TYPE];[MESSAGE]
     char* to_string() {
-        // + 10 should give enough space for the part of new_msg corresponding to ":PORT;"
-        // since port numbers are no more than ~66,000
-        // + 5 should give enough space for ";MESSAGE_TYPE;"
-        char* string = new char[strlen(sender_ip_address) + 10 + 5 + strlen(msg)];
-
-        sprintf(string, "%s:%d;%d;%s", sender_ip_address, sender_port, msg_type, msg);
+        size_t buf_size = snprintf(nullptr, 0, "%s:%d;%d;%s", sender_ip_address, sender_port, msg_type, msg) + 1;
+        char* string = new char[buf_size];
+        snprintf(string, buf_size, "%s:%d;%d;%s", sender_ip_address, sender_port, msg_type, msg);
 
         return string;
     }
