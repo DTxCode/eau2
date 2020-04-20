@@ -3,9 +3,7 @@
 #pragma once
 #include <stdlib.h>
 #include <mutex>
-//#include "../utils/map.h"
-//#include "../utils/string.h"
-//#include "key.h"
+#include <condition_variable>
 #include "network/node.h"
 
 class String;
@@ -22,6 +20,8 @@ class Store : public Node {
     Map* map;
     std::mutex map_lock;
     size_t node_id;
+    std::condition_variable cond_var; // Used to coordinate active thread and listener
+    bool put_has_occured; // Used in tandem with cond_var above
 
 //    Store(Store& s);
 
@@ -42,13 +42,14 @@ class Store : public Node {
     void send_put_request_(Key* k, char* value);
 
     DistributedDataFrame* get(Key* k);
+    DistributedDataFrame* get_unsafe_(Key* k);
     DistributedDataFrame* waitAndGet(Key* k);
 
     bool* get_bool_array_(Key* k);
     int* get_int_array_(Key* k);
     float* get_float_array_(Key* k);
     String** get_string_array_(Key* k);
-    char* get_char_(Key* k);
+    char* get_char_(Key* k, bool safe);
     char* send_get_request_(Key* k);
 
     void handle_message(int connected_socket, Message* msg);

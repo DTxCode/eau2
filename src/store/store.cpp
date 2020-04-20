@@ -2,9 +2,8 @@
 *           David Tandetnik (tandetnik.da@husky.neu.edu) */
 #pragma once
 #include "store.h"
-
 #include <mutex>
-
+#include <condition_variable>
 #include "../client/sorer.h"
 #include "../utils/map.h"
 #include "dataframe/dataframe.h"
@@ -13,7 +12,7 @@
 #include "network/node.h"
 #include "serial.cpp"
 
-#define GETANDWAIT_SLEEP 25
+#define GETANDWAIT_SLEEP 100
 
 Store::Store(size_t node_id, char *my_ip_address, int my_port, char *server_ip_address, int server_port) 
         : Node(my_ip_address, my_port, server_ip_address, server_port) {
@@ -77,10 +76,21 @@ void Store::put_char_(Key *key, char *value) {
     if (key_home == node_id) {
         // Value belongs on this node
         String *val = new String(value);  // deleted in destructor
-        map_lock.lock();
-        // Calling delete here in case put returns a replaced value
-        delete map->put(key->clone(), val);
-        map_lock.unlock();
+
+        // Put value in map under mutex
+        // In case active thread is getAndWaiting for a new value, notify it that there's a new value in the map
+        {
+            std::lock_guard<std::mutex> lck(map_lock);
+            // Calling delete here in case put returns a replaced value
+            delete map->put(key->clone(), val);
+            put_has_occured = true;
+        }
+        cond_var.notify_one();
+
+        // map_lock.lock();
+        // // Calling delete here in case put returns a replaced value
+        // delete map->put(key->clone(), val);
+        // map_lock.unlock();
     } else {
         // Value belongs on another node
         send_put_request_(key, value);
@@ -157,7 +167,23 @@ void Store::send_put_request_(Key *key, char *value) {
 // If key doesn't exist, returns nullptr.
 // Does not modify or delete given key
 DistributedDataFrame *Store::get(Key *k) {
-    char *serialized_df = get_char_(k);
+    char *serialized_df = get_char_(k, true);
+
+    if (serialized_df == nullptr) {
+        return nullptr;
+    }
+
+    DistributedDataFrame *df = serializer->deserialize_distributed_dataframe(serialized_df, this);
+
+    delete[] serialized_df;
+
+    return df;
+}
+
+// Same as get() but does not use mutex when accessing store.
+// Useful if caller has acquired the lock already.
+DistributedDataFrame *Store::get_unsafe_(Key* k) {
+    char *serialized_df = get_char_(k, false);
 
     if (serialized_df == nullptr) {
         return nullptr;
@@ -176,7 +202,7 @@ DistributedDataFrame *Store::get(Key *k) {
     Uses copies of given key (does not modify or delete it)
 */
 bool *Store::get_bool_array_(Key *k) {
-    char *serialized_array = get_char_(k);
+    char *serialized_array = get_char_(k, true);
 
     if (serialized_array == nullptr) {
         return nullptr;
@@ -189,7 +215,7 @@ bool *Store::get_bool_array_(Key *k) {
 }
 
 int *Store::get_int_array_(Key *k) {
-    char *serialized_array = get_char_(k);
+    char *serialized_array = get_char_(k, true);
 
     if (serialized_array == nullptr) {
         return nullptr;
@@ -202,7 +228,7 @@ int *Store::get_int_array_(Key *k) {
 }
 
 float *Store::get_float_array_(Key *k) {
-    char *serialized_array = get_char_(k);
+    char *serialized_array = get_char_(k, true);
 
     if (serialized_array == nullptr) {
         return nullptr;
@@ -215,7 +241,7 @@ float *Store::get_float_array_(Key *k) {
 }
 
 String **Store::get_string_array_(Key *k) {
-    char *serialized_array = get_char_(k);
+    char *serialized_array = get_char_(k, true);
 
     if (serialized_array == nullptr) {
         return nullptr;
@@ -229,14 +255,15 @@ String **Store::get_string_array_(Key *k) {
 
 // Gets a copy of the value associated with the given key, possibly from another node,
 // and returns as a char*. If key doesn't exist, returns nullptr.
+// If safe is true, uses a lock while accessing the store.
 // For internal use only.
-char *Store::get_char_(Key *key) {
+char *Store::get_char_(Key *key, bool safe) {
     size_t key_home = key->get_home_node();
 
     if (key_home == node_id) {
-        map_lock.lock();
+        if (safe) map_lock.lock();
         Object *value_obj = map->get(key);
-        map_lock.unlock();
+        if (safe) map_lock.unlock();
 
         if (value_obj == nullptr) {
             // Key does not exist
@@ -294,15 +321,36 @@ char *Store::send_get_request_(Key *key) {
 // If key doesn't exist, blocks until it does. Never returns nullptr.
 // Does not modify or delete given key
 DistributedDataFrame *Store::waitAndGet(Key *k) {
-    DistributedDataFrame *df = get(k);
+    size_t key_home = k->get_home_node();
 
-    // TODO ways to improve this:
-    // - for local get, could do waitAndNotify method instead of this busy loop
-    // - for network get, use above method + timeout
+    // If key is in the store, return it right away
+    DistributedDataFrame *df = get(k);
+    if (df) return df;
+
+    // Key is not yet in the store, loop and wait
     while (df == nullptr) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(GETANDWAIT_SLEEP));
-        df = get(k);
+        if (key_home == node_id) {
+            // Key is local. Use a conditional_variable to wait for it to appear
+            std::unique_lock<std::mutex> lck(map_lock);
+            cond_var.wait(lck, [&] { return put_has_occured; });
+            df = get_unsafe_(k); // Use unsafe version because we've already acquired the lock
+            put_has_occured = false;
+        } else {
+            // Key is across the network. Sleep intermittently while we wait.
+            std::this_thread::sleep_for(std::chrono::milliseconds(GETANDWAIT_SLEEP));
+            df = get(k);
+        }
     }
+
+    // DistributedDataFrame *df = get(k);
+
+    // // TODO ways to improve this:
+    // // - for local get, could do waitAndNotify method instead of this busy loop
+    // // - for network get, use above method + timeout
+    // while (df == nullptr) {
+    //     std::this_thread::sleep_for(std::chrono::milliseconds(GETANDWAIT_SLEEP));
+    //     df = get(k);
+    // }
 
     return df;
 }
@@ -352,7 +400,7 @@ void Store::handle_get_(int connected_socket, Message *msg) {
     char *key_str = msg->msg;
     Key key(key_str, node_id);  // This node got a GET request, so the key must live on this node.
 
-    char *serialized_value = get_char_(&key);
+    char *serialized_value = get_char_(&key, true);
 
     if (serialized_value == nullptr) {
         // Value doesn't exist, so send NACK

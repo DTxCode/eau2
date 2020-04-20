@@ -94,7 +94,7 @@ class Network {
         struct sockaddr_in serv_addr;
         bzero((char*)&serv_addr, sizeof(serv_addr));
         serv_addr.sin_family = AF_INET;
-        serv_addr.sin_addr.s_addr = inet_addr(ip_address);
+        serv_addr.sin_addr.s_addr = INADDR_ANY; //inet_addr(ip_address);
         serv_addr.sin_port = htons(port);
 
         /* Assign serv_addr struct to the socket that was created.*/
@@ -150,7 +150,9 @@ class Network {
 
         // Check if listening_socket has a socket ready to read from
         struct pollfd fd = {.fd = socket, .events = POLLIN};
-        poll(&fd, 1, listen_timeout);
+        struct timespec timeout = {.tv_sec = 0, .tv_nsec = (long) listen_timeout * 1000000};
+        
+        ppoll(&fd, 1, &timeout, nullptr);
 
         // If something is ready to be read, accept the message
         if (fd.revents & POLLIN) {
@@ -166,85 +168,57 @@ class Network {
         return -1;
     }
 
-    // Returns all data possible to be read from the given socket
-    // Expects message to be prepended with "[LENGTH];", where LENGTH is the length of the message that follows
+    // Reads a size_t from the socket, and then reads that many bytes more from the socket.
     char* read_from_socket_(int socket) {
-        char buffer[max_message_chunk_size];
-        bzero(buffer, max_message_chunk_size);
+        size_t msg_size = 0;
 
-        // first extract how many bytes we're expecting from this socket
-        // read size - 1 to always ensure there's a null terminator
-        // printf("DEBUG: read_from_socket_ calling initial read...\n");
-        size_t bytes_read = read(socket, buffer, max_message_chunk_size - 1);
-        // printf("       read %zu bytes\n", bytes_read);
-        printf("DEBUG: read_from_socket read %zu initial bytes: %s\n", bytes_read, buffer);
-
-        if (bytes_read < 0) {
-            perror("ERROR reading from socket");
+        if (read(socket, &msg_size, sizeof(size_t)) < (long) sizeof(size_t)) {
+            printf("ERROR reading msg size from socket\n");
             exit(1);
         }
 
-        // rest of the message should have this length
-        char* message_length_string = strtok(buffer, ";");
-        size_t message_length = atoi(message_length_string);  // Assumes success because we formatted the message
-
-        // Initialize msg and bytes_read, then loop until bytes_read >= message_length
-        char* message = strtok(nullptr, "\0");  // The actual message
-        if (message == nullptr) {
-            printf("ERROR: read_from_socket_ failed to parse message after length header. Was expecting %zu bytes.\n", message_length);
-            exit(1);
-        }
-        String* msg = new String(message);
-        bytes_read = msg->size();
-
-        while (bytes_read < message_length) {
-            bzero(buffer, max_message_chunk_size);
-
-            // read size - 1 to always ensure there's a null terminator
-            // printf("DEBUG: read_from_socket_ has read %zu of %zu expected bytes. Calling read...\n", bytes_read, message_length);
-            int new_bytes_read = read(socket, buffer, max_message_chunk_size - 1);
+        char* msg = new char[msg_size + 1];
+        msg[msg_size] = '\0';
+        
+        size_t bytes_read = 0;
+        while (bytes_read < msg_size) {
+            size_t new_bytes_read = read(socket, msg + bytes_read, msg_size - bytes_read);
 
             if (new_bytes_read < 0) {
-                perror("ERROR reading from socket");
+                printf("ERROR reading from socket");
+                exit(1);
+            } else if (new_bytes_read == 0) {
+                printf("ERROR: read_from_socket got EOF before receiving all expected data. Expected %zu bytes. Got %zu with contents %s\n",
+                            msg_size, bytes_read, msg);
                 exit(1);
             }
 
             bytes_read += new_bytes_read;
-
-            // record new data
-            String* new_msg = msg->concat(buffer);
-            delete msg;
-            msg = new_msg;
         }
 
-        // Pull out and return cstr inside of String*
-        char* msg_string = msg->get_string();
-        delete msg;
+        // printf("DEBUG: read_from_socket returning %s\n", msg);
+        assert(strlen(msg) == msg_size);
+        assert(msg[msg_size] == '\0');
 
-        return msg_string;
+        return msg;
     }
 
     // Writes given message to the given socket.
-    // Prepends given ip address and port to the message in the format ADDRESS:PORT;msg
+    // First writes a size_t with the length of the message, then writes the message
     void write_to_socket_(int socket, char* msg_to_send) {
-        // Prepend message length to message
         size_t length = strlen(msg_to_send);
-        size_t num_digits_in_length = snprintf(NULL, 0, "%zu", length);
 
-        // + 1 for semicolon between length and message, + 1 for null terminator
-        char prepended_message[num_digits_in_length + 1 + length + 1];
-
-        sprintf(prepended_message, "%zu;%s", length, msg_to_send);
-
-        // Send message to server
-        int bytes_written = write(socket, prepended_message, strlen(prepended_message));
-
-        printf("DEBUG: write_to_socket_ wrote %d bytes: %s\n", bytes_written, prepended_message);
-
-        if (bytes_written < 0) {
-            perror("ERROR writing to socket");
+        if (write(socket, &length, sizeof(size_t)) < 0) {
+            printf("ERROR writing msg size to socket. Full message was %s\n", msg_to_send);
             exit(1);
-        }
+        };
+
+        if (write(socket, msg_to_send, strlen(msg_to_send)) < 0) {
+            printf("ERROR writing msg to socket. Full message was %s\n", msg_to_send);
+            exit(1);
+        };
+
+        // printf("DEBUG: write_to_socket_ wrote msg %s\n", msg_to_send);
     }
 
     // Returns a socket connected to the given IP address and port

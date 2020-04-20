@@ -43,7 +43,7 @@ class Message {
     // Constructs a Message from the given stringified Message
     // Expects given string to have format [SENDER IP ADDRESS]:[SENDER PORT];[MESSAGE TYPE];[MESSAGE]
     Message(char* message_string) {
-        printf("DEBUG: Constructing message from string: %s\n", message_string);
+        // printf("DEBUG: Constructing message from string: %s\n", message_string);
         if (message_string == nullptr) {
             printf("ERROR cannot create Message from empty string\n");
             exit(1);
@@ -71,6 +71,7 @@ class Message {
 
         // Cast message type to enum
         char* msg_type_string = strtok(nullptr, ";");
+        // printf("DEBUG: Atoi'ing message type string: %s\n", msg_type_string);
         msg_type = static_cast<MessageType>(atoi(msg_type_string));
 
         // can be empty string
