@@ -71,8 +71,9 @@ DistributedDataFrame* Serializer::deserialize_distributed_dataframe(char* msg, S
         return new DistributedDataFrame(store, empty_schema);
     }
     
-    char* schema_token = strtok(msg, "~");
-    char* columns_token = strtok(nullptr, "\0");
+    char* entry;
+    char* schema_token = strtok_r(msg, "~", &entry);
+    char* columns_token = strtok_r(nullptr, "\0", &entry);
     Schema* schema = deserialize_schema(schema_token);
 
     // Create array of serialized cols (distinct strings for each col)
@@ -80,10 +81,10 @@ DistributedDataFrame* Serializer::deserialize_distributed_dataframe(char* msg, S
     if (!(schema->width() > 0)) {
         return new DistributedDataFrame(store, *schema);
     }
-    
-    serialized_cols[0] = strtok(columns_token, "~");
+   
+    serialized_cols[0] = strtok_r(columns_token, "~", &entry);
     for (size_t i = 1; i < schema->width(); i++) {
-        serialized_cols[i] = strtok(nullptr, "~");
+        serialized_cols[i] = strtok_r(nullptr, "~", &entry);
     }
 
     Schema empty_schema;
@@ -187,9 +188,10 @@ char* Serializer::serialize_dist_col(DistributedColumn* col) {
 // Expects msg with format: 
 // "[Serialized length];[Serialized num_chunks];[Serialized chunk Key 1];[Serialized missing Key 1];...;[Serialized chunk key (num_chunks - 1)];[Serialized missing key (num_chunks - 1)]
 DistributedColumn* Serializer::deserialize_dist_col(char* msg, Store* store, char col_type) { 
-    char* ser_length = strtok(msg, ";");
-    char* ser_num_chunks = strtok(nullptr, ";");
-    char* ser_keys = strtok(nullptr, "\0");
+    char* entry;
+    char* ser_length = strtok_r(msg, ";", &entry);
+    char* ser_num_chunks = strtok_r(nullptr, ";", &entry);
+    char* ser_keys = strtok_r(nullptr, "\0", &entry);
 
     size_t length = deserialize_size_t(ser_length);
     size_t num_chunks = deserialize_size_t(ser_num_chunks);
@@ -203,11 +205,11 @@ DistributedColumn* Serializer::deserialize_dist_col(char* msg, Store* store, cha
     char* chunk_tokens[num_chunks];
     char* missings_tokens[num_chunks];
     // Get all tokens first, because calling deserialize does weird things to token
-    chunk_tokens[0] = strtok(ser_keys, ";");
-    missings_tokens[0] = strtok(nullptr, ";");
+    chunk_tokens[0] = strtok_r(ser_keys, ";", &entry);
+    missings_tokens[0] = strtok_r(nullptr, ";", &entry);
     for (size_t i = 1; i < num_chunks; i++) {
-        chunk_tokens[i] = strtok(nullptr, ";");
-        missings_tokens[i] = strtok(nullptr, ";");
+        chunk_tokens[i] = strtok_r(nullptr, ";", &entry);
+        missings_tokens[i] = strtok_r(nullptr, ";", &entry);
     }
     
     // Deserialize into chunk and missing keys
@@ -360,8 +362,9 @@ char* Serializer::serialize_key(Key* value) {
 // Deserialize a char* into a Key object
 // Expects char* form of "[serialized Key name],[serialized Key home_node]"
 Key* Serializer::deserialize_key(char* msg) {
-    char* name_token = strtok(msg, ",");  // Get first val before ,
-    char* node_token = strtok(nullptr, ",");
+    char* entry;
+    char* name_token = strtok_r(msg, ",", &entry);  // Get first val before ,
+    char* node_token = strtok_r(nullptr, ",", &entry);
     size_t node_id = deserialize_size_t(node_token);
     return new Key(name_token, node_id);
 }
@@ -418,15 +421,16 @@ char* Serializer::serialize_string_array(StringArray* array) {
 
 // Deserialize serialized message to a StringArray
 StringArray* Serializer::deserialize_string_array(char* msg) {
+    char* entry;
     char* token;
     StringArray* fill_array = new StringArray();
     // Tokenize message
-    token = strtok(msg, ",");
+    token = strtok_r(msg, ",", &entry);
     // For all tokens in the message, deserialize them
     // and add them to the array via push_back
     while (token) {
         fill_array->push_back(deserialize_string(token));
-        token = strtok(nullptr, ",");
+        token = strtok_r(nullptr, ",", &entry);
     }
     return fill_array;
 }
@@ -656,26 +660,6 @@ bool* Serializer::deserialize_bools(char* msg) {
     }
 
     return bools;
-
-    // bool bools_temp[strlen(msg)];  // Temporarily oversize the storage
-    // char* token;
-    // // Tokenize message
-    // token = strtok(msg, ",");
-    // size_t idx = 0;
-    // // For all tokens in the message, deserialize them based on type
-    // // and add them to the column via push_back
-    // while (token) {
-    //     bools_temp[idx] = deserialize_bool(token);
-    //     token = strtok(nullptr, ",");
-    //     idx++;  // After token is created
-    // }
-
-    // bool* bools_final = new bool[idx];
-    // for (size_t i = 0; i < idx; i++) {
-    //     bools_final[i] = bools_temp[i];
-    // }
-
-    // return bools_final;
 }
 
 int* Serializer::deserialize_ints(char* msg) {
@@ -695,26 +679,6 @@ int* Serializer::deserialize_ints(char* msg) {
     }
 
     return ints;
-
-    // int ints_temp[strlen(msg)];  // Temporarily oversize the storage
-    // char* token;
-    // // Tokenize message
-    // token = strtok(msg, ",");
-    // size_t idx = 0;
-    // // For all tokens in the message, deserialize them based on type
-    // // and add them to the column via push_back
-    // while (token) {
-    //     ints_temp[idx] = deserialize_int(token);
-    //     token = strtok(nullptr, ",");
-    //     idx++;  // After token is created
-    // }
-
-    // int* ints_final = new int[idx];
-    // for (size_t i = 0; i < idx; i++) {
-    //     ints_final[i] = ints_temp[i];
-    // }
-
-    // return ints_final;
 }
 
 float* Serializer::deserialize_floats(char* msg) {
@@ -734,26 +698,6 @@ float* Serializer::deserialize_floats(char* msg) {
     }
 
     return floats;
-
-    // float floats_temp[strlen(msg)];  // Temporarily oversize the storage
-    // char* token;
-    // // Tokenize message
-    // token = strtok(msg, ",");
-    // size_t idx = 0;
-    // // For all tokens in the message, deserialize them based on type
-    // // and add them to the column via push_back
-    // while (token) {
-    //     floats_temp[idx] = deserialize_float(token);
-    //     token = strtok(nullptr, ",");
-    //     idx++;  // After token is created
-    // }
-
-    // float* floats_final = new float[idx];
-    // for (size_t i = 0; i < idx; i++) {
-    //     floats_final[i] = floats_temp[i];
-    // }
-
-    // return floats_final;
 }
 
 String** Serializer::deserialize_strings(char* msg) {

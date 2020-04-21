@@ -411,6 +411,7 @@ int main(int argc, char** argv) {
     int master_port = args.master_port;
 
     Server* s = nullptr;
+    // Only one node should start server
     if (start_server) {
         s = new Server(master_ip, master_port);
         s->listen_for_clients();
@@ -427,7 +428,11 @@ int main(int argc, char** argv) {
     char* users_file = args.users_file;
     char* commits_file = args.commits_file;
 
-    while (store.num_nodes() != args.num_nodes) {}
+    // Dont run until we have all nodes loaded
+    while (store.num_nodes() != args.num_nodes) {
+    
+    
+    }
 
     Linus linus(&store, degrees, proj_file, users_file, commits_file);
     linus.run();

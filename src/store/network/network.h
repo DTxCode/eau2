@@ -44,10 +44,12 @@ class Network {
         // address_copy is heap-allocated
         char* address_copy = address->get_string();
 
+        char* entry;
+
         // first call to strtok will "chop off" the host
         // second call should return the port
-        strtok(address_copy, ":");
-        char* port_string = strtok(nullptr, ":");
+        strtok_r(address_copy, ":", &entry);
+        char* port_string = strtok_r(nullptr, ":", &entry);
 
         // Convert port to integer
         int port = atoi(port_string);
@@ -68,8 +70,9 @@ class Network {
         // address_copy is heap-allocated
         char* address_copy = address->get_string();
 
+        char* entry;
         // first call to strtok will return just the string before the ":"
-        char* host = strtok(address_copy, ":");
+        char* host = strtok_r(address_copy, ":", &entry);
 
         // make dupe so that we can delete[] the original copy
         char* host_dup = sys->duplicate(host);

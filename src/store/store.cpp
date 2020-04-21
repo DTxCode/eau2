@@ -384,13 +384,17 @@ void Store::handle_put_(int connected_socket, Message *msg) {
     char *msg_contents = msg->msg;
 
     printf("DEBUG: Handling a PUT with msg contents %s\n", msg_contents);
+
+    char* entry; 
+    
     // put together Key
-    char *key_str = strtok(msg_contents, "~");
-    Key key(key_str, node_id);  // This node got a PUT request, so the key must live on this node.
-
+    char *key_str = strtok_r(msg_contents, "~", &entry);
+    printf("DEBUG: Key string: %s\n", key_str);
     // put together value_str
-    char *val_str = strtok(nullptr, "\0");
-
+    char *val_str = strtok_r(nullptr, "\0", &entry);
+    printf("DEBUG: Val string: %s\n", val_str);
+    
+    Key key(key_str, node_id);  // This node got a PUT request, so the key must live on this node.
     // save to map
     put_char_(&key, val_str);
 
