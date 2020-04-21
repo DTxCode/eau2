@@ -56,14 +56,15 @@ class Message {
 
         original_string = msg_duplicate;  // save to delete later
 
-        sender_ip_address = strtok(msg_duplicate, ":");
+        char* entry;
+        sender_ip_address = strtok_r(msg_duplicate, ":", &entry);
         if (strlen(sender_ip_address) == 0) {
             printf("ERROR failed to parse Message.sender_ip_address from the given string: %s\n", message_string);
             exit(1);
         }
 
         // Cast port to int
-        char* port_string = strtok(nullptr, ";");
+        char* port_string = strtok_r(nullptr, ";", &entry);
         sender_port = atoi(port_string);
         if (sender_port == 0) {
             printf("ERROR failed to parse Message.sender_port from the given string: %s\n", message_string);
@@ -71,16 +72,17 @@ class Message {
         }
 
         // Cast message type to enum
-        char* msg_type_string = strtok(nullptr, ";");
+        char* msg_type_string = strtok_r(nullptr, ";", &entry);
         // printf("DEBUG: Atoi'ing message type string: %s\n", msg_type_string);
         msg_type = static_cast<MessageType>(atoi(msg_type_string));
 
         // can be empty string
-        msg = strtok(nullptr, "\0");
+        msg = strtok_r(nullptr, "\0", &entry);
+        /*
         if (msg == nullptr) {
             msg = new char[1];
             msg[0] = '\0';
-        }
+        }*/
     }
 
     // Returns a string representation of this Message in the format
