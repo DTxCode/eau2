@@ -154,6 +154,8 @@ void Store::send_put_request_(Key *key, char *value) {
 
     Message *response = send_msg(other_node_host, other_node_port, PUT, msg);
 
+    assert(response);
+
     if (response->msg_type != ACK) {
         printf("Node %zu did not get successful ACK for its PUT request to node %zu\n", node_id, key_home);
         exit(1);
@@ -302,6 +304,8 @@ char *Store::send_get_request_(Key *key) {
     // Send GET request to another node with key we're asking for
     Message *response = send_msg(other_node_host, other_node_port, GET, key_str);
 
+    assert(response);
+
     if (response->msg_type == NACK) {
         // key does not exist
         return nullptr;
@@ -346,16 +350,6 @@ DistributedDataFrame *Store::waitAndGet(Key *k) {
         }
     }
 
-    // DistributedDataFrame *df = get(k);
-
-    // // TODO ways to improve this:
-    // // - for local get, could do waitAndNotify method instead of this busy loop
-    // // - for network get, use above method + timeout
-    // while (df == nullptr) {
-    //     std::this_thread::sleep_for(std::chrono::milliseconds(GETANDWAIT_SLEEP));
-    //     df = get(k);
-    // }
-
     return df;
 }
 
@@ -383,17 +377,20 @@ void Store::handle_message(int connected_socket, Message *msg) {
 void Store::handle_put_(int connected_socket, Message *msg) {
     char *msg_contents = msg->msg;
 
-    printf("DEBUG: Handling a PUT with msg contents %s\n", msg_contents);
+    // printf("DEBUG: Handling a PUT with msg contents %s\n", msg_contents);
 
     char* entry; 
     
     // put together Key
     char *key_str = strtok_r(msg_contents, "~", &entry);
-    printf("DEBUG: Key string: %s\n", key_str);
+    // printf("DEBUG: Put key string: %s\n", key_str);
     // put together value_str
     char *val_str = strtok_r(nullptr, "\0", &entry);
-    printf("DEBUG: Val string: %s\n", val_str);
-    
+    // printf("DEBUG: Put val string: %s\n", val_str);
+
+    assert(key_str);
+    assert(val_str);
+
     Key key(key_str, node_id);  // This node got a PUT request, so the key must live on this node.
     // save to map
     put_char_(&key, val_str);
@@ -407,7 +404,7 @@ void Store::handle_put_(int connected_socket, Message *msg) {
 void Store::handle_get_(int connected_socket, Message *msg) {
     // Message consists of just the key
     char *key_str = msg->msg;
-    printf("DEBUG: Handling a GET with msg contents %s\n", key_str);
+    // printf("DEBUG: Handling a GET with msg contents %s\n", key_str);
 
     Key key(key_str, node_id);  // This node got a GET request, so the key must live on this node.
 
@@ -538,6 +535,9 @@ DistributedDataFrame* DataFrame::fromWriter(Key* key, Store* store, char* schema
         writer.accept(r);
         df->add_row(r);
     }
+
+    printf("fromWriter adding DF to store:\n");
+    df->print();
     
     store->put(key, df);
     return df;

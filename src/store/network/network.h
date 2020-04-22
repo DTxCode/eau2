@@ -123,6 +123,8 @@ class Network {
 
         close(sock);
 
+        assert(response);
+
         return response;
     }
 
@@ -132,6 +134,9 @@ class Network {
         char* msg_string = read_from_socket_(socket);
         Message* msg = new Message(msg_string);
         delete[] msg_string;
+
+        assert(msg);
+
         return msg;
     }
 
@@ -211,12 +216,12 @@ class Network {
     void write_to_socket_(int socket, char* msg_to_send) {
         size_t length = strlen(msg_to_send);
 
-        if (write(socket, &length, sizeof(size_t)) < 0) {
+        if (write(socket, &length, sizeof(size_t)) < (long) sizeof(size_t)) {
             printf("ERROR writing msg size to socket. Full message was %s\n", msg_to_send);
             exit(1);
         };
 
-        if (write(socket, msg_to_send, strlen(msg_to_send)) < 0) {
+        if (write(socket, msg_to_send, strlen(msg_to_send)) < (long) strlen(msg_to_send)) {
             printf("ERROR writing msg to socket. Full message was %s\n", msg_to_send);
             exit(1);
         };

@@ -100,8 +100,8 @@ class Sorer {
                     float val = (float)atof(trim_whitespace(buffer));
                     row.set(col_idx, val);
                 } else if (schema->col_type(col_idx) == STRING_TYPE) {
-                    String* val = new String(trim_whitespace(buffer)); // TODO: who deletes this?
-                    row.set(col_idx, val);
+                    String val(trim_whitespace(buffer)); 
+                    row.set(col_idx, &val);
                 } else {  // BOOL_TYPE
                     if (strcmp(trim_whitespace(buffer), "1") == 0) {
                         row.set(col_idx, true);

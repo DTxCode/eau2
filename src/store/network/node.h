@@ -89,6 +89,10 @@ class Node {
 
         Message *response = network->send_and_receive_msg(&msg, target_ip_address, target_port);
 
+        assert(response);
+
+        // printf("Send msg returning msg with contents %s\n", response->to_string());
+
         return response;
     }
 

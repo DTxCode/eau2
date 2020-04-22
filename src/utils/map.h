@@ -183,7 +183,7 @@ class Map : public Object {
             return nullptr;
         }
 
-        printf("DEBUG: Putting into map with key space %zu\n", key_space);
+        // printf("DEBUG: Putting into map with key space %zu\n", key_space);
         size_t bucket_id = key->hash() % key_space;
         List* value_list = value_lists[bucket_id];
 

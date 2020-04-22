@@ -126,6 +126,7 @@ class SetWriter: public Writer {
     }
 
     bool accept(Row & row) { 
+        printf("SetWriter putting value %zu into accepted row\n", i_);
         row.set(0, (int)i_++);
         return true;
     }
@@ -373,15 +374,17 @@ class Linus : public Application {
                 delete delta;
             }
             // STEP (3)
-            printf("    After merge, master has %zu (true) %s elements \n", set.num_true(), name);
+            // printf("    After merge, master has %zu (true) %s elements \n", set.num_true(), name);
             // Create a new DF from the updated set 
             SetWriter writer(set);
             Key* k = mk_key((char*) name, stage, 0);
+            // printf("Writing set using fromWriter: ");
+            // set.print();
             delete DataFrame::fromWriter(k, store, (char*) "I", writer);
             delete k;
         } else {
             // STEP (1) 
-            printf("   sending %zu %s elements to master node \n", set.num_true(), name);
+            printf("   sending %zu new %s elements to master node \n", set.num_true(), name);
             // Put a DF in KVS with updated elements (for master node to process)
             SetWriter writer(set);
             Key* k = mk_key((char*) name, stage, this_node());
@@ -393,7 +396,7 @@ class Linus : public Application {
             // Get the merged result from master node
             Key* mK = mk_key((char*) name, stage, 0);
             DataFrame* merged = dynamic_cast<DataFrame*>(store->waitAndGet(mK));
-            printf("   updated from master and now have %zu true %s elements \n", merged->nrows(), name);
+            printf("   master gave me %zu new %s elements \n", merged->nrows(), name);
 
             SetUpdater upd(set);
             merged->map(upd);
@@ -446,54 +449,3 @@ int main(int argc, char** argv) {
 
     return 0;
 }
-
-
-
-
-
-// // Called by threads to simulate the different nodes
-// int start_linus(Store* store) { 
-// 	printf("Thread for node %zu is starting \n", store->this_node());
-//     Linus linus(store);
-//     linus.run();
-// 	return 0;
-// }
-
-// bool test_linus() {
-//     char* master_ip = (char*)"127.0.0.1";
-//     int master_port = rand_port();
-//     Server s(master_ip, master_port);
-//     s.listen_for_clients();
-
-//     Store store1(0, (char*)"127.0.0.1", rand_port(), master_ip, master_port);
-//     Store store2(1, (char*)"127.0.0.1", rand_port(), master_ip, master_port);
-//    // Store store3(2, (char*)"127.0.0.1", 8002, master_ip, master_port);
-
-//     Linus linus1(&store1);
-//     linus1.run();
-
-//     Linus linus2(&store2);
-//     linus2.run();
-
-//     // std::thread t1(start_linus, &store1);
-//     // std::thread t2(start_linus, &store2);
-//     // t1.join();
-//     // t2.join();
-
-//     // shutdown system
-//     s.shutdown();
-
-//     // wait for nodes to finish
-//     while (!store1.is_shutdown()) {
-//     }
-//     while (!store2.is_shutdown()) {
-//     }
-
-//     return true;
-// }
-
-// int main() {
-//     assert(test_linus());
-//     printf("=================test_linus PASSED if correct number of collaborators printed==================\n");
-//     return 0;
-// }
