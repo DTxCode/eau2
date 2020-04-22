@@ -34,9 +34,9 @@ class Arguments {
             node_port = 0000; // TODO enforce this is set
 
             degrees = 1;
-            proj_file = (char*) "data/projects_med.sor";
-            users_file = (char*) "data/users_med.sor";
-            commits_file = (char*) "data/commits_med.sor";
+            proj_file = (char*) "data/projects_small.sor";
+            users_file = (char*) "data/users_small.sor";
+            commits_file = (char*) "data/commits_small.sor";
 
             for (int i = 1; i < argc; i++) {
                 char* flag_name = argv[i];

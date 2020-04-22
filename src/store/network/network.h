@@ -123,7 +123,7 @@ class Network {
 
         close(sock);
 
-        assert(response);
+        assert(response != nullptr);
 
         return response;
     }
@@ -135,7 +135,7 @@ class Network {
         Message* msg = new Message(msg_string);
         delete[] msg_string;
 
-        assert(msg);
+        assert(msg != nullptr);
 
         return msg;
     }
@@ -181,7 +181,7 @@ class Network {
         size_t msg_size = 0;
 
         if (read(socket, &msg_size, sizeof(size_t)) < (long) sizeof(size_t)) {
-            printf("ERROR reading msg size from socket. Error num %d\n", errno);
+            perror("ERROR reading msg size from socket\n");
             exit(1);
         }
 
@@ -254,7 +254,7 @@ class Network {
 
         // Connect to the server
         if (connect(sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
-            printf("ERROR could not connect to server with IP %s and port %d", target_ip_address, target_port);
+            printf("ERROR could not connect to server with IP %s and port %d\n", target_ip_address, target_port);
             exit(1);
         }
 

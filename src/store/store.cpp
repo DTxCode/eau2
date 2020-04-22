@@ -152,7 +152,9 @@ void Store::send_put_request_(Key *key, char *value) {
     char msg[strlen(key_str) + 1 + strlen(value)];
     sprintf(msg, "%s~%s", key_str, value);
 
+    // printf("Send PUT sending\n");
     Message *response = send_msg(other_node_host, other_node_port, PUT, msg);
+    // printf("Send PUT finished with response pointer %p\n", response);
 
     assert(response);
 
@@ -301,10 +303,13 @@ char *Store::send_get_request_(Key *key) {
     char *other_node_host = network->get_host_from_address(other_node_address);
     int other_node_port = network->get_port_from_address(other_node_address);
 
+    // printf("Send GET sending\n");
     // Send GET request to another node with key we're asking for
     Message *response = send_msg(other_node_host, other_node_port, GET, key_str);
+    // printf("Send GET got response with pointer %p\n", response);
 
-    assert(response);
+    assert(response != nullptr);
+    assert(strlen(response->to_string()) > 2);
 
     if (response->msg_type == NACK) {
         // key does not exist
@@ -536,8 +541,8 @@ DistributedDataFrame* DataFrame::fromWriter(Key* key, Store* store, char* schema
         df->add_row(r);
     }
 
-    printf("fromWriter adding DF to store:\n");
-    df->print();
+    // printf("fromWriter adding DF to store:\n");
+    // df->print();
     
     store->put(key, df);
     return df;

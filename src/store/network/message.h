@@ -34,6 +34,7 @@ class Message {
     }
 
     ~Message() {
+        // printf("Message %s is destructing\n", to_string());
         delete[] sender_ip_address;
         delete[] msg;
     }

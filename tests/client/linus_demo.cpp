@@ -126,7 +126,7 @@ class SetWriter: public Writer {
     }
 
     bool accept(Row & row) { 
-        printf("SetWriter putting value %zu into accepted row\n", i_);
+        // printf("SetWriter putting value %zu into accepted row\n", i_);
         row.set(0, (int)i_++);
         return true;
     }
@@ -239,6 +239,7 @@ class Linus : public Application {
     void run_() override {
         readInput();
         for (size_t i = 0; i < DEGREES; i++) step(i);
+        store->is_done();
     }
 
     // Return a key for storing a node's partial results
@@ -433,8 +434,6 @@ int main(int argc, char** argv) {
 
     // Dont run until we have all nodes loaded
     while (store.num_nodes() != args.num_nodes) {
-    
-    
     }
 
     Linus linus(&store, degrees, proj_file, users_file, commits_file);

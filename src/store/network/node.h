@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <mutex>
 #include <thread>
+#include <atomic>
 #include "../../utils/array.h"
 #include "../serial.h"
 #include "message.h"
@@ -32,8 +33,9 @@ class Node {
                                // directory update from the server
 
     std::thread *listener;  // thread that listens for incoming connections
-    bool registered;        // Whether this node is registered with the master server
-    bool shutting_down;     // Whether this node is shutting down. Used by (infinite) spawned thread to know to shut down
+    std::atomic<bool> registered;        // Whether this node is registered with the master server
+    std::atomic<bool> shutting_down;     // Whether this node is shutting down. Used by (infinite) spawned thread to know to shut down
+    std::atomic<bool> done;              // Whether this node's work is done. Should be set to true before shutdown.
     Serializer *serializer;
     std::mutex known_nodes_lock;
 
@@ -47,6 +49,7 @@ class Node {
         network = new Network();
         registered = false;
         shutting_down = false;
+        done = false;
         serializer = new Serializer();
         register_and_listen();
     }
@@ -82,16 +85,15 @@ class Node {
     // Returns nullptr if this method is called before node is registered.
     Message *send_msg(char *target_ip_address, int target_port, MessageType msg_type, char *msg_contents) {
         if (!registered) {
-            return nullptr;
+            printf("ERROR: cannot send message as node is unregistered.\n");
+            exit(0);
         }
 
         Message msg(my_ip_address, my_port, msg_type, msg_contents);
 
         Message *response = network->send_and_receive_msg(&msg, target_ip_address, target_port);
 
-        assert(response);
-
-        // printf("Send msg returning msg with contents %s\n", response->to_string());
+        assert(response != nullptr);
 
         return response;
     }
@@ -207,14 +209,16 @@ class Node {
     // Called when server tells this node to shut down
     // Cleans up run-time flags, but does not delete memory (handled by destructor)
     void shutdown_(int connected_socket) {
-        // printf("Node at %s:%d is shutting down\n", my_ip_address, my_port);
+        while(!done) {};
+        printf("Node is done, can shutdown \n");
+        shutting_down = true;
+        registered = false;
 
         // Send ACK
         Message ack(my_ip_address, my_port, ACK, (char *)"");
         network->write_msg(connected_socket, &ack);
 
-        shutting_down = true;
-        registered = false;
+        printf("Node at %s:%d shut down\n", my_ip_address, my_port);
     }
 
     // OVERRIDE
@@ -232,5 +236,11 @@ class Node {
     // Whether this node is shut down
     bool is_shutdown() {
         return shutting_down && !registered;
+    }
+
+    // Call when this node has finished its work. Needs to be called for shutdown to occur.
+    void is_done() {
+        printf("Node says it's done\n");
+        done = true;
     }
 };
