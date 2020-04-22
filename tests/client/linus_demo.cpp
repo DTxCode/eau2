@@ -73,9 +73,11 @@ class Set {
 
     /** Performs set union in place. */
     void union_(Set& from) {
-        for (size_t i = 0; i < from.size_; i++) 
-            if (from.test(i))
+        for (size_t i = 0; i < from.size_; i++) { 
+            if (from.test(i)) {
                 set(i);
+            }
+        }
     }
 
     void print() {
@@ -283,13 +285,20 @@ class Linus : public Application {
         } else {
             printf("Node %zu waiting for initial data from master node\n", store->this_node());
             projects = dynamic_cast<DataFrame*>(store->waitAndGet(pK));
+            printf("%zu projects\n", projects->nrows());
             users = dynamic_cast<DataFrame*>(store->waitAndGet(uK));
+            printf("%zu users\n", users->nrows());
             commits = dynamic_cast<DataFrame*>(store->waitAndGet(cK));
+            printf("%zu commits\n", commits->nrows());
             printf("Node %zu finished reading input from master node\n", store->this_node());
         }
         // All users and all projects set to false initially
         uSet = new Set(users);
         pSet = new Set(projects);
+        printf("user set: \n");
+        uSet->print();
+        printf("project set: \n");
+        pSet->print();
 
         delete pK;
         delete uK;
@@ -307,7 +316,7 @@ class Linus : public Application {
 
         // A df with all the users added on the previous round
         DataFrame* newUsers = dynamic_cast<DataFrame*>(store->waitAndGet(uK));
-        // printf("Starting with %zu new users\n", newUsers->nrows());
+        printf("Starting with %zu new users\n", newUsers->nrows());
         // Create set with length = all users    
         Set delta(users);
     
@@ -318,8 +327,8 @@ class Linus : public Application {
         delete uK;
         delete newUsers;
 
-        // printf("Delta from new users");
-        // delta.print();
+        printf("Delta from new users");
+        delta.print();
 
         // At this point delta has bool flags set to true for the newUsers
 
@@ -327,8 +336,8 @@ class Linus : public Application {
         ProjectsTagger ptagger(delta, *pSet, projects);
         // IMPORTANT: Will only update with projects on this node
         commits->local_map(ptagger);
-        // printf("Pset with projects of new users marked:");
-        // ptagger.newProjects.print();
+        printf("Pset with projects of new users marked:");
+        ptagger.newProjects.print();
 
         // Merge results from other nodes
         merge(ptagger.newProjects, "projects", stage);
@@ -339,6 +348,8 @@ class Linus : public Application {
         UsersTagger utagger(ptagger.newProjects, *uSet, users);
         // IMPORTANT: Will only update with users on this node
         commits->local_map(utagger);
+        printf("Uset with new marked users marked:");
+        utagger.newUsers.print();
 
         // Merge results from other nodes
         merge(utagger.newUsers, "users", stage + 1);
@@ -362,7 +373,7 @@ class Linus : public Application {
                 // STEP (2)
                 Key* nK = mk_key((char*) name, stage, i);
                 // New elements
-                // printf("  waiting for node %zu to give me data under key %s\n", i, nK->get_name());
+                printf("  waiting for node %zu to give me data under key %s\n", i, nK->get_name());
                 DataFrame* delta = dynamic_cast<DataFrame*>(store->waitAndGet(nK));
                 printf("   received %zu new %s elements from node %zu\n", delta->nrows(), name, i);
 
@@ -388,7 +399,7 @@ class Linus : public Application {
             // Put a DF in KVS with updated elements (for master node to process)
             SetWriter writer(set);
             Key* k = mk_key((char*) name, stage, this_node());
-            // printf("   ...under key %s\n", k->get_name());
+            printf("   ...under key %s\n", k->get_name());
             delete DataFrame::fromWriter(k, store, (char*) "I", writer);
             delete k;
 
