@@ -23,6 +23,8 @@ bool test_distributed_int_column() {
 
     int val = dist_intc.get(555);
 
+    store1.is_done();
+    store2.is_done();
     s.shutdown();
     while (!store1.is_shutdown()) {
     }
@@ -51,6 +53,8 @@ bool test_distributed_bool_column() {
 
     bool val = dist_boolc.get(25);
 
+    store1.is_done();
+    store2.is_done();
     s.shutdown();
     while (!store1.is_shutdown()) {
     }
@@ -79,6 +83,8 @@ bool test_distributed_float_column() {
 
     float val = dist_floatc.get(25);
 
+    store1.is_done();
+    store2.is_done();
     s.shutdown();
     while (!store1.is_shutdown()) {
     }
@@ -106,10 +112,13 @@ bool test_distributed_string_column() {
         dist_stringc.push_back(&str);
     }
 
+    store1.is_done();
+    store2.is_done();
+
     s.shutdown();
-    while (!store1.is_shutdown()) {
-    }
     while (!store2.is_shutdown()) {
+    }
+    while (!store1.is_shutdown()) {
     }
 
     for (size_t i = 0; i < 100; i++) {

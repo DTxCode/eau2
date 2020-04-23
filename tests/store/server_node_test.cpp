@@ -47,6 +47,9 @@ bool test_simple_message() {
     Message* response = node1.send_msg((char*) "127.0.0.1", port_2, ACK, (char*)"Hello from node 1!");
     delete response;
 
+    node1.is_done();
+    node2.is_done();
+
     // shutdown system
     s.shutdown();
 

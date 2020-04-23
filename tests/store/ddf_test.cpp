@@ -49,6 +49,9 @@ bool test_ddf_multi_column() {
     assert(df.is_missing(0, 1500));
     assert(df.get_bool(1, 1000));
 
+    store1.is_done();
+    store2.is_done();
+
     s.shutdown();
     while (!store1.is_shutdown()) {
     }
@@ -98,6 +101,7 @@ bool test_ddf_with_missings() {
     assert(my_df.is_missing(1, 1));
     assert(my_df.is_missing(2, 2));
 
+    store.is_done();
     // shutdown system
     serv.shutdown();
 

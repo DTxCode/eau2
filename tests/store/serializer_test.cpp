@@ -148,6 +148,8 @@ bool test_dist_col_serialize() {
         assert(!d_s2->is_missing_dist(i));
     }
     
+    store.is_done();
+
     // shutdown system
     s.shutdown();
 
@@ -205,6 +207,8 @@ bool test_ddf_serialize() {
 
     delete[] ser_ddf;
     delete new_ddf;
+
+    store.is_done();
 
     // shutdown system
     s.shutdown();

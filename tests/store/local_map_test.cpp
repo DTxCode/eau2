@@ -89,7 +89,9 @@ int main(int argc, char** argv) {
         s->shutdown();
         delete s;
     }
-
+    
+    store.is_done();
+    
     while(!store.is_shutdown()) {}
 
     return 0;

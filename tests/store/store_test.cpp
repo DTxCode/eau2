@@ -52,6 +52,8 @@ bool test_simple_put_get() {
     delete strings2[1];
     delete[] strings2;
 
+    store.is_done();
+
     // shutdown system
     s.shutdown();
 
@@ -109,6 +111,9 @@ bool test_network_put_get() {
     delete strings2[1];
     delete[] strings2;
 
+    store1.is_done();
+    store2.is_done();
+
     // shutdown system
     s.shutdown();
 
@@ -156,6 +161,9 @@ bool test_network_distributed_df() {
 
     delete df2;
 
+    store1.is_done();
+    store2.is_done();
+
     // shutdown system
     s.shutdown();
 
@@ -202,6 +210,9 @@ bool test_network_distributed_df_waitAndGet() {
     assert(df.get_int(0, 3) == df2->get_int(0, 3));
 
     delete df2;
+
+    store1.is_done();
+    store2.is_done();
 
     // shutdown system
     s.shutdown();
