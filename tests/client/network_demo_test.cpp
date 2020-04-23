@@ -4,6 +4,7 @@
 #include "../../src/client/application.h"
 #include "../../src/store/network/master.h"
 #include "../../src/store/key.h"
+#include "../test_utils.h"
 
 class Demo : public Application {
    public:
@@ -76,13 +77,13 @@ class Demo : public Application {
 
 int test_demo() {
     char* master_ip = (char*)"127.0.0.1";
-    int master_port = 8888;
+    int master_port = rand_port();
     Server s(master_ip, master_port);
     s.listen_for_clients();
 
-    Store store1(0, (char*)"127.0.0.1", 8000, master_ip, master_port);
-    Store store2(1, (char*)"127.0.0.1", 8001, master_ip, master_port);
-    Store store3(2, (char*)"127.0.0.1", 8002, master_ip, master_port);
+    Store store1(0, (char*)"127.0.0.1", rand_port(), master_ip, master_port);
+    Store store2(1, (char*)"127.0.0.1", rand_port(), master_ip, master_port);
+    Store store3(2, (char*)"127.0.0.1", rand_port(), master_ip, master_port);
 
     Demo producer(&store1);
     producer.run_();
