@@ -87,11 +87,6 @@ void Store::put_char_(Key *key, char *value) {
             put_has_occured = true;
         }
         cond_var.notify_one();
-
-        // map_lock.lock();
-        // // Calling delete here in case put returns a replaced value
-        // delete map->put(key->clone(), val);
-        // map_lock.unlock();
     } else {
         // Value belongs on another node
         send_put_request_(key, value);
@@ -153,9 +148,7 @@ void Store::send_put_request_(Key *key, char *value) {
     char msg[strlen(key_str) + 1 + strlen(value)];
     sprintf(msg, "%s~%s", key_str, value);
 
-    // printf("Send PUT sending\n");
     Message *response = send_msg(other_node_host, other_node_port, PUT, msg);
-    // printf("Send PUT finished with response pointer %p\n", response);
 
     assert(response);
 
@@ -304,13 +297,10 @@ char *Store::send_get_request_(Key *key) {
     char *other_node_host = network->get_host_from_address(other_node_address);
     int other_node_port = network->get_port_from_address(other_node_address);
 
-    // printf("Send GET sending\n");
     // Send GET request to another node with key we're asking for
     Message *response = send_msg(other_node_host, other_node_port, GET, key_str);
-    // printf("Send GET got response with pointer %p\n", response);
 
     assert(response != nullptr);
-    assert(strlen(response->to_string()) > 2);
 
     if (response->msg_type == NACK) {
         // key does not exist
