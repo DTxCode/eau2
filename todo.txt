@@ -1,22 +1,15 @@
 Client:
     Application needs flag to start the master server
-    Application needs flag for default key, if input file is given
-       - Update sorer to work with new DistributedDataFrame
 
 Store:
-    Dataframe - Change row to not own its data, make sure this doesn't break something
-    Serialize - memory leaks
     Fix busy loops in store/node
         - getAndWait could be improved
-    Column names
 
 Find all TODOs....
 
-M4:
-    1) USE the cache in BaseColumn's in the Distributed versions (not being used yet)
-    2) Get their test case working
-        - fix application/sorer
-    3) Memory isseus with row, serial
-    4) Vitek couldn't run because of an #include in store...
-    5) General cleanup based on Vitek's comments
-    6) Threading stuff in node
+
+<5> <5> <5>
+<1> <2> <2>
+<3> <2> <2>
+<4> <1> <1>
+<5> <1> <1>

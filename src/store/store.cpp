@@ -2,9 +2,8 @@
 *           David Tandetnik (tandetnik.da@husky.neu.edu) */
 #pragma once
 #include "store.h"
-
 #include <mutex>
-
+#include <condition_variable>
 #include "../client/sorer.h"
 #include "../utils/map.h"
 #include "dataframe/dataframe.h"
@@ -13,11 +12,13 @@
 #include "network/node.h"
 #include "serial.cpp"
 
-#define GETANDWAIT_SLEEP 25
+#define GETANDWAIT_SLEEP 100
 
-Store::Store(size_t node_id, char *my_ip_address, int my_port, char *server_ip_address, int server_port) : Node(my_ip_address, my_port, server_ip_address, server_port) {
+Store::Store(size_t node_id, char *my_ip_address, int my_port, char *server_ip_address, int server_port) 
+        : Node(my_ip_address, my_port, server_ip_address, server_port) {
     this->node_id = node_id;
     map = new Map();
+    register_and_listen();
 }
 
 Store::~Store() {
@@ -66,14 +67,26 @@ void Store::put(Key *k, DistributedDataFrame *df) {
 // Saves the given char* to the given key. For internal use only.
 // Uses copies of given key/value (does not modify or delete them)
 void Store::put_char_(Key *key, char *value) {
+    if (value == nullptr) {
+        printf("ERROR: Tried to put a nullptr value into the store under key %s\n", key->get_name());
+        exit(1);
+    }
+
     size_t key_home = key->get_home_node();
 
     if (key_home == node_id) {
         // Value belongs on this node
         String *val = new String(value);  // deleted in destructor
-        map_lock.lock();
-        map->put(key->clone(), val);
-        map_lock.unlock();
+
+        // Put value in map under mutex
+        // In case active thread is getAndWaiting for a new value, notify it that there's a new value in the map
+        {
+            std::lock_guard<std::mutex> lck(map_lock);
+            // Calling delete here in case put returns a replaced value
+            delete map->put(key->clone(), val);
+            put_has_occured = true;
+        }
+        cond_var.notify_one();
     } else {
         // Value belongs on another node
         send_put_request_(key, value);
@@ -137,6 +150,8 @@ void Store::send_put_request_(Key *key, char *value) {
 
     Message *response = send_msg(other_node_host, other_node_port, PUT, msg);
 
+    assert(response);
+
     if (response->msg_type != ACK) {
         printf("Node %zu did not get successful ACK for its PUT request to node %zu\n", node_id, key_home);
         exit(1);
@@ -150,7 +165,23 @@ void Store::send_put_request_(Key *key, char *value) {
 // If key doesn't exist, returns nullptr.
 // Does not modify or delete given key
 DistributedDataFrame *Store::get(Key *k) {
-    char *serialized_df = get_char_(k);
+    char *serialized_df = get_char_(k, true);
+
+    if (serialized_df == nullptr) {
+        return nullptr;
+    }
+
+    DistributedDataFrame *df = serializer->deserialize_distributed_dataframe(serialized_df, this);
+
+    delete[] serialized_df;
+
+    return df;
+}
+
+// Same as get() but does not use mutex when accessing store.
+// Useful if caller has acquired the lock already.
+DistributedDataFrame *Store::get_unsafe_(Key* k) {
+    char *serialized_df = get_char_(k, false);
 
     if (serialized_df == nullptr) {
         return nullptr;
@@ -169,9 +200,10 @@ DistributedDataFrame *Store::get(Key *k) {
     Uses copies of given key (does not modify or delete it)
 */
 bool *Store::get_bool_array_(Key *k) {
-    char *serialized_array = get_char_(k);
+    char *serialized_array = get_char_(k, true);
 
     if (serialized_array == nullptr) {
+        printf("WARN: get_bool_array_ return nullptr for key %s,%zu\n", k->get_name(), k->get_home_node());
         return nullptr;
     }
 
@@ -182,9 +214,10 @@ bool *Store::get_bool_array_(Key *k) {
 }
 
 int *Store::get_int_array_(Key *k) {
-    char *serialized_array = get_char_(k);
+    char *serialized_array = get_char_(k, true);
 
     if (serialized_array == nullptr) {
+        printf("WARN: get_int_array_ return nullptr for key %s,%zu\n", k->get_name(), k->get_home_node());
         return nullptr;
     }
 
@@ -195,9 +228,10 @@ int *Store::get_int_array_(Key *k) {
 }
 
 float *Store::get_float_array_(Key *k) {
-    char *serialized_array = get_char_(k);
+    char *serialized_array = get_char_(k, true);
 
     if (serialized_array == nullptr) {
+        printf("WARN: get_float_array_ return nullptr for key %s,%zu\n", k->get_name(), k->get_home_node());
         return nullptr;
     }
 
@@ -208,9 +242,10 @@ float *Store::get_float_array_(Key *k) {
 }
 
 String **Store::get_string_array_(Key *k) {
-    char *serialized_array = get_char_(k);
+    char *serialized_array = get_char_(k, true);
 
     if (serialized_array == nullptr) {
+        printf("WARN: get_string_array_ return nullptr for key %s,%zu\n", k->get_name(), k->get_home_node());
         return nullptr;
     }
 
@@ -222,14 +257,15 @@ String **Store::get_string_array_(Key *k) {
 
 // Gets a copy of the value associated with the given key, possibly from another node,
 // and returns as a char*. If key doesn't exist, returns nullptr.
+// If safe is true, uses a lock while accessing the store.
 // For internal use only.
-char *Store::get_char_(Key *key) {
+char *Store::get_char_(Key *key, bool safe) {
     size_t key_home = key->get_home_node();
 
     if (key_home == node_id) {
-        map_lock.lock();
+        if (safe) map_lock.lock();
         Object *value_obj = map->get(key);
-        map_lock.unlock();
+        if (safe) map_lock.unlock();
 
         if (value_obj == nullptr) {
             // Key does not exist
@@ -264,11 +300,16 @@ char *Store::send_get_request_(Key *key) {
     // Send GET request to another node with key we're asking for
     Message *response = send_msg(other_node_host, other_node_port, GET, key_str);
 
+    assert(response != nullptr);
+
     if (response->msg_type == NACK) {
         // key does not exist
         return nullptr;
     } else if (response->msg_type != ACK) {
-        printf("Node %zu did not get successful NACK or ACK for its GET request to node %zu\n", node_id, key_home);
+        printf("ERROR: Node %zu did not get successful NACK or ACK for its GET request to node %zu\n", node_id, key_home);
+        exit(1);
+    } else if (response->msg == nullptr) {
+        printf("ERROR: Node %zu got a nullptr response body to its GET request. Full response was %s\n", node_id, response->to_string());
         exit(1);
     }
 
@@ -284,14 +325,25 @@ char *Store::send_get_request_(Key *key) {
 // If key doesn't exist, blocks until it does. Never returns nullptr.
 // Does not modify or delete given key
 DistributedDataFrame *Store::waitAndGet(Key *k) {
-    DistributedDataFrame *df = get(k);
+    size_t key_home = k->get_home_node();
 
-    // TODO ways to improve this:
-    // - for local get, could do waitAndNotify method instead of this busy loop
-    // - for network get, use above method + timeout
+    // If key is in the store, return it right away
+    DistributedDataFrame *df = get(k);
+    if (df) return df;
+
+    // Key is not yet in the store, loop and wait
     while (df == nullptr) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(GETANDWAIT_SLEEP));
-        df = get(k);
+        if (key_home == node_id) {
+            // Key is local. Use a conditional_variable to wait for it to appear
+            std::unique_lock<std::mutex> lck(map_lock);
+            cond_var.wait(lck, [&] { return put_has_occured; });
+            df = get_unsafe_(k); // Use unsafe version because we've already acquired the lock
+            put_has_occured = false;
+        } else {
+            // Key is across the network. Sleep intermittently while we wait.
+            std::this_thread::sleep_for(std::chrono::milliseconds(GETANDWAIT_SLEEP));
+            df = get(k);
+        }
     }
 
     return df;
@@ -305,11 +357,15 @@ void Store::handle_message(int connected_socket, Message *msg) {
     // printf("Node %s:%d got message from another node with type %d and contents \"%s\"\n", my_ip_address, my_port, msg->msg_type, msg->msg);
 
     if (msg->msg_type == PUT) {
+        // printf("DEBUG: Node %zu got PUT request \n", this_node());
         handle_put_(connected_socket, msg);
+        // printf("DEBUG: Node %zu responded to PUT Request\n", this_node());
     } else if (msg->msg_type == GET) {
+        // printf("DEBUG: Node %zu got GET request \n", this_node());
         handle_get_(connected_socket, msg);
+        // printf("DEBUG: Node %zu responded to GET Request\n", this_node());
     } else {
-        printf("WARN: Store got a message from another node with unknown message type %d\n", msg->msg_type);
+        printf("WARN: Store got a message from another node with unexpected message type %d\n", msg->msg_type);
     }
 }
 
@@ -317,13 +373,21 @@ void Store::handle_message(int connected_socket, Message *msg) {
 void Store::handle_put_(int connected_socket, Message *msg) {
     char *msg_contents = msg->msg;
 
+    // printf("DEBUG: Handling a PUT with msg contents %s\n", msg_contents);
+
+    char* entry; 
+    
     // put together Key
-    char *key_str = strtok(msg_contents, "~");
-    Key key(key_str, node_id);  // This node got a PUT request, so the key must live on this node.
-
+    char *key_str = strtok_r(msg_contents, "~", &entry);
+    // printf("DEBUG: Put key string: %s\n", key_str);
     // put together value_str
-    char *val_str = strtok(nullptr, "\0");
+    char *val_str = strtok_r(nullptr, "\0", &entry);
+    // printf("DEBUG: Put val string: %s\n", val_str);
 
+    assert(key_str);
+    assert(val_str);
+
+    Key key(key_str, node_id);  // This node got a PUT request, so the key must live on this node.
     // save to map
     put_char_(&key, val_str);
 
@@ -336,9 +400,11 @@ void Store::handle_put_(int connected_socket, Message *msg) {
 void Store::handle_get_(int connected_socket, Message *msg) {
     // Message consists of just the key
     char *key_str = msg->msg;
+    // printf("DEBUG: Handling a GET with msg contents %s\n", key_str);
+
     Key key(key_str, node_id);  // This node got a GET request, so the key must live on this node.
 
-    char *serialized_value = get_char_(&key);
+    char *serialized_value = get_char_(&key, true);
 
     if (serialized_value == nullptr) {
         // Value doesn't exist, so send NACK
@@ -398,8 +464,8 @@ DistributedDataFrame *DataFrame::fromArray(Key *key, Store *store, size_t count,
 
 // Stores copy of col in store under key
 DistributedDataFrame *DataFrame::fromDistributedColumn(Key *key, Store *store, DistributedColumn *col) {
-    Schema *empty_schema = new Schema();
-    DistributedDataFrame *df = new DistributedDataFrame(store, *empty_schema);
+    Schema empty_schema;
+    DistributedDataFrame *df = new DistributedDataFrame(store, empty_schema);
 
     // add column to DF
     df->add_column(col);
@@ -410,10 +476,14 @@ DistributedDataFrame *DataFrame::fromDistributedColumn(Key *key, Store *store, D
     return df;
 }
 
-// The following fromSorFile method takes a file in SoR format and stores the
+// The following fromSorFile method takes a file_path in SoR format and stores the
 // data from the file in a DistributedDataFrame under the given key in the
 // given store.
-DistributedDataFrame *DataFrame::fromSorFile(Key *key, Store *store, FILE *fp) {
+DistributedDataFrame *DataFrame::fromSorFile(Key *key, Store *store, char *file_path) {
+    FILE* fp = fopen(file_path, "r");
+    if (fp == nullptr) {
+        exit_with_msg("Failed to open file to create DataFrame");
+    }
     Sorer sor(fp, 0, 0);  // Reads whole file
     DistributedDataFrame *df = sor.get_dataframe(store);
     store->put(key, df);
@@ -452,15 +522,18 @@ DistributedDataFrame *DataFrame::fromScalar(Key *key, Store *store, String *val)
 
 DistributedDataFrame* DataFrame::fromWriter(Key* key, Store* store, char* schema, Writer& writer) {
     Schema scm(schema);
-    DistributedDataFrame* df = new DisributedDataFrame(store, scm);
+    DistributedDataFrame* df = new DistributedDataFrame(store, scm);
 
-    Row r(schema);
+    Row r(scm);
     // While the writer has more values to add, 
     // give it a row and incorporate that row
     while (!writer.done()) {
         writer.accept(r);
-        add_row(r);
+        df->add_row(r);
     }
+
+    // printf("fromWriter adding DF to store:\n");
+    // df->print();
     
     store->put(key, df);
     return df;

@@ -144,8 +144,14 @@ class Row : public Object {
         // Check and update missings
         missings[col] = false;
 
-        // set value in union
-        fields[col]->s_val = val;
+        if (val) {
+            String* copy = val->clone(); // Use copy of given string. Dataframe will eventually get this value and delete it.
+
+            // set value in union
+            fields[col]->s_val = copy;
+        } else {
+            fields[col]->s_val = val;
+        }
     }
 
     // Set the given column index as a missing value, default values are

@@ -1,9 +1,9 @@
-#pragma once
 #include <assert.h>
 #include "../../src/store/store.cpp"
 #include "../../src/store/network/master.h"
 #include "../../src/store/network/message.h"
 #include "../../src/store/network/node.h"
+#include "../test_utils.h"
 
 // A Node for testing
 class TestNode : public Node {
@@ -18,7 +18,7 @@ class TestNode : public Node {
         printf("Node %s:%d got message from another node with type %d and contents \"%s\"\n", my_ip_address, my_port, msg->msg_type, msg->msg);
 
         // Send ACK
-        Message ack(my_ip_address, my_port, ACK, "");
+        Message ack(my_ip_address, my_port, ACK, (char*) "");
         network->write_msg(connected_socket, &ack);
 
         received_messages += 1;
@@ -32,18 +32,25 @@ class TestNode : public Node {
 
 // Tests creating a server and two nodes, and then having a node send another node a simple message
 bool test_simple_message() {
-    char* master_ip = "127.0.0.1";
-    int master_port = 8888;
+    char* master_ip = (char*) "127.0.0.1";
+    int master_port = rand_port();
     Server s(master_ip, master_port);
     s.listen_for_clients();
 
-    TestNode node1("127.0.0.1", 7000, master_ip, master_port);
+    int port_1 = rand_port();
+    TestNode node1((char*) "127.0.0.1", port_1, master_ip, master_port);
+    node1.register_and_listen();
 
-    TestNode node2("127.0.0.1", 7001, master_ip, master_port);
+    int port_2 = rand_port();
+    TestNode node2((char*) "127.0.0.1", port_2, master_ip, master_port);
+    node2.register_and_listen();
 
     // Send empty ACK message from node1 to node2
-    Message* response = node1.send_msg("127.0.0.1", 7001, ACK, "Hello from node 1!");
+    Message* response = node1.send_msg((char*) "127.0.0.1", port_2, ACK, (char*)"Hello from node 1!");
     delete response;
+
+    node1.is_done();
+    node2.is_done();
 
     // shutdown system
     s.shutdown();

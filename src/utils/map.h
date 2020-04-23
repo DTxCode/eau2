@@ -65,9 +65,11 @@ class Map : public Object {
     void delete_entries_() {
         for (size_t i = 0; i < key_space; i++) {
             List* value_list = value_lists[i];
-            for (size_t j = 0; j < value_list->size(); j++) {
-                // Delete the pair pointer
-                delete value_list->remove(j);
+            size_t num_pairs = value_list->size();
+
+            // Delete the pair pointer at index 0, j times
+            for (size_t j = 0; j < num_pairs; j++) {
+                delete value_list->remove(0);
             }
         }
     }
@@ -157,7 +159,7 @@ class Map : public Object {
             Pair* pair = dynamic_cast<Pair*>(entry);
 
             // if a key from the pair matches the given key, return the pair val
-	    if (pair->get_first()->equals(key)) {
+	        if (pair->get_first()->equals(key)) {
                 return pair->get_second();
             }
         }
@@ -181,6 +183,7 @@ class Map : public Object {
             return nullptr;
         }
 
+        // printf("DEBUG: Putting into map with key space %zu\n", key_space);
         size_t bucket_id = key->hash() % key_space;
         List* value_list = value_lists[bucket_id];
 
@@ -189,11 +192,23 @@ class Map : public Object {
         // Updated existing key. Return the replaced value
         if (replaced) {
             Pair* replaced_pair = dynamic_cast<Pair*>(replaced);
+            Object* replaced_key = replaced_pair->get_first();
             Object* replaced_value = replaced_pair->get_second();
             delete replaced_pair;
 
+            // Remove the replaced key from list of keys and add the new one
+            // only if the new key isn't literally the same key as the replaced one
+            if (replaced_key != key) {
+                // printf("Replacing key %p with %p in map\n", replaced_key, key);
+                size_t removed_key_index = keys_->index_of(replaced_key);
+                keys_->remove(removed_key_index);
+                keys_->push_back(key);
+                delete replaced_key;
+            }
+
             // Remove the replaced value from list of values and add the new one.
-            size_t removed_value_index = values_->index_of(replaced_value);
+            // printf("Replacing value %p with %p in map\n", replaced_value, value);
+            size_t removed_value_index = values_->index_of_pointer(replaced_value);
             values_->remove(removed_value_index);
             values_->push_back(value);
 
@@ -201,6 +216,7 @@ class Map : public Object {
         }
 
         // Add new key/value to keys and values lists
+        // printf("Putting new value into map at address %p\n", value);
         keys_->push_back(key);
         values_->push_back(value);
 
@@ -308,19 +324,26 @@ class Map : public Object {
         size_t bucket_id = key->hash() % key_space;
         List* value_list = value_lists[bucket_id];
 
-        for (size_t j = 0; j < value_list->size(); j++) {
+        size_t num_pairs = value_list->size();
+        for (size_t j = 0; j < num_pairs; j++) {
             Pair* pair = dynamic_cast<Pair*>(value_list->get(j));
 
             // if a key from the pair matches the given, store val for return
             if (pair->get_first()->equals(key)) {
+                // Remove pair from value_list and free its memory
                 value_list->remove(j);
-                removed_val = pair->get_second();
+                Object* pair_key = pair->get_first();
+                Object* pair_value = pair->get_second();
+                delete pair; // Does not delete key and value above
+
+                // Remember the value we're removing
+                removed_val = pair_value;
 
                 // Remove removed key and value
-                size_t removed_key_index = keys_->index_of(pair->get_first());
+                size_t removed_key_index = keys_->index_of(pair_key);
                 keys_->remove(removed_key_index);
 
-                size_t removed_value_index = values_->index_of(pair->get_second());
+                size_t removed_value_index = values_->index_of_pointer(pair_value);
                 values_->remove(removed_value_index);
 
                 // Update keyspace if this bucket is now empty

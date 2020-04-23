@@ -35,7 +35,7 @@ class DataFrame : public Object {
     /** Create a data frame from a schema and columns. All columns are created
     * empty. */
     DataFrame(Schema& scm) {
-	schema = new Schema(scm);
+	    schema = new Schema(scm);
         columns = new Column*[scm.width()];
 
         set_empty_cols_(schema);
@@ -47,7 +47,7 @@ class DataFrame : public Object {
         }
 
         delete[] columns;
-	delete schema;
+	    delete schema;
     }
 
     // Creates and sets empty columns in this dataframe according to the given schema
@@ -198,7 +198,6 @@ class DataFrame : public Object {
 
             // Handle missing first
             if (is_missing(col_idx, idx)) {
-                printf("Filling idx %zu of row with missing\n", col_idx);
 		        row.set_missing(col_idx);
                 continue;
             }
@@ -206,6 +205,7 @@ class DataFrame : public Object {
             // get appropriately typed value out of the column, and set it in the row
             if (col_type == INT_TYPE) {
                 int val = col->as_int()->get(idx);
+                // printf("fill_row setting row idx %zu to be val %d\n", col_idx, val);
                 row.set(col_idx, val);
             } else if (col_type == BOOL_TYPE) {
                 bool val = col->as_bool()->get(idx);
@@ -290,11 +290,11 @@ class DataFrame : public Object {
     /** Helper function to visit a chunk of rows in order. Row_start and 
         row_end must be valid row indices, or behavior is undefined. **/
     void map_chunk(size_t row_start, size_t row_end, Rower& r) {
-        Row* row = new Row(*schema);  // TODO no need to be heap allocated
+        Row row(*schema);  
         for (size_t row_idx = row_start; row_idx <= row_end; row_idx++) {
-            fill_row(row_idx, *row);
+            fill_row(row_idx, row);
 
-            r.accept(*row);
+            r.accept(row);
 
             // Now insert changes back into map (if any)
             for (size_t j = 0; j < ncols(); j++) {
@@ -302,7 +302,7 @@ class DataFrame : public Object {
                 char col_type = col->get_type();
 
                 // Handle missings first
-                if (row->is_missing(j)) {
+                if (row.is_missing(j)) {
                     set_missing(j, row_idx);
                     continue;
                 }
@@ -310,13 +310,13 @@ class DataFrame : public Object {
                 // get appropriately typed value out of the row, and set it in the column
                 // expect col schema to match row schema
                 if (col_type == INT_TYPE) {
-                    set(j, row_idx, row->get_int(j));
+                    set(j, row_idx, row.get_int(j));
                 } else if (col_type == BOOL_TYPE) {
-                    set(j, row_idx, row->get_bool(j));
+                    set(j, row_idx, row.get_bool(j));
                 } else if (col_type == FLOAT_TYPE) {
-                    set(j, row_idx, row->get_float(j));
+                    set(j, row_idx, row.get_float(j));
                 } else {
-                    set(j, row_idx, row->get_string(j));
+                    set(j, row_idx, row.get_string(j));
                 }
             }
         }
@@ -324,6 +324,10 @@ class DataFrame : public Object {
 
     /** Visit rows in order */
     virtual void map(Rower& r) {
+        // Nothing to do with no rows
+        if (nrows() == 0) {
+            return;
+        }
         map_chunk(0, nrows() - 1, r);
     }
 
@@ -420,13 +424,18 @@ class DataFrame : public Object {
             s.pln();
         }
     }
+    
+    virtual void local_map(Rower& row) {
+        printf("ERROR local_map unimplemented in dataframe\n");
+        exit(1);
+    }
 
     static DistributedDataFrame* fromArray(Key* key, Store* store, size_t count, float* vals);
     static DistributedDataFrame* fromArray(Key* key, Store* store, size_t count, bool* vals);
     static DistributedDataFrame* fromArray(Key* key, Store* store, size_t count, int* vals);
     static DistributedDataFrame* fromArray(Key* key, Store* store, size_t count, String** vals);
     static DistributedDataFrame* fromDistributedColumn(Key* key, Store* store, DistributedColumn* col);
-    static DistributedDataFrame* fromSorFile(Key* key, Store* store, FILE* fp); 
+    static DistributedDataFrame* fromSorFile(Key* key, Store* store, char *file_path); 
 
     static DistributedDataFrame* fromScalar(Key* key, Store* store, float val);
     static DistributedDataFrame* fromScalar(Key* key, Store* store, bool val);
@@ -443,18 +452,21 @@ class DistributedDataFrame : public DataFrame {
 
     DistributedDataFrame(Store* store, DataFrame& df) : DataFrame(df) {
         this->store = store;
-        set_empty_cols_(schema);
+        set_empty_dist_cols_(schema);
     }
 
     DistributedDataFrame(Store* store, Schema& scm) : DataFrame(scm) {
         this->store = store;
-        set_empty_cols_(schema);
+        set_empty_dist_cols_(schema);
     }
 
-    // Creates and sets empty columns in this dataframe according to the given schema
-    void set_empty_cols_(Schema* schema) {
+    // Overrides normal columns in this dataframe with distributed versions
+    void set_empty_dist_cols_(Schema* schema) {
         for (size_t col_idx = 0; col_idx < schema->width(); col_idx++) {
             char col_type = schema->col_type(col_idx);
+
+            // Delete empty column that base constructor added
+            delete columns[col_idx];
 
             if (col_type == INT_TYPE) {
                 columns[col_idx] = new DistributedIntColumn(store);
@@ -568,30 +580,29 @@ class DistributedDataFrame : public DataFrame {
             fill_row(row_idx, row);
 
             r.accept(row);
+            // // Now insert changes back into map (if any)
+            // for (size_t j = 0; j < ncols(); j++) {
+            //     Column* col = columns[j];
+            //     char col_type = col->get_type();
 
-            // Now insert changes back into map (if any)
-            for (size_t j = 0; j < ncols(); j++) {
-                Column* col = columns[j];
-                char col_type = col->get_type();
+            //     // Handle missings first
+            //     if (row.is_missing(j)) {
+            //         set_missing(j, row_idx);
+            //         continue;
+            //     }
 
-                // Handle missings first
-                if (row.is_missing(j)) {
-                    set_missing(j, row_idx);
-                    continue;
-                }
-
-                // get appropriately typed value out of the row, and set it in the column
-                // expect col schema to match row schema
-                if (col_type == INT_TYPE) {
-                    set(j, row_idx, row.get_int(j));
-                } else if (col_type == BOOL_TYPE) {
-                    set(j, row_idx, row.get_bool(j));
-                } else if (col_type == FLOAT_TYPE) {
-                    set(j, row_idx, row.get_float(j));
-                } else {
-                    set(j, row_idx, row.get_string(j));
-                }
-            }
+            //     // get appropriately typed value out of the row, and set it in the column
+            //     // expect col schema to match row schema
+            //     if (col_type == INT_TYPE) {
+            //         set(j, row_idx, row.get_int(j));
+            //     } else if (col_type == BOOL_TYPE) {
+            //         set(j, row_idx, row.get_bool(j));
+            //     } else if (col_type == FLOAT_TYPE) {
+            //         set(j, row_idx, row.get_float(j));
+            //     } else {
+            //         set(j, row_idx, row.get_string(j));
+            //     }
+            // }
         }
     }
 };

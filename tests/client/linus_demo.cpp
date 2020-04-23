@@ -1,8 +1,9 @@
-
-
+#include "../../src/store/network/master.h"
+#include "../../src/client/application.h"
 #include "../../src/store/dataframe/dataframe.h"
 #include "../../src/store/store.cpp"
 #include "../../src/store/dataframe/rower.h"
+#include "../test_utils.h"
 
 /** Authors:
 *	Ryan Heminway (heminway.r@husky.neu.edu)
@@ -61,11 +62,30 @@ class Set {
 
     size_t size() { return size_; }
 
+    size_t num_true() {
+        size_t count = 0;
+        for (size_t i=0; i<size_; i++) {
+            if (vals_[i]) count++;
+        }
+
+        return count;
+    }
+
     /** Performs set union in place. */
     void union_(Set& from) {
-        for (size_t i = 0; i < from.size_; i++) 
-            if (from.test(i))
+        for (size_t i = 0; i < from.size_; i++) { 
+            if (from.test(i)) {
                 set(i);
+            }
+        }
+    }
+
+    void print() {
+        printf("Set contains: ");
+        for (size_t i=0; i<size_; i++) {
+            printf("%d,", vals_[i]);
+        }
+        printf("\n");
     }
 };
 
@@ -83,7 +103,10 @@ class SetUpdater : public Rower {
     /** Assume a row with at least one column of type I. Assumes that there
      * are no missing. Reads the value and sets the corresponding position.
      * The return value is irrelevant here. */
-    bool accept(Row & row) { set_.set(row.get_int(0));  return false; }
+    bool accept(Row & row) { 
+        set_.set(row.get_int(0));  
+        return false; 
+    }
 };
 
 /*****************************************************************************
@@ -94,7 +117,7 @@ class SetUpdater : public Rower {
 class SetWriter: public Writer {
    public:
     Set& set_; // set to read from
-    int i_ = 0;  // position in set
+    size_t i_ = 0;  // position in set
 
     SetWriter(Set& set): set_(set) { }
 
@@ -104,9 +127,11 @@ class SetWriter: public Writer {
         return i_ == set_.size_;
     }
 
-    // TODO why is this i_++ instead of i_ ????
-    // Is this adding i_ and then incrementing it? 
-    void accept(Row & row) { row.set(0, i_++); }
+    bool accept(Row & row) { 
+        // printf("SetWriter putting value %zu into accepted row\n", i_);
+        row.set(0, (int)i_++);
+        return true;
+    }
 };
 
 /***************************************************************************
@@ -134,11 +159,15 @@ class ProjectsTagger : public Rower {
     bool accept(Row & row) override {
         int pid = row.get_int(0);
         int uid = row.get_int(1);
-        if (uSet.test(uid)) 
+        // printf("Projects tagger processing commit for project %d from user %d\n", pid, uid);
+        if (uSet.test(uid)) {
+            // printf("... author is a collaborator\n");
             if (!pSet.test(pid)) {
+                // printf("... marking %d as new project\n", pid);
                 pSet.set(pid);
                 newProjects.set(pid);
             }
+        }
         return false;
     }
 };
@@ -163,11 +192,12 @@ class UsersTagger : public Rower {
     bool accept(Row & row) override {
         int pid = row.get_int(0);
         int uid = row.get_int(1);
-        if (pSet.test(pid)) 
+        if (pSet.test(pid)) {
             if(!uSet.test(uid)) {
                 uSet.set(uid);
                 newUsers.set(uid);
             }
+        }
         return false;
     }
 };
@@ -179,11 +209,11 @@ class UsersTagger : public Rower {
  **************************************************************************/
 class Linus : public Application {
    public:
-    int DEGREES = 4;  // How many degrees of separation from linus?
-    int LINUS = 4967;   // The uid of Linus (offset in the user df)
-    const char* PROJ = "data/projects.ltgt";
-    const char* USER = "data/users.ltgt";
-    const char* COMM = "data/commits.ltgt";
+    size_t DEGREES = 3;  // How many degrees of separation from linus?
+    int LINUS = 0; //4967;   // The OFFSET of the uid of Linus in the DF
+    const char* PROJ = "data/projects_small.sor";
+    const char* USER = "data/users_small.sor";
+    const char* COMM = "data/commits_small.sor";
     DataFrame* projects; //  pid x project name
     DataFrame* users;  // uid x user name
     DataFrame* commits;  // pid x uid x uid 
@@ -192,17 +222,34 @@ class Linus : public Application {
 
     Linus(Store* store): Application(store) {}
 
+    Linus(Store* store, size_t degrees, char* proj_file, char* users_file, char* commits_file)
+         : Application(store) {
+        DEGREES = degrees;
+        PROJ = proj_file;
+        USER = users_file;
+        COMM = commits_file;
+    }
+
+    ~Linus() {
+        delete projects;
+        delete users;
+        delete commits;
+        delete uSet;
+        delete pSet;
+    }
+
     /** Compute DEGREES of Linus.  */
     void run_() override {
         readInput();
         for (size_t i = 0; i < DEGREES; i++) step(i);
+        store->is_done();
     }
 
     // Return a key for storing a node's partial results
     Key* mk_key(char* str, size_t stage, size_t node_id) {
-        size_t needed_buf_size = snprintf(nullptr, 0, "%s-%zu-%zu", "str", stage, node_id) + 1;
+        size_t needed_buf_size = snprintf(nullptr, 0, "%s-%zu-%zu", str, stage, node_id) + 1;
         char key_name[needed_buf_size];
-        snprintf(key_name, needed_buf_size, "%s-%zu-%zu", "str", stage, node_id);
+        snprintf(key_name, needed_buf_size, "%s-%zu-%zu", str, stage, node_id);
 
         return new Key(key_name, node_id);
     }
@@ -214,69 +261,107 @@ class Linus : public Application {
      *  'tagged' users. At this point the dataframe consists of only
      *  Linus. **/
     void readInput() {
-        Key* pK = new Key("projs", 0);
-        Key* uK = new Key("usrs", 0);
-        Key* cK = new Key("comts", 0);
-        if (index == 0) {
+        Key* pK = new Key((char*) "projs", 0);
+        Key* uK = new Key((char*) "usrs", 0);
+        Key* cK = new Key((char*) "comts", 0);
+        if (this_node() == 0) {
             printf("Reading...\n");
-            projects = DataFrame::fromFile(PROJ, pK, &kv);
-            printf("%zu projects", projects->nrows());
-            users = DataFrame::fromFile(USER, uK, &kv);
-            printf("%zu users", users->nrows());
-            commits = DataFrame::fromFile(COMM, cK, &kv);
-            printf("%zu commits", commits->nrows());
-            // This dataframe contains the id of Linus.
-            delete DataFrame::fromScalarInt(new Key("users-0-0"), &kv, LINUS);
+
+            projects = DataFrame::fromSorFile(pK, store, (char*) PROJ);
+            printf("%zu projects\n", projects->nrows());
+            // projects->print();
+
+            users = DataFrame::fromSorFile(uK, store, (char*) USER);
+            printf("%zu users\n", users->nrows());
+            // users->print();
+
+            commits = DataFrame::fromSorFile(cK, store, (char*) COMM);
+            printf("%zu commits\n", commits->nrows());
+            // commits->print();
+
+            // Make initial collaboraters DF with just Linus.
+            Key* initial_collabs_key = mk_key((char*) "users", 0, 0);
+            delete DataFrame::fromScalar(initial_collabs_key, store, LINUS);
+            delete initial_collabs_key;
         } else {
-            projects = dynamic_cast<DataFrame*>(kv.waitAndGet(pK));
-            users = dynamic_cast<DataFrame*>(kv.waitAndGet(uK));
-            commits = dynamic_cast<DataFrame*>(kv.waitAndGet(cK));
+            printf("Node %zu waiting for initial data from master node\n", store->this_node());
+            projects = dynamic_cast<DataFrame*>(store->waitAndGet(pK));
+            printf("%zu projects\n", projects->nrows());
+            users = dynamic_cast<DataFrame*>(store->waitAndGet(uK));
+            printf("%zu users\n", users->nrows());
+            commits = dynamic_cast<DataFrame*>(store->waitAndGet(cK));
+            printf("%zu commits\n", commits->nrows());
+            printf("Node %zu finished reading input from master node\n", store->this_node());
         }
         // All users and all projects set to false initially
         uSet = new Set(users);
         pSet = new Set(projects);
+        // printf("user set: \n");
+        // uSet->print();
+        // printf("project set: \n");
+        // pSet->print();
+
+        delete pK;
+        delete uK;
+        delete cK;
     }
 
 
     /** Performs a step of the linus calculation. It operates over the three
      *  datafrrames (projects, users, commits), the sets of tagged users and
      *  projects, and the users added in the previous round. */
-    void step(int stage) {
-        printf("Stage: %zu", stage);
+    void step(size_t stage) {
+        printf("Node %zu starting step at stage %zu\n", store->this_node(), stage);
         // Key of the shape: users-stage-0
-        Key* uK = mk_key("users-", stage, 0);
+        Key* uK = mk_key((char*) "users", stage, 0);
 
         // A df with all the users added on the previous round
-        DataFrame* newUsers = dynamic_cast<DataFrame*>(kv.waitAndGet(uK));
-        // users is DF of all user info    
+        DataFrame* newUsers = dynamic_cast<DataFrame*>(store->waitAndGet(uK));
+        // printf("Starting with %zu new users\n", newUsers->nrows());
+        // Create set with length = all users    
         Set delta(users);
-        SetUpdater upd(delta); 
+    
         // For all users in newUsers, set that user bit to True in delta 
-        newUsers->map(upd); 
+        SetUpdater upd(delta); 
+        newUsers->map(upd);
+
+        delete uK;
         delete newUsers;
-        // At this point delta is updated with the newUsers
+
+        // printf("Delta from new users ");
+        // delta.print();
+
+        // At this point delta has bool flags set to true for the newUsers
 
         // Mark all projects touched by the users in delta as projects related to linus
         ProjectsTagger ptagger(delta, *pSet, projects);
         // IMPORTANT: Will only update with projects on this node
         commits->local_map(ptagger);
+
         // Merge results from other nodes
-        merge(ptagger.newProjects, "projects-", stage);
+        merge(ptagger.newProjects, "projects", stage);
         // Add new projects to set of projects related to linus
         pSet->union_(ptagger.newProjects); 
 
+        // printf("Pset with projects of all new users marked: ");
+        // pSet->print();
+
         // Now mark all users who contributed to any of the new projects
-        UsersTagger utagger(ptagger.newProjects, *uSet, users);
+        UsersTagger utagger(*pSet, *uSet, users);
         // IMPORTANT: Will only update with users on this node
         commits->local_map(utagger);
+
         // Merge results from other nodes
-        merge(utagger.newUsers, "users-", stage + 1);
+        merge(utagger.newUsers, "users", stage + 1);
         // Add new users to set of users related to linus
         uSet->union_(utagger.newUsers); 
+   
+        // printf("Uset with all new marked users marked: ");
+        // uSet->print();
 
-        printf("After stage %zu : \n");
-        printf("   tagged projects: %zu", pSet->size());
-        printf("   tagged users: %zu", uSet->size());
+        printf("After stage %zu : \n", stage);
+        printf("   tagged projects: %zu\n", pSet->num_true());
+        printf("   tagged users: %zu\n", uSet->num_true());
     }
 
     /** Gather updates to the given set from all the nodes in the systems.
@@ -287,36 +372,92 @@ class Linus : public Application {
      */ 
     void merge(Set& set, char const* name, int stage) {
         if (this_node() == 0) {
-            for (size_t i = 1; i < arg.num_nodes; ++i) {
-                Key* nk = mk_key(name, stage, i);
+            for (size_t i = 1; i < num_nodes(); ++i) {
+                // STEP (2)
+                Key* nK = mk_key((char*) name, stage, i);
                 // New elements
-                DataFrame* delta = dynamic_cast<DataFrame*>(kv.waitAndGet(nK));
-                printf("  received delta of %zu elements from node %zu", 
-                        delta->nrows(), i);
+                printf("   waiting for node %zu to give me data under key %s\n", i, nK->get_name());
+                DataFrame* delta = dynamic_cast<DataFrame*>(store->waitAndGet(nK));
+                printf("   received %zu new %s elements from node %zu\n", delta->nrows(), name, i);
+
                 // Update the given set with new elements
                 SetUpdater upd(set);
                 delta->map(upd);
+
+                delete nK;
                 delete delta;
             }
-            printf("    storing %zu merged elements", set.size());
+            // STEP (3)
+            // printf("    After merge, master has %zu (true) %s elements \n", set.num_true(), name);
             // Create a new DF from the updated set 
             SetWriter writer(set);
-            Key* k = mk_key(name, stage, 0);
-            delete DataFrame::fromWriter(k, &kv, "I", writer);
+            Key* k = mk_key((char*) name, stage, 0);
+            // printf("Writing set using fromWriter: ");
+            // set.print();
+            delete DataFrame::fromWriter(k, store, (char*) "I", writer);
+            delete k;
         } else {
-            printf("   sending %zu elements to master node", set.size());
+            // STEP (1) 
+            printf("   sending %zu new %s elements to master node \n", set.num_true(), name);
             // Put a DF in KVS with updated elements (for master node to process)
             SetWriter writer(set);
-            Key* k = mk_key(name, stage, this_node());
-            delete DataFrame::fromWriter(k, &kv, "I", writer);
+            Key* k = mk_key((char*) name, stage, this_node());
+            // printf("   ...under key %s\n", k->get_name());
+            delete DataFrame::fromWriter(k, store, (char*) "I", writer);
+            delete k;
 
+            // STEP (4)
             // Get the merged result from master node
-            Key* mK = mk_key(name, stage, 0);
-            DataFrame* merged = dynamic_cast<DataFrame*>(kv.waitAndGet(mK));
-            printf("    receiving %zu merged elements", merged->nrows());
+            Key* mK = mk_key((char*) name, stage, 0);
+            DataFrame* merged = dynamic_cast<DataFrame*>(store->waitAndGet(mK));
+            printf("   master gave me %zu new %s elements \n", merged->nrows(), name);
+
             SetUpdater upd(set);
             merged->map(upd);
             delete merged;
+            delete mK;
         }
     }
 }; // Linus
+
+int main(int argc, char** argv) {
+    Arguments args(argc, argv);
+
+    bool start_server = args.start_server;
+    char* master_ip = args.master_ip;
+    int master_port = args.master_port;
+
+    Server* s = nullptr;
+    // Only one node should start server
+    if (start_server) {
+        s = new Server(master_ip, master_port);
+        s->listen_for_clients();
+    }
+
+    int node_id = args.node_id;
+    char* node_ip = args.node_ip;
+    int node_port = args.node_port;
+
+    Store store(node_id, node_ip, node_port, master_ip, master_port);
+
+    int degrees = args.degrees;
+    char* proj_file = args.proj_file;
+    char* users_file = args.users_file;
+    char* commits_file = args.commits_file;
+
+    // Dont run until we have all nodes loaded
+    while (store.num_nodes() != args.num_nodes) {
+    }
+
+    Linus linus(&store, degrees, proj_file, users_file, commits_file);
+    linus.run();
+
+    if (start_server) {
+        s->shutdown();
+        delete s;
+    }
+
+    while (!store.is_shutdown()) {}
+
+    return 0;
+}

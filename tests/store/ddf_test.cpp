@@ -1,18 +1,17 @@
-#pragma once
 #include <assert.h>
-
 #include "../../src/store/dataframe/dataframe.h"
 #include "../../src/store/network/master.h"
 #include "../../src/store/store.cpp"
+#include "../test_utils.h"
 
 bool test_ddf_multi_column() {
     char* master_ip = (char*)"127.0.0.1";
-    int master_port = 6543;
+    int master_port = rand_port();
     Server s(master_ip, master_port);
     s.listen_for_clients();
 
-    Store store1(0, (char*)"127.0.0.1", 6065, master_ip, master_port);
-    Store store2(1, (char*)"127.0.0.1", 6064, master_ip, master_port);
+    Store store1(0, (char*)"127.0.0.1", rand_port(), master_ip, master_port);
+    Store store2(1, (char*)"127.0.0.1", rand_port(), master_ip, master_port);
 
     DistributedIntColumn dist_intc(&store1);
     DistributedBoolColumn dist_boolc(&store2);
@@ -50,6 +49,9 @@ bool test_ddf_multi_column() {
     assert(df.is_missing(0, 1500));
     assert(df.get_bool(1, 1000));
 
+    store1.is_done();
+    store2.is_done();
+
     s.shutdown();
     while (!store1.is_shutdown()) {
     }
@@ -59,8 +61,63 @@ bool test_ddf_multi_column() {
     return true;
 }
 
+bool test_ddf_with_missings() {
+    char* master_ip = (char*)"127.0.0.1";
+    int master_port = rand_port();
+    Server serv(master_ip, master_port);
+    serv.listen_for_clients();
+
+    Store store(0, (char*)"127.0.0.1", rand_port(), master_ip, master_port);
+
+    Schema schema("IFSB");
+    
+    DistributedDataFrame my_df(&store, schema);
+    Row r(schema);
+
+    String str("test");
+
+    r.set_missing(0);
+    r.set(1, (float)5.55);
+    r.set(2, &str);
+    r.set(3, true);
+
+    my_df.add_row(r);
+    
+    r.set(0, 5);
+    r.set_missing(1);
+    r.set(2, &str);
+    r.set(3, false);
+
+    my_df.add_row(r);
+    
+    r.set(0, 5);
+    r.set(1, (float) 6.66);
+    r.set_missing(2);
+    r.set(3, false);
+    
+    my_df.add_row(r);
+
+    assert(my_df.is_missing(0, 0));
+    assert(my_df.is_missing(1, 1));
+    assert(my_df.is_missing(2, 2));
+
+    store.is_done();
+    // shutdown system
+    serv.shutdown();
+
+    // wait for nodes to finish
+    while (!store.is_shutdown()) {
+    }
+
+    return true;
+}
+
+
 int main() {
     assert(test_ddf_multi_column());
     printf("=========== test_ddf_multi_column PASSED =========\n");
+    assert(test_ddf_with_missings());
+    printf("=========== test_ddf_with_missings PASSED =========\n");
+
     return 0;
 }

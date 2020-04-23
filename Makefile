@@ -1,8 +1,13 @@
 build:
-	g++ -std=c++11 -Wall -pthread src/client/application.cpp -o app
+	g++ -std=c++11 -Wall -pthread -g tests/client/linus_demo.cpp -o linus 
 
 run:
-	./app -from 0 -len 1000 -f ./data/data.sor
+	./linus -node_id 0 -node_port 4000 -degrees 5 -num_nodes 1 -start_server 1
+	# ./linus -node_id 1 -node_port 4001 -degrees 1 
+
+# Run all tests
+test: test-dist-column test-server-node test-serializer test-store test-ddf test-map
+	echo "All tests passed!"
 
 ### Client
 
@@ -36,6 +41,15 @@ valgrind-client-sorer:
 
 ### Store
 
+# Distributed Column test
+test-dist-column:
+	g++ -std=c++11 -Wall -pthread -g tests/store/dist_column_test.cpp -o col_test
+	./col_test
+
+valgrind-dist-column:
+	g++ -std=c++11 -Wall -pthread -g tests/store/dist_column_test.cpp -o col_test
+	valgrind --leak-check=full --track-origins=yes ./col_test
+
 # Server-node test
 test-server-node:
 	g++ -std=c++11 -Wall -pthread -g tests/store/server_node_test.cpp -o server_node_test
@@ -46,12 +60,12 @@ valgrind-server-node:
 	valgrind --leak-check=full --track-origins=yes ./server_node_test
 
 # Simple serializer test
-test-simple-serializer:
-	g++ -std=c++11 -Wall -pthread -g tests/store/simple_serializer_test.cpp -o serial_test
+test-serializer:
+	g++ -std=c++11 -Wall -pthread -g tests/store/serializer_test.cpp -o serial_test
 	./serial_test
 
-valgrind-simple-serializer:
-	g++ -std=c++11 -Wall -pthread -g tests/store/simple_serializer_test.cpp -o serial_test
+valgrind-serializer:
+	g++ -std=c++11 -Wall -pthread -g tests/store/serializer_test.cpp -o serial_test
 	valgrind --leak-check=full --track-origins=yes ./serial_test
 
 # Store test
@@ -63,13 +77,23 @@ valgrind-store:
 	g++ -std=c++11 -Wall -pthread -g tests/store/store_test.cpp -o store_test
 	valgrind --leak-check=full --track-origins=yes ./store_test
 
-# Distributed Column test
-test-column:
-	g++ -std=c++11 -Wall -pthread -g tests/store/dist_column_test.cpp -o col_test
-	./col_test
-
+# DDF test
 test-ddf:
-	g++ -std=c++11 -Wall -pthread -g tests/store/test_ddf.cpp -o ddf_test
+	g++ -std=c++11 -Wall -pthread -g tests/store/ddf_test.cpp -o ddf_test
 	./ddf_test
-	g++ -std=c++11 -Wall -pthread -g tests/store/test_missings_col.cpp -o missing_col_test
-	./missing_col_test
+
+valgrind-ddf:
+	g++ -std=c++11 -Wall -pthread -g tests/store/ddf_test.cpp -o ddf_test
+	valgrind --leak-check=full --track-origins=yes ./ddf_test
+
+
+### Utils Tests
+
+# Map test
+test-map:
+	g++ -std=c++11 -Wall -pthread -g tests/utils/map_test.cpp -o map_test
+	./map_test
+
+valgrind-map:
+	g++ -std=c++11 -Wall -pthread -g tests/utils/map_test.cpp -o map_test
+	valgrind --leak-check=full --track-origins=yes ./map_test 

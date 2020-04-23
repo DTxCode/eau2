@@ -1,4 +1,4 @@
-﻿Ryan Heminway
+Ryan Heminway
 David Tandetnik        
 Eau2 System Architecture and Design
 

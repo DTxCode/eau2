@@ -65,9 +65,11 @@ class Sorer {
         }
 
         DistributedDataFrame* df = new DistributedDataFrame(store, *schema);
-        Row* row = new Row(*schema);
+        Row row(*schema);
 
-        char buffer[255];
+        size_t MAX_LINE_LENGTH = 256;
+        char buffer[MAX_LINE_LENGTH];
+        bzero(buffer, MAX_LINE_LENGTH);
 
         size_t col_idx = 0;
         size_t read_idx = 0;
@@ -89,37 +91,41 @@ class Sorer {
                 // Handle missings
                 if (is_empty_field(buffer, schema->col_type(col_idx))) {
 			        printf("Sorer found a missing at column %zu\n", col_idx);
-                    row->set_missing(col_idx);
+                    row.set_missing(col_idx);
                     // Based on schema, add data to row
                 } else if (schema->col_type(col_idx) == INT_TYPE) {
                     int val = atoi(trim_whitespace(buffer));
-                    row->set(col_idx, val);
+                    row.set(col_idx, val);
                 } else if (schema->col_type(col_idx) == FLOAT_TYPE) {
                     float val = (float)atof(trim_whitespace(buffer));
-                    row->set(col_idx, val);
+                    row.set(col_idx, val);
                 } else if (schema->col_type(col_idx) == STRING_TYPE) {
-                    String* val = new String(trim_whitespace(buffer));
-                    row->set(col_idx, val);
+                    String val(trim_whitespace(buffer)); 
+                    row.set(col_idx, &val);
                 } else {  // BOOL_TYPE
                     if (strcmp(trim_whitespace(buffer), "1") == 0) {
-                        row->set(col_idx, true);
+                        row.set(col_idx, true);
                     } else {
-                        row->set(col_idx, false);
+                        row.set(col_idx, false);
                     }
                 }
 
                 col_idx++;
             } else if (reading_val) {  // Copy value into buffer
                 buffer[read_idx] = c;
+                // printf("Read so far %s\n", buffer);
                 read_idx++;
             } else if (c == '\n') {
+                // printf("Adding row to df. Read %zu bytes of total desired %zu.\n", bytes_read, length);
                 // Add row to dataframe
-                df->add_row(*row);
+                df->add_row(row);
 
                 col_idx = 0;
+                bzero(buffer, MAX_LINE_LENGTH);
             }
             // Stop reading after length_to_read
             if (bytes_read >= length) {
+                // printf("Stopping reading DF because reached length\n");
                 break;
             }
         }
@@ -151,8 +157,14 @@ class Sorer {
 
         // Field should be empty (missing) if it is EMPTY or its field_type
         //  does not match column type
+        // SPECIAL CASES: field is bool but column is int or float
+        //                field is int but column is float
+        bool case_1 = (val_type == BOOL && (col_field_type == INT
+            || col_field_type == FLOAT));
+        bool case_2 = (val_type == INT && (col_field_type == FLOAT));
         bool is_empty;
-        is_empty = (val_type == EMPTY) || (val_type != col_field_type);
+        is_empty = (val_type == EMPTY) || ((val_type != col_field_type) 
+                                           && !case_1 && !case_2);
         return is_empty;
     }
 
