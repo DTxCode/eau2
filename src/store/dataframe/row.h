@@ -36,7 +36,8 @@ class Row : public Object {
 
     /** Build a row following a schema. */
     Row(Schema& scm) {
-        row_index = -1;  // Default to invalid row number to not overlap with valid row index 0
+        // Default to invalid row number to not overlap with valid row index 0
+        row_index = -1;  
         num_columns = scm.width();
 
         // initilize empty fields and field types
@@ -58,8 +59,6 @@ class Row : public Object {
 
     ~Row() {
         for (size_t i = 0; i < num_columns; i++) {
-            // Note: no longer taking ownership of string*
-            // delete fields[i]->s_val;  // If we're given a string*, set() says we should delete it.
             delete fields[i];
         }
 
@@ -145,7 +144,9 @@ class Row : public Object {
         missings[col] = false;
 
         if (val) {
-            String* copy = val->clone(); // Use copy of given string. Dataframe will eventually get this value and delete it.
+            // Use copy of given string. Dataframe will 
+            // eventually get this value and delete it.
+            String* copy = val->clone(); 
 
             // set value in union
             fields[col]->s_val = copy;

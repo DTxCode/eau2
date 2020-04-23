@@ -13,7 +13,8 @@
 #include "../serial.h"
 
 /*
-    Represents a Server in a network. Clients connect to this server in order in order to register/join the network.
+    Represents a Server in a network. Clients connect to this server 
+    in order in order to register/join the network.
 */
 class Server {
    public:
@@ -21,8 +22,11 @@ class Server {
     int my_port;
     StringArray *registered_nodes;
     Network *network;
-    std::thread *listener;  // Thread that listens for incoming connections
-    bool shutting_down;     // Whether this server is shutting down. Used by (infinite) spawned thread to know to shut down
+    // Thread that listens for incoming connections
+    std::thread *listener;
+    // Whether this server is shutting down. Used by (infinite) 
+    // spawned thread to know to shut down
+    bool shutting_down;     
     Serializer *serializer;
 
     Server(char *my_ip_address, int my_port) {
@@ -59,7 +63,6 @@ class Server {
             listener->join();
         }
 
-        // printf("Server is shutting down itself and %zu other nodes...\n", registered_nodes->size());
         Message shutdown_msg(my_ip_address, my_port, SHUTDOWN, (char*) "");
 
         // Loop over all the nodes this server knows about
@@ -68,9 +71,7 @@ class Server {
             char *node_host = network->get_host_from_address(node);
             int node_port = network->get_port_from_address(node);
 
-            //printf("... sending shutdown message to %s:%d\n", node_host, node_port);
             Message *response = network->send_and_receive_msg(&shutdown_msg, node_host, node_port);
-
             delete[] node_host;
 
             if (response->msg_type != ACK) {
@@ -117,8 +118,6 @@ class Server {
 
     // Register client that's connected on given socket
     void process_client_registration_(int connection, Message *registration_msg) {
-        //printf("Server got registration request from node: %s\n", registration_msg->msg);
-
         // Send ACK back to node
         Message ack(my_ip_address, my_port, ACK, (char*) "");
         network->write_msg(connection, &ack);

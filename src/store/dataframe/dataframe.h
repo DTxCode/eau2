@@ -50,7 +50,8 @@ class DataFrame : public Object {
 	    delete schema;
     }
 
-    // Creates and sets empty columns in this dataframe according to the given schema
+    // Creates and sets empty columns in this dataframe according to 
+    // the given schema
     virtual void set_empty_cols_(Schema* schema) {
         for (size_t col_idx = 0; col_idx < schema->width(); col_idx++) {
             char col_type = schema->col_type(col_idx);
@@ -75,7 +76,7 @@ class DataFrame : public Object {
 
     /** Adds a column this dataframe, updates the schema, the new column
     * is external, and appears as the last column of the dataframe.
-    * A nullptr colum is undefined. */
+    * A nullptr column is undefined. */
     virtual void add_column(Column* col) {
         // If this is not the first column being added, only accept it if
         // it has the same number of rows as what's already in the dataframe
@@ -114,7 +115,6 @@ class DataFrame : public Object {
 
     // returns a copy of the given column
     virtual Column* get_col_copy_(Column* col) {
-        printf("This is the wrong get_col_copy!\n");
         char col_type = col->get_type();
 
         if (col_type == INT_TYPE) {
@@ -580,6 +580,8 @@ class DistributedDataFrame : public DataFrame {
             fill_row(row_idx, row);
 
             r.accept(row);
+        
+            // TODO reimplement for broader use
             // // Now insert changes back into map (if any)
             // for (size_t j = 0; j < ncols(); j++) {
             //     Column* col = columns[j];

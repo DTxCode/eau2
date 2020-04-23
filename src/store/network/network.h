@@ -123,8 +123,6 @@ class Network {
 
         close(sock);
 
-        assert(response != nullptr);
-
         return response;
     }
 
@@ -134,8 +132,6 @@ class Network {
         char* msg_string = read_from_socket_(socket);
         Message* msg = new Message(msg_string);
         delete[] msg_string;
-
-        assert(msg != nullptr);
 
         return msg;
     }
