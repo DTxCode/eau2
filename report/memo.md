@@ -3,6 +3,7 @@ David Tandetnik
 Eau2 System Architecture and Design
 
 Introduction
+
     The eau2 system aims to provide key-value storage over a distributed set of nodes acting as the backbone for applications which process large amounts of data. 
 With the requirement of a cluster of compute nodes, users can run the eau2 system to store data across the cluster but interact with it as if it was local.
 Eau2 only accepts input data formatted based on schema-on-read (SoR) requirements, and that data is read-only once it is stored in the system. 
@@ -10,6 +11,7 @@ For queries, the eau2 system provides the data in the form of a dataframe which 
 
 
 Architecture
+
     Conceptually, there are three layers of the eau2 system. At the bottom is the key-value storage system. Data is stored across multiple nodes, 
 so this layer also includes a network protocol which allows the key-value stores on each node to interact with each other. 
 Each key consists of a string and a home node while each value is a serialized blob of data. Communication between the stores allows the user to view the 
@@ -20,6 +22,7 @@ The user builds on top of this layer to leverage the underlying key-value store 
 
 
 Implementation
+
     The bottom layer will be implemented using one main class, for now referenced as Store. This class will have two main components, a Map and a Network. 
 The map is the normal key-value storage structure, mapping Keys to Strings. Keys are a new type which represent a tuple of a String and an integer 
 to denote the home node identifier of the data. Strings are used to hold serialized blobs of data. The Network object on the other hand contains 
@@ -37,7 +40,9 @@ cluster to start up the system. This class has the Store as a field, providing t
 stored on the system. Additionally, this class will contain any utility methods required for building a program on top of it. One example is the Application 
 API method ‘this_node’ which returns the index of the current node. 
 
+
 Use Cases
+
 // One node saves some data to the store, the other takes the max of the data and saves that to 
 // the store too.
 class Demo : public Application {
@@ -79,6 +84,7 @@ Public:
 	
 
 Status
+
     At this point, our system is capable of processing an application across multiple nodes, including the Linus demo. We have 
 however only experimented with relatively small files (less than half a GB). Our next steps include testing the system further with 
 more data and more nodes. All of our tests pass and are clean of memory issues.
