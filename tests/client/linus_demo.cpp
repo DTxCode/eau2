@@ -192,11 +192,12 @@ class UsersTagger : public Rower {
     bool accept(Row & row) override {
         int pid = row.get_int(0);
         int uid = row.get_int(1);
-        if (pSet.test(pid)) 
+        if (pSet.test(pid)) {
             if(!uSet.test(uid)) {
                 uSet.set(uid);
                 newUsers.set(uid);
             }
+        }
         return false;
     }
 };
@@ -278,7 +279,6 @@ class Linus : public Application {
             printf("%zu commits\n", commits->nrows());
             // commits->print();
 
-
             // Make initial collaboraters DF with just Linus.
             Key* initial_collabs_key = mk_key((char*) "users", 0, 0);
             delete DataFrame::fromScalar(initial_collabs_key, store, LINUS);
@@ -296,10 +296,10 @@ class Linus : public Application {
         // All users and all projects set to false initially
         uSet = new Set(users);
         pSet = new Set(projects);
-        printf("user set: \n");
-        uSet->print();
-        printf("project set: \n");
-        pSet->print();
+        // printf("user set: \n");
+        // uSet->print();
+        // printf("project set: \n");
+        // pSet->print();
 
         delete pK;
         delete uK;
@@ -317,7 +317,7 @@ class Linus : public Application {
 
         // A df with all the users added on the previous round
         DataFrame* newUsers = dynamic_cast<DataFrame*>(store->waitAndGet(uK));
-        printf("Starting with %zu new users\n", newUsers->nrows());
+        // printf("Starting with %zu new users\n", newUsers->nrows());
         // Create set with length = all users    
         Set delta(users);
     
@@ -328,8 +328,8 @@ class Linus : public Application {
         delete uK;
         delete newUsers;
 
-        printf("Delta from new users");
-        delta.print();
+        // printf("Delta from new users ");
+        // delta.print();
 
         // At this point delta has bool flags set to true for the newUsers
 
@@ -337,25 +337,27 @@ class Linus : public Application {
         ProjectsTagger ptagger(delta, *pSet, projects);
         // IMPORTANT: Will only update with projects on this node
         commits->local_map(ptagger);
-        printf("Pset with projects of new users marked:");
-        ptagger.newProjects.print();
 
         // Merge results from other nodes
         merge(ptagger.newProjects, "projects", stage);
         // Add new projects to set of projects related to linus
         pSet->union_(ptagger.newProjects); 
 
+        // printf("Pset with projects of all new users marked: ");
+        // pSet->print();
+
         // Now mark all users who contributed to any of the new projects
-        UsersTagger utagger(ptagger.newProjects, *uSet, users);
+        UsersTagger utagger(*pSet, *uSet, users);
         // IMPORTANT: Will only update with users on this node
         commits->local_map(utagger);
-        printf("Uset with new marked users marked:");
-        utagger.newUsers.print();
 
         // Merge results from other nodes
         merge(utagger.newUsers, "users", stage + 1);
         // Add new users to set of users related to linus
         uSet->union_(utagger.newUsers); 
+   
+        // printf("Uset with all new marked users marked: ");
+        // uSet->print();
 
         printf("After stage %zu : \n", stage);
         printf("   tagged projects: %zu\n", pSet->num_true());
@@ -374,7 +376,7 @@ class Linus : public Application {
                 // STEP (2)
                 Key* nK = mk_key((char*) name, stage, i);
                 // New elements
-                printf("  waiting for node %zu to give me data under key %s\n", i, nK->get_name());
+                printf("   waiting for node %zu to give me data under key %s\n", i, nK->get_name());
                 DataFrame* delta = dynamic_cast<DataFrame*>(store->waitAndGet(nK));
                 printf("   received %zu new %s elements from node %zu\n", delta->nrows(), name, i);
 
@@ -400,7 +402,7 @@ class Linus : public Application {
             // Put a DF in KVS with updated elements (for master node to process)
             SetWriter writer(set);
             Key* k = mk_key((char*) name, stage, this_node());
-            printf("   ...under key %s\n", k->get_name());
+            // printf("   ...under key %s\n", k->get_name());
             delete DataFrame::fromWriter(k, store, (char*) "I", writer);
             delete k;
 

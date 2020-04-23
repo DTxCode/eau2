@@ -18,6 +18,7 @@ Store::Store(size_t node_id, char *my_ip_address, int my_port, char *server_ip_a
         : Node(my_ip_address, my_port, server_ip_address, server_port) {
     this->node_id = node_id;
     map = new Map();
+    register_and_listen();
 }
 
 Store::~Store() {

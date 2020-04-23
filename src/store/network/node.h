@@ -51,7 +51,6 @@ class Node {
         shutting_down = false;
         done = false;
         serializer = new Serializer();
-        register_and_listen();
     }
 
     ~Node() {
@@ -210,7 +209,6 @@ class Node {
     // Cleans up run-time flags, but does not delete memory (handled by destructor)
     void shutdown_(int connected_socket) {
         while(!done) {};
-        printf("Node is done, can shutdown \n");
         shutting_down = true;
         registered = false;
 
@@ -240,7 +238,6 @@ class Node {
 
     // Call when this node has finished its work. Needs to be called for shutdown to occur.
     void is_done() {
-        printf("Node says it's done\n");
         done = true;
     }
 };

@@ -39,9 +39,11 @@ bool test_simple_message() {
 
     int port_1 = rand_port();
     TestNode node1((char*) "127.0.0.1", port_1, master_ip, master_port);
+    node1.register_and_listen();
 
     int port_2 = rand_port();
     TestNode node2((char*) "127.0.0.1", port_2, master_ip, master_port);
+    node2.register_and_listen();
 
     // Send empty ACK message from node1 to node2
     Message* response = node1.send_msg((char*) "127.0.0.1", port_2, ACK, (char*)"Hello from node 1!");

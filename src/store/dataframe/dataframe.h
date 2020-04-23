@@ -198,7 +198,6 @@ class DataFrame : public Object {
 
             // Handle missing first
             if (is_missing(col_idx, idx)) {
-                printf("Filling idx %zu of row with missing\n", col_idx);
 		        row.set_missing(col_idx);
                 continue;
             }
@@ -206,6 +205,7 @@ class DataFrame : public Object {
             // get appropriately typed value out of the column, and set it in the row
             if (col_type == INT_TYPE) {
                 int val = col->as_int()->get(idx);
+                // printf("fill_row setting row idx %zu to be val %d\n", col_idx, val);
                 row.set(col_idx, val);
             } else if (col_type == BOOL_TYPE) {
                 bool val = col->as_bool()->get(idx);
@@ -425,8 +425,10 @@ class DataFrame : public Object {
         }
     }
     
-    // TODO 
-    virtual void local_map(Rower& row) {}
+    virtual void local_map(Rower& row) {
+        printf("ERROR local_map unimplemented in dataframe\n");
+        exit(1);
+    }
 
     static DistributedDataFrame* fromArray(Key* key, Store* store, size_t count, float* vals);
     static DistributedDataFrame* fromArray(Key* key, Store* store, size_t count, bool* vals);
@@ -578,30 +580,29 @@ class DistributedDataFrame : public DataFrame {
             fill_row(row_idx, row);
 
             r.accept(row);
+            // // Now insert changes back into map (if any)
+            // for (size_t j = 0; j < ncols(); j++) {
+            //     Column* col = columns[j];
+            //     char col_type = col->get_type();
 
-            // Now insert changes back into map (if any)
-            for (size_t j = 0; j < ncols(); j++) {
-                Column* col = columns[j];
-                char col_type = col->get_type();
+            //     // Handle missings first
+            //     if (row.is_missing(j)) {
+            //         set_missing(j, row_idx);
+            //         continue;
+            //     }
 
-                // Handle missings first
-                if (row.is_missing(j)) {
-                    set_missing(j, row_idx);
-                    continue;
-                }
-
-                // get appropriately typed value out of the row, and set it in the column
-                // expect col schema to match row schema
-                if (col_type == INT_TYPE) {
-                    set(j, row_idx, row.get_int(j));
-                } else if (col_type == BOOL_TYPE) {
-                    set(j, row_idx, row.get_bool(j));
-                } else if (col_type == FLOAT_TYPE) {
-                    set(j, row_idx, row.get_float(j));
-                } else {
-                    set(j, row_idx, row.get_string(j));
-                }
-            }
+            //     // get appropriately typed value out of the row, and set it in the column
+            //     // expect col schema to match row schema
+            //     if (col_type == INT_TYPE) {
+            //         set(j, row_idx, row.get_int(j));
+            //     } else if (col_type == BOOL_TYPE) {
+            //         set(j, row_idx, row.get_bool(j));
+            //     } else if (col_type == FLOAT_TYPE) {
+            //         set(j, row_idx, row.get_float(j));
+            //     } else {
+            //         set(j, row_idx, row.get_string(j));
+            //     }
+            // }
         }
     }
 };

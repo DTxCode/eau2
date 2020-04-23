@@ -594,15 +594,24 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
     // Returns the integer at the given index.
     // Input index out of bounds will cause a runtime error
     int get(size_t idx) {
+        // printf("DIC get called with index %zu\n", idx);
         size_t array_idx = idx / INTERNAL_CHUNK_SIZE;  // Will round down (floor)
         size_t local_idx = idx % INTERNAL_CHUNK_SIZE;
         // Load chunk into cache if its not
+        // printf("       checking if array_idx %zu is equal to cached_idx %zu\n", array_idx, cached_chunk_idx);
         if (array_idx != cached_chunk_idx) {
             // Free old cache
             delete[] cells_;
             Key* k = chunk_keys[array_idx];
             cells_ = store->get_int_array_(k);
+            // printf("       array_idx %zu was not cached so got new chunk from key %s,%zu. First 3 values of new cells_ are %d,%d,%d\n",
+                //  array_idx, k->get_name(), k->get_home_node(), cells_[0], cells_[1], cells_[2]);
             cached_chunk_idx = array_idx;
+            // printf("       cached_chunk_idx is now %zu\n", cached_chunk_idx);
+        } else {
+            // printf("       array_idx %zu cached. First 3 values of exisiting cells_ are %d,%d,%d\n",
+                            //  array_idx, cells_[0], cells_[1], cells_[2]);
+            // printf("       cached_chunk_idx is left as %zu\n", cached_chunk_idx);
         }
         // Get value from cache
         return get_local(local_idx);
@@ -612,6 +621,7 @@ class DistributedIntColumn : public DistributedColumn, public IntColumn {
     // Assumes the local cache is populated
     // Input index out of bounds will cause out of bounds error
     int get_local(size_t idx) {
+        // printf("      finally returning %d for index %zu\n", cells_[idx], idx);
         return cells_[idx];
     }
 
