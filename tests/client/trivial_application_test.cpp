@@ -1,4 +1,3 @@
-#pragma once
 #include "../../src/store/store.cpp"
 #include "../../src/client/application.h"
 #include "../../src/store/network/master.h"

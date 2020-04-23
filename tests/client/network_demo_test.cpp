@@ -47,6 +47,7 @@ class Demo : public Application {
 
         delete DataFrame::fromArray(main, store, SZ, vals);
         delete DataFrame::fromScalar(check, store, sum);
+        delete[] vals;
     }
 
     void counter() {
@@ -57,16 +58,19 @@ class Demo : public Application {
         }
 	    printf("The sum is %f\n", sum);
         delete DataFrame::fromScalar(verify, store, sum);
+        delete v;
     }
 
     void summarizer() {
         DataFrame* result = store->waitAndGet(verify);
         DataFrame* expected = store->waitAndGet(check);
         if(expected->get_float(0, 0) == result->get_float(0, 0)){
-		printf("SUCCESS\n");
-	} else {
-		printf("FAILURE\n");
-	}
+		    printf("SUCCESS\n");
+	    } else {
+		    printf("FAILURE\n");
+    	}
+        delete result;
+        delete expected;
     }
 };
 
@@ -86,6 +90,10 @@ int test_demo() {
     counter.run_();
     Demo summarizer(&store3);
     summarizer.run_();
+    
+    store1.is_done();
+    store2.is_done();
+    store3.is_done();
 
     // shutdown system
     s.shutdown();
@@ -97,6 +105,7 @@ int test_demo() {
     }
     while (!store3.is_shutdown()) {
     }
+
 
     return true;
 }

@@ -1,6 +1,5 @@
 // lang:CwC
 // Authors: Ryan Heminway (heminway.r@husky.neu.edu), David Tandetnik
-#pragma once
 #include "../../src/store/network/master.h"
 #include "../../src/store/store.cpp"
 #include "../../src/client/sorer.h"
@@ -37,6 +36,8 @@ bool test_sorer_without_missings() {
     char* expected = "bye";
 
     assert(equal_strings(actual, expected));
+
+    store.is_done();
     
     // shutdown system
     serv.shutdown();
@@ -70,20 +71,10 @@ bool test_sorer_with_missings() {
     Sorer s(input_file, from, length);
     DistributedDataFrame* my_df = s.get_dataframe(&store);
 
-    /*Sys sys;
-    sys.p(my_df->get_string(2, 0)->c_str());
-    sys.p("\n");
-    sys.p(my_df->get_string(2, 1)->c_str());
-    sys.p("\n");
-    sys.p(my_df->get_string(2, 2)->c_str());
-    sys.p("\n");
-    sys.p(my_df->get_string(2, 3)->c_str());
-    sys.p("\n");
-    sys.p(my_df->get_string(2, 1799)->c_str());
-    sys.p("\n");*/
-
     // Check a string deep in the file
     assert(my_df->get_string(2, 1799)->equals(new String("no")));
+
+    store.is_done();
     
     // shutdown system
     serv.shutdown();

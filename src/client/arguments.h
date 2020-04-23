@@ -4,8 +4,10 @@
 #include <stdlib.h>
 #include <iostream>
 #include "../utils/helper.h"
-// #include "../../tests/test_utils.h"
 
+/* Arguments class to process command-line arguments for Linus application.
+ * Processes arguments for node ports, addresses, number of nodes, and how
+ * many degrees of linus to compute. */
 class Arguments {
     public:
         bool start_server;
@@ -31,7 +33,7 @@ class Arguments {
             num_nodes = 1;
             node_id = -1; // TODO enforce this is set
             node_ip = (char*) "127.0.0.1";
-            node_port = 0000; // TODO enforce this is set
+            node_port = 0; // TODO enforce this is set
 
             degrees = 1;
             proj_file = (char*) "data/projects_med.sor";
@@ -86,8 +88,6 @@ class Arguments {
             }
         }
 };
-
-
 
 
 /* Class for parsing command line arguments for a Sorer/Application

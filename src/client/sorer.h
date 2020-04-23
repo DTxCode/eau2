@@ -1,4 +1,3 @@
-
 // Authors: Ryan Heminway (heminway.r@husky.neu.edu)
 //          David Tandetnik (tandetnik.da@husky.neu.edu)
 #pragma once
@@ -11,8 +10,8 @@
 
 /* 
 * Utility class to parse SoR file into a DataFrame format.
-* Sorer class holds the file pointer and can return a DataFrame
-* corresponding to a chunk of that file's data. 
+* Sorer class holds the file pointer and can return a DistributedDataFrame
+* corresponding to the data in that file.
 */
 class Sorer {
    public:
@@ -23,9 +22,9 @@ class Sorer {
 
     /* Create a Sorer based on a file pointer.
        PARAMS: 
-        file_ptr : FILE pointer to SoR file to process
-        from_pt : byte location of where to start reading the file
-        length_to_read : number of bytes to read from the file
+       file_ptr : FILE pointer to SoR file to process
+       from_pt : byte location of where to start reading the file
+       length_to_read : number of bytes to read from the file
        Undefined behavior if the given number_chunks_size results in chunks 
        that are too large to store. Always creates at least 1 chunk. If 
        length_to_read is 0, assumes the whole file should be read. */
@@ -90,7 +89,6 @@ class Sorer {
 
                 // Handle missings
                 if (is_empty_field(buffer, schema->col_type(col_idx))) {
-			        printf("Sorer found a missing at column %zu\n", col_idx);
                     row.set_missing(col_idx);
                     // Based on schema, add data to row
                 } else if (schema->col_type(col_idx) == INT_TYPE) {
@@ -116,7 +114,6 @@ class Sorer {
                 // printf("Read so far %s\n", buffer);
                 read_idx++;
             } else if (c == '\n') {
-                // printf("Adding row to df. Read %zu bytes of total desired %zu.\n", bytes_read, length);
                 // Add row to dataframe
                 df->add_row(row);
 
@@ -125,7 +122,6 @@ class Sorer {
             }
             // Stop reading after length_to_read
             if (bytes_read >= length) {
-                // printf("Stopping reading DF because reached length\n");
                 break;
             }
         }

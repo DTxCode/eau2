@@ -1,7 +1,7 @@
 #include <map>
 
 #include "../../src/store/store.cpp"
-#include "../../src/client/application.cpp"
+#include "../../src/client/application.h"
 #include "../../src/store/dataframe/fielder.h"
 #include "../../src/store/dataframe/rower.h"
 #include "../../src/store/key.h"

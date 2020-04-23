@@ -1,15 +1,15 @@
 build:
 	g++ -std=c++11 -Wall -pthread -g tests/client/linus_demo.cpp -o linus 
 
+# Runs a single node system
 run:
 	./linus -node_id 0 -node_port 4000 -degrees 5 -num_nodes 1 -start_server 1
-	# ./linus -node_id 1 -node_port 4001 -degrees 1 
 
 # Run all tests
-test: test-dist-column test-server-node test-serializer test-store test-ddf test-map
+test: test-client-with-network test-dist-column test-server-node test-serializer test-store test-ddf test-map
 	echo "All tests passed!"
 
-### Client
+### Client Tests
 
 # WordCount Demo
 test-word-count:
@@ -20,6 +20,10 @@ test-word-count:
 test-client-with-network:
 	g++ -std=c++11 -Wall -pthread -g tests/client/network_demo_test.cpp -o network_demo
 	./network_demo
+
+valgrind-client-with-network:
+	g++ -std=c++11 -Wall -pthread -g tests/client/network_demo_test.cpp -o network_demo
+	valgrind --leak-check=full --track-origins=yes ./network_demo
 
 # Trivial Application Test
 test-client-trivial:
@@ -39,7 +43,7 @@ valgrind-client-sorer:
 	g++ -std=c++11 -Wall -pthread -g tests/client/simple_sorer_test.cpp -o simple_sorer_test
 	valgrind --leak-check=full --track-origins=yes ./simple_sorer_test
 
-### Store
+### Store Tests
 
 # Distributed Column test
 test-dist-column:
