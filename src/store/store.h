@@ -23,8 +23,6 @@ class Store : public Node {
     std::condition_variable cond_var; // Used to coordinate active thread and listener
     bool put_has_occured; // Used in tandem with cond_var above
 
-//    Store(Store& s);
-
     Store(size_t node_id, char* my_ip_address, int my_port, char* server_ip_address, int server_port);
 
     ~Store();
@@ -53,8 +51,6 @@ class Store : public Node {
     char* send_get_request_(Key* k);
 
     void handle_message(int connected_socket, Message* msg);
-
     void handle_put_(int connected_socket, Message* msg);
-
     void handle_get_(int connected_socket, Message* msg);
 };

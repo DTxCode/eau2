@@ -149,23 +149,7 @@ bool equal_strings(char* s1, const char* s2) {
 // Helper to convert the given string to an int
 // Returns 0 on error.
 int string_to_int(char* int_str) {
-    // int temp;
-    // char* endpt;  // For use in strtol func
-    // temp = strtol(int_str, &endpt, 10);
-    // if (endpt == int_str) {  // Test if arg is an integer
-    //     return -1;
-    // }
-    
     return atoi(int_str);  // Convert string to int
-   
-    // if (temp < 0) {
-    //     return -1;
-    // }
-
-    // if (temp > INT_MAX) {
-    //     return -1;
-    // }
-    // return temp;
 }
 
 // Utility function to get time in milliseconds as a double

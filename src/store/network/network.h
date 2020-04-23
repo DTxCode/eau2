@@ -123,8 +123,6 @@ class Network {
 
         close(sock);
 
-        assert(response != nullptr);
-
         return response;
     }
 
@@ -134,8 +132,6 @@ class Network {
         char* msg_string = read_from_socket_(socket);
         Message* msg = new Message(msg_string);
         delete[] msg_string;
-
-        assert(msg != nullptr);
 
         return msg;
     }
@@ -204,10 +200,8 @@ class Network {
             bytes_read += new_bytes_read;
         }
 
-        // printf("DEBUG: read_from_socket returning %s\n", msg);
         assert(strlen(msg) == msg_size);
         assert(msg[msg_size] == '\0');
-
         return msg;
     }
 
@@ -225,8 +219,6 @@ class Network {
             printf("ERROR writing msg to socket. Full message was %s\n", msg_to_send);
             exit(1);
         };
-
-        // printf("DEBUG: write_to_socket_ wrote msg %s\n", msg_to_send);
     }
 
     // Returns a socket connected to the given IP address and port

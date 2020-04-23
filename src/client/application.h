@@ -5,8 +5,9 @@
 #include "arguments.h"
 #include "sorer.h"
 
-// Application represents the top layer of the distributed system. It reads in data, sends it throughout the network,
-// and then lets the user preform K/V operations on it.
+// Application represents the top layer of the distributed system.
+// It reads in data, sends it throughout the network,
+// and then lets the users preform K/V operations on it.
 class Application {
    public:
     Store* store;

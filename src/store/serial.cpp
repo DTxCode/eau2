@@ -507,8 +507,9 @@ bool Serializer::deserialize_bool(char* msg) {
     return false;
 }
 
-// Serializer a c-array of bools into a char* formed
-// [bool],[bool],[bool] ...
+/* The following serialize methods serialize an array of primitives or Strings
+ * into a c-style array of characters. Produces a message with form:
+ * '[VALUE],[VALUE],...,[VALUE] */
 char* Serializer::serialize_bools(bool* bools, size_t num_values) {
     char* data;
     if (nullptr == bools) {
@@ -642,12 +643,11 @@ char* Serializer::serialize_strings(String** strings, size_t num_values) {
     return data;
 }
 
-// Deserializer a char* msg into a c-array of bools
+/* The following deserialize methods take a char array and deserialize it into
+ * an array of primitives, or Strings. The return type depends on the method
+ * called, but all these methods expect the same format of the message:
+ * '[VALUE],[VALUE],....,[VALUE]' */
 bool* Serializer::deserialize_bools(char* msg) {
-    // printf("DEBUG: deserializing bools array: %s\n", msg);
-
-    assert(msg);
-
     Sys s;
     size_t num_bools = s.count_char(",", msg) + 1;
 
@@ -663,10 +663,6 @@ bool* Serializer::deserialize_bools(char* msg) {
 }
 
 int* Serializer::deserialize_ints(char* msg) {
-    // printf("DEBUG: deserializing ints array: %s\n", msg);
-
-    assert(msg);
-
     Sys s;
     size_t num_ints = s.count_char(",", msg) + 1;
 
@@ -682,10 +678,6 @@ int* Serializer::deserialize_ints(char* msg) {
 }
 
 float* Serializer::deserialize_floats(char* msg) {
-    // printf("DEBUG: deserializing floats array: %s\n", msg);
-
-    assert(msg);
-
     Sys s;
     size_t num_floats = s.count_char(",", msg) + 1;
 
@@ -701,9 +693,6 @@ float* Serializer::deserialize_floats(char* msg) {
 }
 
 String** Serializer::deserialize_strings(char* msg) {
-
-    assert(msg);
-
     Sys s;
     size_t num_strings = s.count_char(",", msg) + 1;
 

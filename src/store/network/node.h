@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-//#include <stropts.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <mutex>
@@ -29,13 +28,19 @@ class Node {
     char *server_ip_address;
     int server_port;
     Network *network;
-    StringArray *known_nodes;  // List of other nodes in the network. Set to nullptr until the first
-                               // directory update from the server
-
-    std::thread *listener;  // thread that listens for incoming connections
-    std::atomic<bool> registered;        // Whether this node is registered with the master server
-    std::atomic<bool> shutting_down;     // Whether this node is shutting down. Used by (infinite) spawned thread to know to shut down
-    std::atomic<bool> done;              // Whether this node's work is done. Should be set to true before shutdown.
+    // List of other nodes in the network. Set to nullptr until the first
+    // directory update from server
+    StringArray *known_nodes; 
+                              
+    // Thread that listens for incoming connections
+    std::thread *listener; 
+    // Whether this node is registered with the master server
+    std::atomic<bool> registered;   
+    // Whether this node is shutting down. Used by (infinite) 
+    // spawned thread to know to shut down
+    std::atomic<bool> shutting_down;    
+    // Whether this node's work is done. Should be set to true before shutdown.
+    std::atomic<bool> done;              
     Serializer *serializer;
     std::mutex known_nodes_lock;
 
@@ -91,8 +96,6 @@ class Node {
         Message msg(my_ip_address, my_port, msg_type, msg_contents);
 
         Message *response = network->send_and_receive_msg(&msg, target_ip_address, target_port);
-
-        assert(response != nullptr);
 
         return response;
     }
@@ -181,8 +184,6 @@ class Node {
 
     // Processes an update from the server with the list of connected nodes in the network
     void update_directory_(int connected_socket, Message *msg) {
-        //printf("Node at %s:%d got a directory update from the server\n", my_ip_address, my_port);
-
         // Get new directory list as a string
         char *new_directory = msg->msg;
 

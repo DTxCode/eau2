@@ -68,7 +68,6 @@ class List : public Object {
         }
 
         // set element at i now that there's space for it
-        // printf("Add is adding object at address %p to this list at index %zu\n", e, i);
         list[i] = e;
 
         length += 1;
@@ -82,7 +81,6 @@ class List : public Object {
             int index_to_insert = i + j;
             Object* object_to_insert = c->get(j);
 
-            // printf("Add_all processing %p from given list\n", object_to_insert);
             add(index_to_insert, object_to_insert);
         }
     }
@@ -114,7 +112,6 @@ class List : public Object {
         }
 
         Object* removed_element = list[i];
-        // printf("List is removing element %p at index %zu\n", removed_element, i);
 
         // shift elements after the one to remove to the left
         for (int j = i + 1; (size_t)j < length; j++) {

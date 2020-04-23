@@ -14,6 +14,7 @@
 
 #define GETANDWAIT_SLEEP 100
 
+// Construct a store from all networking info required
 Store::Store(size_t node_id, char *my_ip_address, int my_port, char *server_ip_address, int server_port) 
         : Node(my_ip_address, my_port, server_ip_address, server_port) {
     this->node_id = node_id;
@@ -149,8 +150,6 @@ void Store::send_put_request_(Key *key, char *value) {
     sprintf(msg, "%s~%s", key_str, value);
 
     Message *response = send_msg(other_node_host, other_node_port, PUT, msg);
-
-    assert(response);
 
     if (response->msg_type != ACK) {
         printf("Node %zu did not get successful ACK for its PUT request to node %zu\n", node_id, key_home);
@@ -354,16 +353,10 @@ DistributedDataFrame *Store::waitAndGet(Key *k) {
 // Some sort of reply is expected to be written to the given socket
 // By default, sends empty ACK back to the message sender and prints a "message-received" string
 void Store::handle_message(int connected_socket, Message *msg) {
-    // printf("Node %s:%d got message from another node with type %d and contents \"%s\"\n", my_ip_address, my_port, msg->msg_type, msg->msg);
-
     if (msg->msg_type == PUT) {
-        // printf("DEBUG: Node %zu got PUT request \n", this_node());
         handle_put_(connected_socket, msg);
-        // printf("DEBUG: Node %zu responded to PUT Request\n", this_node());
     } else if (msg->msg_type == GET) {
-        // printf("DEBUG: Node %zu got GET request \n", this_node());
         handle_get_(connected_socket, msg);
-        // printf("DEBUG: Node %zu responded to GET Request\n", this_node());
     } else {
         printf("WARN: Store got a message from another node with unexpected message type %d\n", msg->msg_type);
     }
@@ -372,20 +365,14 @@ void Store::handle_message(int connected_socket, Message *msg) {
 // Called when this store gets a PUT request from another node
 void Store::handle_put_(int connected_socket, Message *msg) {
     char *msg_contents = msg->msg;
-
-    // printf("DEBUG: Handling a PUT with msg contents %s\n", msg_contents);
-
+    
+    // For re-entrant, thread safety of strtok_r
     char* entry; 
     
     // put together Key
     char *key_str = strtok_r(msg_contents, "~", &entry);
-    // printf("DEBUG: Put key string: %s\n", key_str);
     // put together value_str
     char *val_str = strtok_r(nullptr, "\0", &entry);
-    // printf("DEBUG: Put val string: %s\n", val_str);
-
-    assert(key_str);
-    assert(val_str);
 
     Key key(key_str, node_id);  // This node got a PUT request, so the key must live on this node.
     // save to map
@@ -400,7 +387,6 @@ void Store::handle_put_(int connected_socket, Message *msg) {
 void Store::handle_get_(int connected_socket, Message *msg) {
     // Message consists of just the key
     char *key_str = msg->msg;
-    // printf("DEBUG: Handling a GET with msg contents %s\n", key_str);
 
     Key key(key_str, node_id);  // This node got a GET request, so the key must live on this node.
 
@@ -520,6 +506,10 @@ DistributedDataFrame *DataFrame::fromScalar(Key *key, Store *store, String *val)
     return fromDistributedColumn(key, store, &col);
 }
 
+
+// Create a DataFrame from a Writer object. A Writer is expected to load data 
+// into give rows which are incorporated into the DataFrame. A call to Writer's
+// method done() must return true when no more data is left to be added.
 DistributedDataFrame* DataFrame::fromWriter(Key* key, Store* store, char* schema, Writer& writer) {
     Schema scm(schema);
     DistributedDataFrame* df = new DistributedDataFrame(store, scm);
@@ -532,9 +522,6 @@ DistributedDataFrame* DataFrame::fromWriter(Key* key, Store* store, char* schema
         df->add_row(r);
     }
 
-    // printf("fromWriter adding DF to store:\n");
-    // df->print();
-    
     store->put(key, df);
     return df;
 }

@@ -183,7 +183,6 @@ class Map : public Object {
             return nullptr;
         }
 
-        // printf("DEBUG: Putting into map with key space %zu\n", key_space);
         size_t bucket_id = key->hash() % key_space;
         List* value_list = value_lists[bucket_id];
 
@@ -199,7 +198,6 @@ class Map : public Object {
             // Remove the replaced key from list of keys and add the new one
             // only if the new key isn't literally the same key as the replaced one
             if (replaced_key != key) {
-                // printf("Replacing key %p with %p in map\n", replaced_key, key);
                 size_t removed_key_index = keys_->index_of(replaced_key);
                 keys_->remove(removed_key_index);
                 keys_->push_back(key);
@@ -207,7 +205,6 @@ class Map : public Object {
             }
 
             // Remove the replaced value from list of values and add the new one.
-            // printf("Replacing value %p with %p in map\n", replaced_value, value);
             size_t removed_value_index = values_->index_of_pointer(replaced_value);
             values_->remove(removed_value_index);
             values_->push_back(value);
@@ -216,7 +213,6 @@ class Map : public Object {
         }
 
         // Add new key/value to keys and values lists
-        // printf("Putting new value into map at address %p\n", value);
         keys_->push_back(key);
         values_->push_back(value);
 
